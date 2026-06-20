@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тестировщик с нуля — путь в IT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF8F4;
+    --surface:#FFFFFF;
+    --ink:#1E2420;
+    --muted:#5C625D;
+    --faint:#8A8F8A;
+    --accent:#1F7A5C;
+    --accent-soft:#E4F0EA;
+    --amber:#B4691F;
+    --amber-soft:#F6ECDD;
+    --line:#E7E2D9;
+    --shadow:0 1px 2px rgba(30,36,32,.05), 0 8px 24px rgba(30,36,32,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#13171A;
+      --surface:#1A1F22;
+      --ink:#E9E6DF;
+      --muted:#9BA09B;
+      --faint:#6E736E;
+      --accent:#5FC79E;
+      --accent-soft:#16332A;
+      --amber:#E0A057;
+      --amber-soft:#33261699;
+      --line:#2A2F31;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Golos Text",system-ui,sans-serif;
+    font-size:18px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 22px;}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;}
+  a:hover{border-bottom-color:var(--accent);}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
+
+  /* hero */
+  .hero{padding:84px 0 40px;}
+  .eyebrow{
+    font-family:"JetBrains Mono",monospace;
+    font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 20px;
+  }
+  h1{
+    font-family:"Onest",sans-serif;font-weight:800;
+    font-size:clamp(34px,7vw,52px);line-height:1.08;
+    letter-spacing:-.02em;margin:0 0 22px;
+  }
+  .lede{font-size:clamp(19px,2.6vw,22px);color:var(--muted);margin:0 0 28px;max-width:38ch;}
+  .howto{
+    font-size:15px;color:var(--faint);border-left:2px solid var(--line);
+    padding-left:16px;margin:0;
+  }
+  .howto a{font-weight:600;}
+
+  section{padding:46px 0;border-top:1px solid var(--line);}
+  h2{
+    font-family:"Onest",sans-serif;font-weight:700;
+    font-size:clamp(24px,4vw,30px);letter-spacing:-.01em;
+    margin:0 0 18px;line-height:1.2;
+  }
+  h2 .num{
+    font-family:"JetBrains Mono",monospace;font-size:15px;font-weight:500;
+    color:var(--accent);margin-right:12px;vertical-align:middle;
+  }
+  p{margin:0 0 18px;}
+  p:last-child{margin-bottom:0;}
+  strong{font-weight:600;}
+  .muted{color:var(--muted);}
+
+  .example{
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    padding:22px 24px;box-shadow:var(--shadow);margin:24px 0 0;
+  }
+  .example .label{
+    font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--faint);margin:0 0 14px;
+  }
+  .line{display:flex;gap:12px;margin:0 0 14px;align-items:flex-start;}
+  .line:last-child{margin-bottom:0;}
+  .who{
+    flex:0 0 auto;font-family:"JetBrains Mono",monospace;font-size:13px;
+    width:104px;color:var(--accent);padding-top:2px;
+  }
+  .who.you{color:var(--amber);}
+  .said{margin:0;font-size:16px;line-height:1.55;}
+
+  /* roadmap signature */
+  .track{margin:6px 0 0;}
+  .stop{position:relative;padding:0 0 30px 52px;}
+  .stop:last-child{padding-bottom:0;}
+  .stop::before{
+    content:"";position:absolute;left:15px;top:30px;bottom:0;width:2px;
+    background:var(--line);
+  }
+  .stop:last-child::before{display:none;}
+  .dot{
+    position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;
+    background:var(--surface);border:2px solid var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:500;
+    color:var(--accent);box-shadow:var(--shadow);
+  }
+  .stop h3{
+    font-family:"Onest",sans-serif;font-weight:700;font-size:19px;
+    margin:3px 0 6px;letter-spacing:-.01em;
+  }
+  .stop p{font-size:16px;color:var(--muted);margin:0;line-height:1.5;}
+
+  /* callout */
+  .callout{
+    background:var(--amber-soft);border-radius:14px;padding:20px 22px;
+    margin:24px 0 0;border:1px solid var(--line);
+  }
+  .callout .label{
+    font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--amber);margin:0 0 8px;
+  }
+  .callout p{font-size:16px;margin:0;}
+
+  .rules{list-style:none;padding:0;margin:18px 0 0;counter-reset:r;}
+  .rules li{
+    position:relative;padding:0 0 16px 42px;counter-increment:r;
+  }
+  .rules li:last-child{padding-bottom:0;}
+  .rules li::before{
+    content:counter(r);position:absolute;left:0;top:0;
+    width:28px;height:28px;border-radius:50%;background:var(--accent-soft);
+    color:var(--accent);font-family:"JetBrains Mono",monospace;font-size:14px;
+    display:flex;align-items:center;justify-content:center;font-weight:500;
+  }
+  .rules strong{display:block;margin-bottom:2px;}
+  .rules span{color:var(--muted);font-size:16px;}
+
+  .needs{list-style:none;padding:0;margin:18px 0 0;}
+  .needs li{padding:12px 0;border-top:1px solid var(--line);display:flex;gap:14px;}
+  .needs li:first-child{border-top:none;padding-top:0;}
+  .needs .k{flex:0 0 auto;width:130px;font-weight:600;}
+  .needs .v{color:var(--muted);}
+
+  /* prompt block */
+  .promptwrap{margin:22px 0 0;}
+  .promptbar{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    background:var(--ink);color:var(--paper);
+    border-radius:12px 12px 0 0;padding:12px 16px;
+  }
+  .promptbar .t{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.04em;}
+  .copybtn{
+    font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:500;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;
+    padding:8px 16px;cursor:pointer;transition:transform .08s ease,opacity .2s;
+  }
+  .copybtn:hover{opacity:.9;}
+  .copybtn:active{transform:translateY(1px);}
+  pre{
+    margin:0;background:var(--surface);border:1px solid var(--line);
+    border-top:none;border-radius:0 0 12px 12px;padding:20px;
+    overflow-x:auto;
+    font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.55;
+    color:var(--ink);
+    white-space:pre-wrap;word-break:break-word;
+  }
+  .fill{background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;font-weight:500;}
+
+  .swap{font-size:14px;color:var(--faint);margin:16px 0 0;}
+
+  footer{padding:48px 0 80px;border-top:1px solid var(--line);}
+  footer p{font-size:15px;color:var(--faint);margin:0;}
+
+  @media (max-width:520px){
+    body{font-size:17px;}
+    .hero{padding:60px 0 32px;}
+    .who{width:84px;font-size:12px;}
+    .needs .k{width:104px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Путь в IT с нуля</p>
+    <h1>Тестировщик — профессия, в которую входят без опыта</h1>
+    <p class="lede">Эта страница проведёт тебя от «я ничего не знаю про IT» до первого реального навыка. Шаг за шагом, с личным преподавателем.</p>
+    <p class="howto">Прочитай сверху вниз один раз — это займёт минут десять. В самом низу лежит <a href="#start">текст, с которого начнётся обучение</a>. Когда дочитаешь, скопируешь его и отправишь нейросети.</p>
+  </header>
+
+  <section>
+    <h2>Что это вообще за работа</h2>
+    <p>Любой сайт или приложение иногда «падает», когда на него разом приходит много людей: старт продаж билетов на концерт, большая распродажа, запуск новой игры. Кто-то должен заранее проверить, что система это выдержит, и найти слабые места до того, как их найдут живые пользователи. Этим и занимается тестировщик.</p>
+    <p>Нагрузочное тестирование — узкая и востребованная часть этой работы. Ты создаёшь искусственный «наплыв» из тысяч пользователей и смотришь, где сайт начинает тормозить или ломаться.</p>
+    <p>Как это выглядит на деле: за неделю до распродажи команда просит тебя проверить, выдержит ли сайт в десять раз больше посетителей, чем обычно. Ты прогоняешь тест и отвечаешь конкретно: «до такого-то количества держит, выше — вот здесь начинает тормозить». Один такой ответ экономит компании и деньги, и репутацию.</p>
+  </section>
+
+  <section>
+    <h2>Почему именно сюда</h2>
+    <p>Порог входа ниже, чем у большинства IT-профессий: чтобы начать, не нужно уметь программировать на уровне разработчика. Базовые навыки осваиваются с нуля.</p>
+    <p>Профессия не исчезнет. Пока в мире есть сайты и приложения, кто-то должен проверять, что они работают под нагрузкой. Инструменты со временем меняются, появляются новые — а сама суть работы остаётся прежней. То, чему ты научишься, не устареет за пару лет.</p>
+    <p>Есть куда расти: от новичка к опытному специалисту, а дальше — в соседние, более высокие по доходу области вроде автоматизации и инженерии надёжности. Работать часто можно удалённо.</p>
+    <p>Про деньги честно. Зарплата здесь выше средней по региону и растёт с опытом, но точные цифры быстро устаревают, поэтому не доверяй числам из статей. Зайди сам на любой сайт вакансий, набери «тестировщик» и «QA» — увидишь актуальную картину по своему городу лучше, чем покажет любой гайд.</p>
+    <p>И честно о трудном: первая работа — самый тяжёлый шаг, новичков на рынке много. Решает не врождённый талант, а настойчивость и доведённое до конца портфолио. Кто доходит до конца обучения и собирает примеры своих работ — тот находит работу. Дальше становится легче.</p>
+  </section>
+
+  <section>
+    <h2>Твой путь</h2>
+    <p class="muted">Шесть этапов от основ до готовности к собеседованию. На каждом — практика на твоём ноутбуке, а не теория из учебника.</p>
+    <div class="track">
+      <div class="stop">
+        <div class="dot">0</div>
+        <h3>Освоиться</h3>
+        <p>Как устроен компьютер «изнутри», что такое команды, как сайт общается с сервером. Фундамент — без него дальше никак.</p>
+      </div>
+      <div class="stop">
+        <div class="dot">1</div>
+        <h3>Проверять вручную</h3>
+        <p>Что значит «протестировать», как находить ошибки и понятно их описывать. Первая настоящая работа руками.</p>
+      </div>
+      <div class="stop">
+        <div class="dot">2</div>
+        <h3>Понять, что измерять</h3>
+        <p>Скорость ответа, сколько запросов система держит, сколько падает. Это язык, на котором говорит вся профессия.</p>
+      </div>
+      <div class="stop">
+        <div class="dot">3</div>
+        <h3>Первый нагрузочный тест</h3>
+        <p>Запустить на своём ноутбуке учебное приложение, «нагрузить» его и прочитать результат. Момент, когда всё начинает складываться.</p>
+      </div>
+      <div class="stop">
+        <div class="dot">4</div>
+        <h3>Усложнять</h3>
+        <p>Разные сценарии нагрузки, поиск узкого места — той самой точки, где система ломается первой.</p>
+      </div>
+      <div class="stop">
+        <div class="dot">5</div>
+        <h3>Подготовиться к работе</h3>
+        <p>Собрать портфолио: примеры твоих тестов с выводами, которые ты покажешь работодателю. Это и есть твой пропуск на собеседование.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Как ты будешь учиться</h2>
+    <p>Учить тебя будет не человек, а нейросеть — твой личный преподаватель. Она ведёт за руку, объясняет простыми словами, даёт маленькие задания и проверяет, что ты понял. Главный принцип всего обучения — понимание, а не зубрёжка. Каждый шаг заканчивается тем, что ты что-то реально сделал и увидел результат своими глазами.</p>
+    <ul class="rules">
+      <li><strong>Не притворяйся, что понял.</strong><span>Непонятно — пиши прямо: «не понял, объясни проще». Преподаватель для этого и нужен, это не стыдно.</span></li>
+      <li><strong>Делай руками, а не читай глазами.</strong><span>Сказано ввести команду или запустить программу — введи и запусти у себя. Прочитать и кивнуть не считается, навык так не появится.</span></li>
+      <li><strong>Английский отдельно не учи.</strong><span>Все английские надписи на экране преподаватель переводит сам — так заложено в тексте. Просто показывай ему, что видишь.</span></li>
+    </ul>
+    <div class="callout">
+      <p class="label">Если застрял</p>
+      <p>Что-то не ставится, выдаёт ошибку, не запускается — это нормально, так у всех. Напиши преподавателю «застрял на этом шаге» и опиши, что на экране. Он разберёт по шагам. Если совсем тупик — спроси Евгения.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Как выглядит один урок</h2>
+    <p>Не лекция на час, а короткий понятный обмен репликами. Примерно так:</p>
+    <div class="example">
+      <p class="label">Пример</p>
+      <div class="line"><span class="who">Преподаватель</span><p class="said">Открой программу «Терминал». Введи вот эту команду и нажми Enter.</p></div>
+      <div class="line"><span class="who you">Ты</span><p class="said">Ввёл. На экране появился текст с числом 200.</p></div>
+      <div class="line"><span class="who">Преподаватель</span><p class="said">Отлично. 200 означает «всё хорошо, сервер ответил». Запомни это число — оно тебе встретится сотни раз. А теперь маленькое задание…</p></div>
+    </div>
+    <p class="muted" style="margin-top:18px">Маленький шаг, понятный результат, проверка. И так до тех пор, пока навык не станет твоим.</p>
+  </section>
+
+  <section>
+    <h2>Что понадобится</h2>
+    <ul class="needs">
+      <li><span class="k">Ноутбук</span><span class="v">У тебя уже есть. Его мощности хватает с большим запасом.</span></li>
+      <li><span class="k">Интернет</span><span class="v">Тоже есть. Больше ничего покупать не нужно — все программы по ходу обучения бесплатные.</span></li>
+      <li><span class="k">Нейросеть</span><span class="v">Сильная модель — например Claude или ChatGPT. С доступом поможет Евгений. Открой ту, что вы выбрали, и начинай.</span></li>
+      <li><span class="k">Время</span><span class="v">Полтора-два часа на занятие. Важнее не длина, а регулярность.</span></li>
+    </ul>
+  </section>
+
+  <section id="start">
+    <h2>С чего начать прямо сейчас</h2>
+    <p>Скопируй текст ниже целиком кнопкой «Скопировать», вставь в нейросеть и отправь. Перед отправкой найди строку <span class="fill">ОС:</span> и впиши свою систему — одно из трёх слов: <strong>Windows</strong>, <strong>macOS</strong> или <strong>Linux</strong>. Если не знаешь какое — спроси Евгения. Остальное менять не нужно. Дальше просто следуй за преподавателем.</p>
+
+    <div class="promptwrap">
+      <div class="promptbar">
+        <span class="t">текст для нейросети</span>
+        <button class="copybtn" id="copy" type="button">Скопировать</button>
+      </div>
+      <pre id="prompt">Ты — мой персональный преподаватель. Я вне IT и хочу войти в профессию через тестирование с прицелом на нагрузочное (performance/load testing). Веди меня с абсолютного нуля.
+
+Мои вводные:
+- ОС: ВПИШИ_СЮДА (Windows, macOS или Linux)
+- Ноутбук: 8 ядер, 16 ГБ RAM, 512 ГБ диск, интернет есть.
+- Время: 1–2 часа раз в три дня, жёсткий потолок. Между сессиями я почти ничего не делаю.
+- Английский: почти нулевой. Это критично — см. правила ниже.
+- Код меня не пугает.
+- Основной инструмент: k6
+
+Язык и английский — обязательно:
+1. Всё общение — на русском.
+2. Я НЕ читаю по-английски. Любой вывод инструмента, текст ошибки, кусок документации, надпись в интерфейсе — переводи и объясняй на русском. Не предполагай, что я пойму английский экран сам.
+3. Параллельно веди мой словарь терминов: каждый новый английский термин (latency, throughput, threshold, ramp-up, request, response, error rate и т.д.) — выписывай отдельно с русским пояснением одной строкой. В начале сессии проверяй 3–5 терминов из словаря на узнавание.
+
+Как ты обязан вести обучение:
+4. Практика впереди теории. Теории — ровно столько, сколько нужно для шага.
+5. Одна сессия = один маленький шаг + один осязаемый результат: запущенная команда, рабочий скрипт, появившееся число, скриншот. Без результата сессию не закрываем.
+6. В начале каждой сессии — 3 коротких вопроса по прошлой. Не отвечаю — повторяем её, дальше не идём (между сессиями три дня, я многое забываю).
+7. После каждого шага проверяй понимание маленьким заданием. Аналогии бытовые, жаргон без расшифровки запрещён.
+8. Всё бесплатное и локальное. Точные команды установки под мою ОС, текущие стабильные версии.
+9. Не запустилось — разбираем по шагам, без «должно работать». Спрашивай, что именно на экране, и веди к рабочему результату.
+10. В конце сессии: что освоено, что повторить за 5–10 минут, с чего начнём.
+11. Весь план разом не вываливай — показывай только ближайшие шаги.
+
+Маршрут (ориентир для тебя, мне раскрывай постепенно):
+- Этап 0. База: терминал и команды, файлы/папки, клиент-сервер, HTTP, запрос/ответ, статус-коды. Инструменты: терминал, curl, Postman.
+- Этап 1. Ручное тестирование: тест-кейс, баг, проверка API руками в Postman, чтение ответа.
+- Этап 2. Метрики на пальцах и на реальных числах: latency, throughput, перцентили p95/p99, доля ошибок под нагрузкой.
+- Этап 3. Первый нагрузочный тест: поднять простое приложение локально через Docker, написать первый сценарий в k6, прогнать, прочитать результат.
+- Этап 4. Усложнение: параметры, профили нагрузки (ramp-up, stages), пороги (thresholds), поиск узкого места.
+- Этап 5. Под рынок РФ: показать JMeter, сравнить с k6; собрать мини-портфолио — репозиторий со сценариями и README с выводами на русском.
+
+Начинаем с Этапа 0, шаг первый. Сначала проверь, вписал ли я свою ОС в строке выше — если там осталось «ВПИШИ_СЮДА», спроси её у меня.</pre>
+    </div>
+    <p class="swap">Примечание для Евгения: чтобы дать JMeter вместо k6, замени в строке «Основной инструмент» k6 на JMeter и поменяй их местами в этапах 3 и 5.</p>
+  </section>
+
+  <footer>
+    <p>Сделано, чтобы тебе было с чего начать. Первый шаг — самый важный.</p>
+  </footer>
+
+</main>
+
+<script>
+  (function(){
+    var btn = document.getElementById('copy');
+    var pre = document.getElementById('prompt');
+    btn.addEventListener('click', function(){
+      var text = pre.innerText;
+      var done = function(){
+        var old = btn.textContent;
+        btn.textContent = 'Скопировано ✓';
+        setTimeout(function(){ btn.textContent = old; }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(function(){ fallback(text, done); });
+      } else {
+        fallback(text, done);
+      }
+    });
+    function fallback(text, done){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); done(); }catch(e){}
+      document.body.removeChild(ta);
+    }
+  })();
+</script>
+</body>
+</html>
