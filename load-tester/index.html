@@ -16,6 +16,37 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://distinguished-sre.github.io/load-tester/og.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<script>
+  (function(){
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var root = document.documentElement;
+    root.classList.add('anim');
+    function reveal(){
+      var hero = document.querySelector('.hero');
+      if (hero) requestAnimationFrame(function(){ hero.classList.add('in'); });
+      var targets = document.querySelectorAll('section, .track');
+      if (!('IntersectionObserver' in window)){
+        targets.forEach(function(el){ el.classList.add('in'); });
+        return;
+      }
+      var io = new IntersectionObserver(function(entries, obs){
+        entries.forEach(function(en){
+          if (en.isIntersecting){ en.target.classList.add('in'); obs.unobserve(en.target); }
+        });
+      }, {rootMargin:'0px 0px -8% 0px', threshold:0.12});
+      targets.forEach(function(el){ io.observe(el); });
+    }
+    function safeReveal(){
+      try { reveal(); }
+      catch(e){
+        document.querySelectorAll('.hero, section, .track').forEach(function(el){ el.classList.add('in'); });
+      }
+    }
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', safeReveal);
+    } else { safeReveal(); }
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -216,6 +247,55 @@
   .jump:hover{border-bottom:none;transform:translateY(-2px);}
   .jump.hide{opacity:0;transform:translateY(12px);pointer-events:none;}
 
+  .figure{margin:26px 0 0;}
+  .figure svg{display:block;width:100%;height:auto;max-width:430px;margin:0 auto;}
+  .figcap{font-size:14px;color:var(--muted);text-align:center;line-height:1.45;margin:12px auto 0;max-width:42ch;}
+  .fig-axis{stroke:var(--line);stroke-width:1.5;fill:none;}
+  .fig-head{fill:var(--line);}
+  .fig-knee{stroke:var(--amber);stroke-width:1.3;stroke-dasharray:3 3;}
+  .fig-hold{stroke:var(--accent);stroke-width:3;fill:none;stroke-linecap:round;}
+  .fig-fail{stroke:var(--amber);stroke-width:3;fill:none;stroke-linecap:round;}
+  .fig-dot{fill:var(--accent);}
+  .fig-kneedot{fill:var(--amber);}
+  .fig-tx{fill:var(--faint);font-family:"Golos Text",sans-serif;font-size:12px;}
+  .fig-hold-tx{fill:var(--accent);font-family:"Golos Text",sans-serif;font-size:12.5px;font-weight:600;}
+  .fig-fail-tx{fill:var(--amber);font-family:"Golos Text",sans-serif;font-size:12.5px;font-weight:600;}
+  .fig-user{fill:var(--accent);}
+  .fig-server{fill:var(--surface);stroke:var(--accent);stroke-width:2;}
+  .fig-server-tx{fill:var(--ink);font-family:"Golos Text",sans-serif;font-size:13px;font-weight:600;}
+  .fig-bar-bg{fill:var(--line);}
+  .fig-bar{fill:var(--amber);}
+  .fig-arrow{stroke:var(--muted);stroke-width:1.6;fill:none;}
+  .fig-arrowhead{fill:var(--muted);}
+
+  .anim .hero > *{
+    opacity:0;transform:translateY(20px);
+    transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1);
+  }
+  .anim .hero.in > *{opacity:1;transform:none;}
+  .anim .hero.in > *:nth-child(1){transition-delay:.05s;}
+  .anim .hero.in > *:nth-child(2){transition-delay:.13s;}
+  .anim .hero.in > *:nth-child(3){transition-delay:.21s;}
+  .anim .hero.in > *:nth-child(4){transition-delay:.29s;}
+
+  .anim section{
+    opacity:0;transform:translateY(26px);
+    transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1);
+  }
+  .anim section.in{opacity:1;transform:none;}
+
+  .anim .track .stop{
+    opacity:0;transform:translateY(18px);
+    transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1);
+  }
+  .anim .track.in .stop{opacity:1;transform:none;}
+  .anim .track.in .stop:nth-child(1){transition-delay:.04s;}
+  .anim .track.in .stop:nth-child(2){transition-delay:.11s;}
+  .anim .track.in .stop:nth-child(3){transition-delay:.18s;}
+  .anim .track.in .stop:nth-child(4){transition-delay:.25s;}
+  .anim .track.in .stop:nth-child(5){transition-delay:.32s;}
+  .anim .track.in .stop:nth-child(6){transition-delay:.39s;}
+
   @media (max-width:520px){
     body{font-size:17px;}
     .hero{padding:60px 0 32px;}
@@ -244,7 +324,50 @@
     <h2>Что это вообще за работа</h2>
     <p>Любой сайт или приложение иногда «падает», когда на него разом приходит много людей: старт продаж билетов на концерт, большая распродажа, запуск новой игры. Кто-то должен заранее проверить, что система это выдержит, и найти слабые места до того, как их найдут живые пользователи. Этим и занимается тестировщик.</p>
     <p>Нагрузочное тестирование — узкая и востребованная часть этой работы. Ты создаёшь искусственный «наплыв» из тысяч пользователей и смотришь, где сайт начинает тормозить или ломаться.</p>
+    <figure class="figure">
+      <svg viewBox="0 0 360 170" role="img" aria-label="Схема: много пользователей одновременно отправляют запросы на один сервер, сервер под нагрузкой.">
+        <circle class="fig-user" cx="30" cy="38" r="6"/>
+        <circle class="fig-user" cx="56" cy="28" r="6"/>
+        <circle class="fig-user" cx="48" cy="58" r="6"/>
+        <circle class="fig-user" cx="26" cy="74" r="6"/>
+        <circle class="fig-user" cx="60" cy="84" r="6"/>
+        <circle class="fig-user" cx="44" cy="98" r="6"/>
+        <circle class="fig-user" cx="30" cy="118" r="6"/>
+        <circle class="fig-user" cx="58" cy="128" r="6"/>
+        <circle class="fig-user" cx="40" cy="142" r="6"/>
+        <path class="fig-arrow" d="M78 56 L228 76"/>
+        <polygon class="fig-arrowhead" points="236,78 226,72 227,80"/>
+        <path class="fig-arrow" d="M78 90 L228 90"/>
+        <polygon class="fig-arrowhead" points="236,90 227,85 227,95"/>
+        <path class="fig-arrow" d="M78 124 L228 104"/>
+        <polygon class="fig-arrowhead" points="236,102 227,100 228,108"/>
+        <rect class="fig-server" x="240" y="56" width="86" height="60" rx="9"/>
+        <rect class="fig-bar-bg" x="254" y="96" width="58" height="8" rx="4"/>
+        <rect class="fig-bar" x="254" y="96" width="46" height="8" rx="4"/>
+        <text class="fig-server-tx" x="283" y="82" text-anchor="middle">Сервер</text>
+        <text class="fig-tx" x="44" y="163" text-anchor="middle">Пользователи</text>
+      </svg>
+      <figcaption class="figcap">Нагрузка — это когда много пользователей приходят на сервер разом.</figcaption>
+    </figure>
     <p>Как это выглядит на деле: за неделю до распродажи команда просит тебя проверить, выдержит ли сайт в десять раз больше посетителей, чем обычно. Ты прогоняешь тест и отвечаешь конкретно: «до такого-то количества держит, выше — вот здесь начинает тормозить». Один такой ответ экономит компании и деньги, и репутацию.</p>
+    <figure class="figure">
+      <svg viewBox="0 0 360 200" role="img" aria-label="График: пока пользователей немного, время ответа низкое и стабильное; после узкого места оно резко растёт.">
+        <line class="fig-axis" x1="46" y1="24" x2="46" y2="170"/>
+        <polygon class="fig-head" points="46,18 41,27 51,27"/>
+        <line class="fig-axis" x1="46" y1="170" x2="340" y2="170"/>
+        <polygon class="fig-head" points="346,170 337,165 337,175"/>
+        <line class="fig-knee" x1="200" y1="44" x2="200" y2="170"/>
+        <path class="fig-hold" d="M54 150 L200 148"/>
+        <path class="fig-fail" d="M200 148 C 244 146 270 104 322 42"/>
+        <circle class="fig-kneedot" cx="200" cy="148" r="4"/>
+        <text class="fig-tx" x="200" y="36" text-anchor="middle">узкое место</text>
+        <text class="fig-hold-tx" x="118" y="140" text-anchor="middle">держит</text>
+        <text class="fig-fail-tx" x="276" y="92" text-anchor="middle">тормозит</text>
+        <text class="fig-tx" x="20" y="98" text-anchor="middle" transform="rotate(-90 20 98)">Время ответа</text>
+        <text class="fig-tx" x="210" y="190" text-anchor="middle">Пользователей →</text>
+      </svg>
+      <figcaption class="figcap">До узкого места сайт держит и отвечает быстро. За ним резко тормозит. Найти эту точку заранее — и есть твоя работа.</figcaption>
+    </figure>
   </section>
 
   <section>
@@ -417,6 +540,14 @@
       }, {rootMargin:'0px 0px -40% 0px'});
       io.observe(start);
     }
+
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.querySelectorAll('a[href="#start"]').forEach(function(a){
+      a.addEventListener('click', function(e){
+        e.preventDefault();
+        if (start) start.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+      });
+    });
   })();
 </script>
 </body>
