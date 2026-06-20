@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Тестировщик с нуля — путь в IT</title>
+<meta name="description" content="Гайд для входа в IT через тестирование с нуля: что за профессия, путь обучения по шагам и готовый промпт для нейросети-преподавателя.">
+<meta property="og:title" content="Тестировщик с нуля — путь в IT">
+<meta property="og:description" content="Что за профессия, путь обучения по шагам и готовый текст для нейросети, с которого начинается практика.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://distinguished-sre.github.io/load-tester/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -192,9 +198,29 @@
     .who{width:84px;font-size:12px;}
     .needs .k{width:104px;}
   }
+  .jump{
+    position:fixed;right:18px;bottom:18px;z-index:50;
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--accent);color:#fff;text-decoration:none;
+    font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:500;
+    padding:11px 18px;border-radius:999px;border:none;
+    box-shadow:var(--shadow);
+    transition:opacity .25s ease,transform .25s ease;
+  }
+  .jump:hover{border-bottom:none;transform:translateY(-2px);}
+  .jump.hide{opacity:0;transform:translateY(12px);pointer-events:none;}
+
+  @media (max-width:520px){
+    body{font-size:17px;}
+    .hero{padding:60px 0 32px;}
+    .who{width:84px;font-size:12px;}
+    .needs .k{width:104px;}
+    .jump{right:14px;bottom:14px;font-size:13px;padding:10px 16px;}
+  }
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
     *{transition:none !important;}
+    .jump{transition:opacity .25s ease;}
   }
 </style>
 </head>
@@ -350,6 +376,8 @@
 
 </main>
 
+<a href="#start" class="jump" id="jump">↓ К промпту</a>
+
 <script>
   (function(){
     var btn = document.getElementById('copy');
@@ -373,6 +401,15 @@
       document.body.appendChild(ta); ta.select();
       try{ document.execCommand('copy'); done(); }catch(e){}
       document.body.removeChild(ta);
+    }
+
+    var jump = document.getElementById('jump');
+    var start = document.getElementById('start');
+    if (jump && start && 'IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        jump.classList.toggle('hide', entries[0].isIntersecting);
+      }, {rootMargin:'0px 0px -40% 0px'});
+      io.observe(start);
     }
   })();
 </script>
