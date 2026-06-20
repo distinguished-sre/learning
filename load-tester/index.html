@@ -19,6 +19,7 @@
 <script>
   (function(){
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(max-width: 700px)').matches) return;
     var root = document.documentElement;
     root.classList.add('anim');
     function reveal(){
@@ -33,7 +34,7 @@
         entries.forEach(function(en){
           if (en.isIntersecting){ en.target.classList.add('in'); obs.unobserve(en.target); }
         });
-      }, {rootMargin:'0px 0px -8% 0px', threshold:0.12});
+      }, {rootMargin:'0px 0px 25% 0px', threshold:0});
       targets.forEach(function(el){ io.observe(el); });
     }
     function safeReveal(){
