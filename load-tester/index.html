@@ -402,6 +402,7 @@
   /* svg animations — only when motion is allowed */
   @media (prefers-reduced-motion: no-preference){
     @keyframes fa-flow{to{stroke-dashoffset:-28;}}
+    @keyframes fa-flowR{to{stroke-dashoffset:-24;}}
     @keyframes fa-pulse{0%,100%{opacity:.45;}50%{opacity:1;}}
     @keyframes fa-loadbar{0%{transform:scaleX(.3);}60%{transform:scaleX(1);}100%{transform:scaleX(.3);}}
     @keyframes fa-draw{0%{stroke-dashoffset:240;}45%{stroke-dashoffset:0;}85%{stroke-dashoffset:0;}100%{stroke-dashoffset:240;}}
@@ -426,7 +427,7 @@
 
     /* fa-compare: 1 vs 10 */
     .fa-compare .c-arrow{stroke-dasharray:6 8;animation:fa-flow 1.5s linear infinite;}
-    .fa-compare .c-arrowR{stroke-dasharray:5 7;animation:fa-flow .7s linear infinite;}
+    .fa-compare .c-arrowR{stroke-dasharray:5 7;animation:fa-flowR .7s linear infinite;}
     .fa-compare .c-user{animation:fa-pulse 3s ease-in-out infinite;}
     .fa-compare .c-userR{animation:fa-pulse 1.2s ease-in-out infinite;}
     .fa-compare .c-userR:nth-of-type(2n){animation-delay:.3s;}
@@ -450,36 +451,42 @@
     .fa-grow .g-rise{stroke-dasharray:6 8;animation:fa-flow 1.1s linear infinite;}
 
   }
+  .langtoggle{position:fixed;left:14px;bottom:14px;z-index:40;font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:500;letter-spacing:.04em;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;box-shadow:var(--shadow);transition:transform .08s ease,opacity .2s;}
+  .langtoggle:hover{opacity:.85;}
+  .langtoggle:active{transform:translateY(1px);}
+  .os-hint{margin:0 0 14px;padding:10px 14px;background:var(--accent-soft);border-radius:10px;color:var(--ink);font-size:14.5px;}
+  .os-hint[hidden]{display:none;}
 </style>
 </head>
 <body>
 <div class="progress" id="progress"></div>
 <main class="wrap">
+  <button class="langtoggle" id="langToggle" type="button" aria-label="Switch language">EN</button>
 
   <header class="hero">
-    <p class="eyebrow">Ценная ниша · вход с нуля</p>
-    <h1>Автоматизация и нагрузочное тестирование — туда входят с нуля</h1>
-    <p class="lede">Две инженерные специализации, которые ценят и хорошо оплачивают: автоматизация тестов и нагрузка. Эта страница проведёт тебя от «я ничего не знаю про IT» до первого реального инженерного навыка.</p>
-    <p class="howto">Прочитай сверху вниз один раз — это займёт минут десять. В самом низу лежит <a href="#start">текст, с которого начнётся обучение</a>. Когда дочитаешь, скопируешь его и отправишь нейросети.</p>
+    <p class="eyebrow" data-en="A valuable niche · start from zero">Ценная ниша · вход с нуля</p>
+    <h1 data-en="Test automation and load testing — you start from zero">Автоматизация и нагрузочное тестирование — туда входят с нуля</h1>
+    <p class="lede" data-en="Two engineering tracks that are valued and well paid: test automation and load testing. This page takes you from “I know nothing about IT” to your first real engineering skill.">Две инженерные специализации, которые ценят и хорошо оплачивают: автоматизация тестов и нагрузка. Эта страница проведёт тебя от «я ничего не знаю про IT» до первого реального инженерного навыка.</p>
+    <p class="howto" id="howto">Прочитай сверху вниз один раз — это займёт минут десять. В самом низу лежит <a href="#start">текст, с которого начнётся обучение</a>. Когда дочитаешь, скопируешь его и отправишь нейросети.</p>
   </header>
 
   <section>
-    <p class="sec-eyebrow">01 · Профессия</p>
-    <h2>Что это за работа</h2>
-    <p>Ты идёшь в две инженерные специализации, которые держатся на коде и понимании систем: автоматизацию тестов и нагрузочное тестирование. Обе востребованы и хорошо оплачиваются, и в обе можно войти с нуля, если разобраться в коде.</p>
-    <p>Нагрузочное тестирование: ты создаёшь искусственный «наплыв» из тысяч пользователей и смотришь, где сайт начинает тормозить или ломаться. Любой сервис иногда падает, когда на него разом приходит много людей — старт продаж билетов, распродажа, запуск игры. Твоя работа — найти этот предел заранее.</p>
+    <p class="sec-eyebrow" data-en="01 · The job">01 · Профессия</p>
+    <h2 data-en="What this job is">Что это за работа</h2>
+    <p data-en="You’re entering two engineering tracks built on code and an understanding of systems: test automation and load testing. Both are in demand and well paid, and you can enter both from zero once you get comfortable with code.">Ты идёшь в две инженерные специализации, которые держатся на коде и понимании систем: автоматизацию тестов и нагрузочное тестирование. Обе востребованы и хорошо оплачиваются, и в обе можно войти с нуля, если разобраться в коде.</p>
+    <p data-en="Load testing: you create an artificial “flood” of thousands of users and watch where the site starts to slow down or break. Any service sometimes falls over when many people arrive at once — a ticket sale, a big discount, a game launch. Your job is to find that limit in advance.">Нагрузочное тестирование: ты создаёшь искусственный «наплыв» из тысяч пользователей и смотришь, где сайт начинает тормозить или ломаться. Любой сервис иногда падает, когда на него разом приходит много людей — старт продаж билетов, распродажа, запуск игры. Твоя работа — найти этот предел заранее.</p>
     <figure class="figure">
-      <svg class="fa-compare" viewBox="0 0 360 168" role="img" aria-label="Сравнение: один пользователь — сервер отвечает спокойно; десять пользователей разом — сервер напрягается и краснеет.">
+      <svg class="fa-compare" viewBox="0 0 360 168" role="img" data-en-aria="Comparison: one user — the server answers calmly; ten users at once — the server strains and turns red." aria-label="Сравнение: один пользователь — сервер отвечает спокойно; десять пользователей разом — сервер напрягается и краснеет.">
         <line class="c-divider" x1="180" y1="20" x2="180" y2="150"/>
-        <text class="c-title" x="86" y="22" text-anchor="middle">1 пользователь</text>
+        <text class="c-title" x="86" y="22" text-anchor="middle" data-en="1 user">1 пользователь</text>
         <circle class="c-user" cx="30" cy="90" r="6"/>
         <path class="c-arrow" d="M40 90 L92 90"/>
         <polygon class="c-head" points="100,90 91,85 91,95"/>
         <rect class="c-srv" x="104" y="68" width="52" height="46" rx="9"/>
         <rect class="c-bar-bg" x="114" y="102" width="32" height="6" rx="3"/>
         <rect class="c-bar-ok" x="114" y="102" width="11" height="6" rx="3"/>
-        <text class="c-sub" x="86" y="146" text-anchor="middle">обычный тест</text>
-        <text class="c-title" x="272" y="22" text-anchor="middle">10 пользователей</text>
+        <text class="c-sub" x="86" y="146" text-anchor="middle" data-en="single test">обычный тест</text>
+        <text class="c-title" x="272" y="22" text-anchor="middle" data-en="10 users">10 пользователей</text>
         <circle class="c-userR" cx="198" cy="56" r="5"/>
         <circle class="c-userR" cx="220" cy="48" r="5"/>
         <circle class="c-userR" cx="240" cy="60" r="5"/>
@@ -513,13 +520,13 @@
         <rect class="c-srv c-srv-load" x="300" y="68" width="52" height="46" rx="9"/>
         <rect class="c-bar-bg" x="310" y="102" width="32" height="6" rx="3"/>
         <rect class="c-bar-load" x="310" y="102" width="30" height="6" rx="3"/>
-        <text class="c-sub" x="272" y="146" text-anchor="middle">нагрузочный тест</text>
+        <text class="c-sub" x="272" y="146" text-anchor="middle" data-en="load test">нагрузочный тест</text>
       </svg>
-      <figcaption class="figcap">Один тест — один пользователь, сервер отвечает спокойно. Нагрузочный — десятки разом, и сервер начинает напрягаться.</figcaption>
+      <figcaption class="figcap" data-en="One test — one user, the server answers calmly. A load test — dozens at once, and the server starts to strain.">Один тест — один пользователь, сервер отвечает спокойно. Нагрузочный — десятки разом, и сервер начинает напрягаться.</figcaption>
     </figure>
-    <p>Результат ты формулируешь конкретно: «до такого-то количества держит, выше — вот здесь начинает тормозить». Один такой ответ экономит компании и деньги, и репутацию.</p>
+    <p data-en="You state the result concretely: “it holds up to this many, above that it starts slowing down right here.” One such answer saves a company both money and reputation.">Результат ты формулируешь конкретно: «до такого-то количества держит, выше — вот здесь начинает тормозить». Один такой ответ экономит компании и деньги, и репутацию.</p>
     <figure class="figure">
-      <svg class="fa-curve" viewBox="0 0 360 200" role="img" aria-label="График: пока пользователей немного, время ответа низкое и стабильное; после узкого места оно резко растёт.">
+      <svg class="fa-curve" viewBox="0 0 360 200" role="img" data-en-aria="Chart: while there are few users, response time is low and stable; after the bottleneck it rises sharply." aria-label="График: пока пользователей немного, время ответа низкое и стабильное; после узкого места оно резко растёт.">
         <line class="fig-axis" x1="46" y1="24" x2="46" y2="170"/>
         <polygon class="fig-head" points="46,18 41,27 51,27"/>
         <line class="fig-axis" x1="46" y1="170" x2="340" y2="170"/>
@@ -528,24 +535,24 @@
         <path class="fig-hold" d="M54 150 L200 148"/>
         <path class="fig-fail" d="M200 148 C 244 146 270 104 322 42"/>
         <circle class="fig-kneedot" cx="200" cy="148" r="4"/>
-        <text class="fig-tx" x="200" y="36" text-anchor="middle">узкое место</text>
-        <text class="fig-hold-tx" x="118" y="140" text-anchor="middle">держит</text>
-        <text class="fig-fail-tx" x="276" y="92" text-anchor="middle">тормозит</text>
-        <text class="fig-tx" x="20" y="98" text-anchor="middle" transform="rotate(-90 20 98)">Время ответа</text>
-        <text class="fig-tx" x="210" y="190" text-anchor="middle">Пользователей →</text>
+        <text class="fig-tx" x="200" y="36" text-anchor="middle" data-en="bottleneck">узкое место</text>
+        <text class="fig-hold-tx" x="118" y="140" text-anchor="middle" data-en="holds">держит</text>
+        <text class="fig-fail-tx" x="276" y="92" text-anchor="middle" data-en="slows down">тормозит</text>
+        <text class="fig-tx" x="20" y="98" text-anchor="middle" transform="rotate(-90 20 98)" data-en="Response time">Время ответа</text>
+        <text class="fig-tx" x="210" y="190" text-anchor="middle" data-en="Users →">Пользователей →</text>
       </svg>
-      <figcaption class="figcap">До узкого места сайт держит и отвечает быстро. За ним резко тормозит. Найти эту точку заранее — и есть твоя работа.</figcaption>
+      <figcaption class="figcap" data-en="Before the bottleneck the site holds and answers fast. Past it, it slows sharply. Finding that point in advance is your job.">До узкого места сайт держит и отвечает быстро. За ним резко тормозит. Найти эту точку заранее — и есть твоя работа.</figcaption>
     </figure>
-    <p>Автоматизация тестов: ты пишешь код-робота, который сам прогоняет проверки после каждого изменения — быстро, без устали, сотни раз, и ловит поломку в ту же минуту, как её внесли. Один раз написал — дальше работу делает написанный тобой код.</p>
+    <p data-en="Test automation: you write a robot-in-code that runs the checks itself after every change — fast, tireless, hundreds of times, catching a breakage the same minute it’s introduced. Write it once, and from then on the code you wrote does the work.">Автоматизация тестов: ты пишешь код-робота, который сам прогоняет проверки после каждого изменения — быстро, без устали, сотни раз, и ловит поломку в ту же минуту, как её внесли. Один раз написал — дальше работу делает написанный тобой код.</p>
     <figure class="figure">
-      <svg class="fa-auto" viewBox="0 0 360 170" role="img" aria-label="Схема: правка на сайте запускает робота-автотесты, который прогоняет проверки и сразу сообщает — работает или сломалось.">
+      <svg class="fa-auto" viewBox="0 0 360 170" role="img" data-en-aria="Diagram: a change on the site triggers the autotest robot, which runs the checks and reports right away — working or broken." aria-label="Схема: правка на сайте запускает робота-автотесты, который прогоняет проверки и сразу сообщает — работает или сломалось.">
         <rect class="fig-server" x="8" y="56" width="80" height="56" rx="10"/>
-        <text class="fig-server-tx" x="48" y="80" text-anchor="middle">Сайт</text>
-        <text class="fig-server-tx" x="48" y="98" text-anchor="middle">изменили</text>
+        <text class="fig-server-tx" x="48" y="80" text-anchor="middle" data-en="Site">Сайт</text>
+        <text class="fig-server-tx" x="48" y="98" text-anchor="middle" data-en="changed">изменили</text>
         <path class="fig-arrow" d="M92 84 L128 84"/>
         <polygon class="fig-arrowhead" points="136,84 127,79 127,89"/>
         <rect class="fig-server" x="136" y="48" width="98" height="72" rx="12"/>
-        <text class="fig-server-tx" x="185" y="74" text-anchor="middle">Автотесты</text>
+        <text class="fig-server-tx" x="185" y="74" text-anchor="middle" data-en="Autotests">Автотесты</text>
         <path class="fig-hold" d="M160 96 l3 4 l6 -8"/>
         <path class="fig-hold" d="M181 96 l3 4 l6 -8"/>
         <path class="fig-hold" d="M202 96 l3 4 l6 -8"/>
@@ -554,26 +561,26 @@
         <path class="fig-arrow" d="M234 84 L276 100"/>
         <polygon class="fig-arrowhead" points="284,103 276,96 275,104"/>
         <path class="fig-hold" d="M289 64 l3 4 l6 -9"/>
-        <text class="fig-hold-tx" x="304" y="69" text-anchor="start">работает</text>
+        <text class="fig-hold-tx" x="304" y="69" text-anchor="start" data-en="works">работает</text>
         <path class="fig-fail" d="M289 98 l9 9"/>
         <path class="fig-fail" d="M298 98 l-9 9"/>
-        <text class="fig-fail-tx" x="304" y="107" text-anchor="start">поломка</text>
+        <text class="fig-fail-tx" x="304" y="107" text-anchor="start" data-en="broken">поломка</text>
       </svg>
-      <figcaption class="figcap">Робот-автотесты сам прогоняет проверки на каждое изменение и сразу говорит: работает или сломалось.</figcaption>
+      <figcaption class="figcap" data-en="The autotest robot runs the checks on every change and tells you right away: working or broken.">Робот-автотесты сам прогоняет проверки на каждое изменение и сразу говорит: работает или сломалось.</figcaption>
     </figure>
-    <p>Как это выглядит: сайт правят по нескольку раз в день. Каждый раз твой робот прогоняет десятки проверок — формы, кнопки, ответы сервера — и если что-то сломалось, сообщает сразу, ещё до того, как баг увидят живые пользователи. Руками это заняло бы часы, робот делает за секунды.</p>
+    <p data-en="How it looks: a site gets edited several times a day. Each time your robot runs dozens of checks — forms, buttons, server responses — and if something broke, it reports immediately, before real users see the bug. By hand this would take hours; the robot does it in seconds.">Как это выглядит: сайт правят по нескольку раз в день. Каждый раз твой робот прогоняет десятки проверок — формы, кнопки, ответы сервера — и если что-то сломалось, сообщает сразу, ещё до того, как баг увидят живые пользователи. Руками это заняло бы часы, робот делает за секунды.</p>
   </section>
 
   <section>
-    <p class="sec-eyebrow">02 · Почему</p>
-    <h2>Почему стоит идти именно сюда</h2>
-    <p>Эти специализации держатся на коде и понимании систем — навыке, который осваивается дольше и потому ценится выше. Инженеров, которые умеют писать автотесты и грамотно нагружать систему, на рынке не хватает: их ищут дольше и платят больше. Ты осваиваешь именно этот навык.</p>
-    <p>Это не исчезнет. Пока в мире есть сайты и приложения, кто-то должен проверять, что они работают и держат нагрузку — и делать это автоматически. Инструменты со временем меняются, появляются новые, а сама суть остаётся. То, чему ты научишься, не устареет за пару лет.</p>
-    <p>Есть куда расти: из автоматизатора и нагрузочника дорога ведёт дальше — в более сложные и доходные роли вроде SDET, performance-инженера, а оттуда к инженерии надёжности. Работать часто можно удалённо.</p>
-    <p>Про деньги честно. Доход здесь выше среднего по рынку и растёт с опытом, но точные цифры быстро устаревают. Зайди сам на любой сайт вакансий, набери «автоматизатор тестирования», «AQA», «нагрузочное тестирование», «performance» — увидишь актуальную картину по своему городу лучше любого гайда.</p>
-    <p>И честно о трудном: путь через код требует усилий, а первая работа — самый трудный шаг. Решает не талант, а настойчивость и портфолио: репозиторий с твоими автотестами и нагрузочными сценариями. Кто доходит до конца и собирает такие примеры — тот находит работу. Дальше становится легче.</p>
+    <p class="sec-eyebrow" data-en="02 · Why">02 · Почему</p>
+    <h2 data-en="Why this is worth it">Почему стоит идти именно сюда</h2>
+    <p data-en="These tracks rest on code and an understanding of systems — a skill that takes longer to learn and is therefore valued more highly. Engineers who can write autotests and load a system properly are in short supply: they’re hunted longer and paid more. This is exactly the skill you’re building.">Эти специализации держатся на коде и понимании систем — навыке, который осваивается дольше и потому ценится выше. Инженеров, которые умеют писать автотесты и грамотно нагружать систему, на рынке не хватает: их ищут дольше и платят больше. Ты осваиваешь именно этот навык.</p>
+    <p data-en="It won’t disappear. As long as there are sites and apps, someone has to check that they work and hold up under load — and do it automatically. Tools change over time and new ones appear, but the essence stays. What you learn won’t go stale in a couple of years.">Это не исчезнет. Пока в мире есть сайты и приложения, кто-то должен проверять, что они работают и держат нагрузку — и делать это автоматически. Инструменты со временем меняются, появляются новые, а сама суть остаётся. То, чему ты научишься, не устареет за пару лет.</p>
+    <p data-en="There’s room to grow: from automation and load engineering the road leads further — into harder, better-paid roles like SDET or performance engineer, and from there to reliability engineering. Often you can work remotely.">Есть куда расти: из автоматизатора и нагрузочника дорога ведёт дальше — в более сложные и доходные роли вроде SDET, performance-инженера, а оттуда к инженерии надёжности. Работать часто можно удалённо.</p>
+    <p data-en="Honest about money. Pay here is above the market average and grows with experience, but exact numbers go stale fast. Go to any job board yourself and type “test automation”, “AQA”, “load testing”, “performance” — you’ll see the current picture for your city better than any guide.">Про деньги честно. Доход здесь выше среднего по рынку и растёт с опытом, но точные цифры быстро устаревают. Зайди сам на любой сайт вакансий, набери «автоматизатор тестирования», «AQA», «нагрузочное тестирование», «performance» — увидишь актуальную картину по своему городу лучше любого гайда.</p>
+    <p data-en="And honest about the hard part: the code path takes effort, and the first job is the hardest step. It’s not talent that decides but persistence and a portfolio: a repository with your autotests and load scenarios. Those who reach the end and collect such examples are the ones who get hired. After that it gets easier.">И честно о трудном: путь через код требует усилий, а первая работа — самый трудный шаг. Решает не талант, а настойчивость и портфолио: репозиторий с твоими автотестами и нагрузочными сценариями. Кто доходит до конца и собирает такие примеры — тот находит работу. Дальше становится легче.</p>
     <figure class="figure">
-      <svg class="fa-grow" viewBox="0 0 360 178" role="img" aria-label="Лестница навыков с подписями и восходящей стрелкой: чем выше навык, тем дороже он ценится.">
+      <svg class="fa-grow" viewBox="0 0 360 178" role="img" data-en-aria="A ladder of skills with labels and a rising arrow: the higher the skill, the more it’s valued." aria-label="Лестница навыков с подписями и восходящей стрелкой: чем выше навык, тем дороже он ценится.">
         <line class="fig-axis" x1="40" y1="128" x2="332" y2="128"/>
         <rect class="g-bar" x="50" y="104" width="40" height="24" rx="4"/>
         <rect class="g-bar" x="130" y="80" width="40" height="48" rx="4"/>
@@ -581,129 +588,130 @@
         <rect class="g-bar" x="290" y="28" width="40" height="100" rx="4"/>
         <path class="g-rise" d="M54 116 C 134 104 224 64 318 28"/>
         <polygon class="g-head" points="325,22 309,27 319,38"/>
-        <text class="g-lbl" x="70" y="146" text-anchor="middle">ручное</text>
-        <text class="g-lbl" x="150" y="146" text-anchor="middle">автотесты</text>
-        <text class="g-lbl" x="230" y="146" text-anchor="middle">нагрузка</text>
+        <text class="g-lbl" x="70" y="146" text-anchor="middle" data-en="manual">ручное</text>
+        <text class="g-lbl" x="150" y="146" text-anchor="middle" data-en="autotests">автотесты</text>
+        <text class="g-lbl" x="230" y="146" text-anchor="middle" data-en="load">нагрузка</text>
         <text class="g-lbl" x="310" y="146" text-anchor="middle">CI/CD</text>
       </svg>
-      <figcaption class="figcap">Чем выше навык — ручное, автотесты, нагрузка, CI/CD — тем дороже он ценится.</figcaption>
+      <figcaption class="figcap" data-en="The higher the skill — manual, autotests, load, CI/CD — the more it’s valued.">Чем выше навык — ручное, автотесты, нагрузка, CI/CD — тем дороже он ценится.</figcaption>
     </figure>
   </section>
 
-  <blockquote class="pull">Путь длинный, но каждый шаг — это уже работающий навык, который останется с тобой.</blockquote>
+  <blockquote class="pull" data-en="The path is long, but every step is already a working skill that stays with you.">Путь длинный, но каждый шаг — это уже работающий навык, который останется с тобой.</blockquote>
 
   <section>
-    <p class="sec-eyebrow">03 · Путь</p>
-    <h2>Твой путь</h2>
-    <p class="muted">Восемь этапов от основ до готовности к собеседованию. Тонкая база — и быстро в код. На каждом — практика на твоём ноутбуке, а не теория из учебника.</p>
+    <p class="sec-eyebrow" data-en="03 · Path">03 · Путь</p>
+    <h2 data-en="Your path">Твой путь</h2>
+    <p class="muted" data-en="Eight stages from the basics to interview-ready. A thin foundation — then quickly into code. Each one is practice on your laptop, not theory from a textbook.">Восемь этапов от основ до готовности к собеседованию. Тонкая база — и быстро в код. На каждом — практика на твоём ноутбуке, а не теория из учебника.</p>
     <div class="track">
       <div class="stop">
         <div class="dot">0</div>
-        <h3>Освоиться</h3>
-        <p>Как устроен компьютер «изнутри», команды в терминале, как сайт общается с сервером, что такое API. Фундамент — без него дальше никак.</p>
+        <h3 data-en="Get comfortable">Освоиться</h3>
+        <p data-en="How a computer works “inside”, terminal commands, how a site talks to a server, what an API is. The foundation — nothing works further without it.">Как устроен компьютер «изнутри», команды в терминале, как сайт общается с сервером, что такое API. Фундамент — без него дальше никак.</p>
       </div>
       <div class="stop">
         <div class="dot">1</div>
-        <h3>Понять, что и как тестируют</h3>
-        <p>Что значит «проверить», что такое баг и статус-коды, как проверить API руками. Тонкий слой основ — ровно чтобы понимать, что ты дальше будешь автоматизировать.</p>
+        <h3 data-en="Understand what’s tested and how">Понять, что и как тестируют</h3>
+        <p data-en="What “checking” means, what a bug and status codes are, how to check an API by hand. A thin layer of basics — just enough to understand what you’ll automate next.">Что значит «проверить», что такое баг и статус-коды, как проверить API руками. Тонкий слой основ — ровно чтобы понимать, что ты дальше будешь автоматизировать.</p>
       </div>
       <div class="stop">
         <div class="dot">2</div>
-        <h3>Автотесты API</h3>
-        <p>Написать код, который сам проверяет API вместо тебя, и запустить его. Здесь начинается твоя инженерная работа — и первые проекты в портфолио.</p>
+        <h3 data-en="API autotests">Автотесты API</h3>
+        <p data-en="Write code that checks the API for you, and run it. This is where your engineering work begins — and your first portfolio projects.">Написать код, который сам проверяет API вместо тебя, и запустить его. Здесь начинается твоя инженерная работа — и первые проекты в портфолио.</p>
       </div>
       <div class="stop">
         <div class="dot">3</div>
-        <h3>Автотесты интерфейса и фреймворк</h3>
-        <p>Автоматизировать проверки самого сайта — клики, формы, переходы — и собрать тесты в аккуратную структуру, чтобы их было легко добавлять и запускать.</p>
+        <h3 data-en="UI autotests and a framework">Автотесты интерфейса и фреймворк</h3>
+        <p data-en="Automate checks of the site itself — clicks, forms, navigation — and organize the tests into a tidy structure that’s easy to add to and run.">Автоматизировать проверки самого сайта — клики, формы, переходы — и собрать тесты в аккуратную структуру, чтобы их было легко добавлять и запускать.</p>
       </div>
       <div class="stop">
         <div class="dot">4</div>
-        <h3>Понять, что измерять</h3>
-        <p>Скорость ответа, сколько запросов система держит, сколько падает. Это язык, на котором говорит вся нагрузка.</p>
+        <h3 data-en="Understand what to measure">Понять, что измерять</h3>
+        <p data-en="Response time, how many requests the system holds, how many fail. This is the language all load testing speaks.">Скорость ответа, сколько запросов система держит, сколько падает. Это язык, на котором говорит вся нагрузка.</p>
       </div>
       <div class="stop">
         <div class="dot">5</div>
-        <h3>Нагрузочный тест</h3>
-        <p>Поднять учебное приложение, «нагрузить» его, прочитать результат; разные сценарии и профили, поиск узкого места — точки, где система ломается первой.</p>
+        <h3 data-en="A load test">Нагрузочный тест</h3>
+        <p data-en="Spin up a practice app, “load” it, read the result; different scenarios and profiles, finding the bottleneck — the point where the system breaks first.">Поднять учебное приложение, «нагрузить» его, прочитать результат; разные сценарии и профили, поиск узкого места — точки, где система ломается первой.</p>
       </div>
       <div class="stop">
         <div class="dot">6</div>
-        <h3>Всё в CI/CD на GitHub</h3>
-        <p>И автотесты, и нагрузочные прогоны запускаются сами при каждом изменении кода. Просела скорость ниже порога или упал тест — проверка краснеет. Этот навык работодатели ценят особенно.</p>
+        <h3 data-en="Everything in CI/CD on GitHub">Всё в CI/CD на GitHub</h3>
+        <p data-en="Both autotests and load runs trigger automatically on every code change. Speed drops below the threshold or a test fails — the check turns red. Employers value this skill especially.">И автотесты, и нагрузочные прогоны запускаются сами при каждом изменении кода. Просела скорость ниже порога или упал тест — проверка краснеет. Этот навык работодатели ценят особенно.</p>
       </div>
       <div class="stop">
         <div class="dot">7</div>
-        <h3>Портфолио и рынок</h3>
-        <p>Собрать репозиторий с автотестами, нагрузочными сценариями и CI-пайплайном; показать второй инструмент. Это твой пропуск на собеседование на AQA и performance.</p>
+        <h3 data-en="Portfolio and the market">Портфолио и рынок</h3>
+        <p data-en="Build a repository with autotests, load scenarios and a CI pipeline; show the second tool. This is your ticket to an AQA and performance interview.">Собрать репозиторий с автотестами, нагрузочными сценариями и CI-пайплайном; показать второй инструмент. Это твой пропуск на собеседование на AQA и performance.</p>
       </div>
     </div>
   </section>
 
   <section>
-    <p class="sec-eyebrow">04 · Как учишься</p>
-    <h2>Как ты будешь учиться</h2>
-    <p>Учить тебя будет не человек, а нейросеть — твой личный преподаватель. Она ведёт за руку, объясняет простыми словами, даёт маленькие задания и проверяет, что ты понял. Главный принцип всего обучения — понимание, а не зубрёжка. Каждый шаг заканчивается тем, что ты что-то реально сделал и увидел результат своими глазами.</p>
-    <p>На каждом этапе ты сделаешь не один, а несколько разных примеров — так навык закрепляется надёжнее. А начиная с автотестов эти примеры складываются в твоё портфолио: чем их больше и чем они разнообразнее, тем сильнее ты выглядишь на собеседовании.</p>
+    <p class="sec-eyebrow" data-en="04 · How you learn">04 · Как учишься</p>
+    <h2 data-en="How you’ll learn">Как ты будешь учиться</h2>
+    <p data-en="Your teacher won’t be a person but an AI — your personal tutor. It leads you by the hand, explains in plain words, gives small tasks and checks that you understood. The main principle of the whole course is understanding, not cramming. Every step ends with you actually having done something and seen the result with your own eyes.">Учить тебя будет не человек, а нейросеть — твой личный преподаватель. Она ведёт за руку, объясняет простыми словами, даёт маленькие задания и проверяет, что ты понял. Главный принцип всего обучения — понимание, а не зубрёжка. Каждый шаг заканчивается тем, что ты что-то реально сделал и увидел результат своими глазами.</p>
+    <p data-en="At each stage you’ll do not one but several different examples — that’s how the skill sticks more reliably. And from autotests on, these examples add up to your portfolio: the more of them and the more varied, the stronger you look at an interview.">На каждом этапе ты сделаешь не один, а несколько разных примеров — так навык закрепляется надёжнее. А начиная с автотестов эти примеры складываются в твоё портфолио: чем их больше и чем они разнообразнее, тем сильнее ты выглядишь на собеседовании.</p>
     <ul class="rules">
-      <li><strong>Не притворяйся, что понял.</strong><span>Непонятно — пиши прямо: «не понял, объясни проще». Преподаватель для этого и нужен, это не стыдно.</span></li>
-      <li><strong>Делай руками, а не читай глазами.</strong><span>Сказано ввести команду или запустить программу — введи и запусти у себя. Прочитать и кивнуть не считается, навык так не появится.</span></li>
-      <li><strong>Английский отдельно не учи.</strong><span>Все английские надписи на экране преподаватель переводит сам — так заложено в тексте. Несколько ходовых терминов запомнишь на узнавание, но зубрить язык отдельно не нужно.</span></li>
+      <li id="rule1"><strong>Не притворяйся, что понял.</strong><span>Непонятно — пиши прямо: «не понял, объясни проще». Преподаватель для этого и нужен, это не стыдно.</span></li>
+      <li id="rule2"><strong>Делай руками, а не читай глазами.</strong><span>Сказано ввести команду или запустить программу — введи и запусти у себя. Прочитать и кивнуть не считается, навык так не появится.</span></li>
+      <li id="rule3"><strong>Английский отдельно не учи.</strong><span>Все английские надписи на экране преподаватель переводит сам — так заложено в тексте. Несколько ходовых терминов запомнишь на узнавание, но зубрить язык отдельно не нужно.</span></li>
     </ul>
     <div class="callout">
-      <p class="label">Если застрял</p>
-      <p>Что-то не ставится, выдаёт ошибку, не запускается — это нормально, так у всех. Напиши преподавателю «застрял на этом шаге» и опиши, что на экране. Он разберёт по шагам. Если совсем тупик — напиши Евгению: <a href="https://vk.com/distinguished_sre" target="_blank" rel="noopener">ВКонтакте</a>, <a href="https://t.me/distinguished_sre" target="_blank" rel="noopener">Telegram</a> или <a href="https://www.linkedin.com/in/distinguished-sre/" target="_blank" rel="noopener">LinkedIn</a> (через VPN).</p>
+      <p class="label" data-en="If you’re stuck">Если застрял</p>
+      <p id="calloutP">Что-то не ставится, выдаёт ошибку, не запускается — это нормально, так у всех. Напиши преподавателю «застрял на этом шаге» и опиши, что на экране. Он разберёт по шагам. Если совсем тупик — напиши Евгению: <a href="https://vk.com/distinguished_sre" target="_blank" rel="noopener">ВКонтакте</a>, <a href="https://t.me/distinguished_sre" target="_blank" rel="noopener">Telegram</a> или <a href="https://www.linkedin.com/in/distinguished-sre/" target="_blank" rel="noopener">LinkedIn</a> (через VPN).</p>
     </div>
   </section>
 
   <section>
-    <p class="sec-eyebrow">05 · Урок</p>
-    <h2>Как выглядит один урок</h2>
-    <p>Не лекция на час, а короткий понятный обмен репликами. Примерно так:</p>
+    <p class="sec-eyebrow" data-en="05 · A lesson">05 · Урок</p>
+    <h2 data-en="What one lesson looks like">Как выглядит один урок</h2>
+    <p data-en="Not an hour-long lecture, but a short, clear exchange of messages. Roughly like this:">Не лекция на час, а короткий понятный обмен репликами. Примерно так:</p>
     <figure class="figure">
       <div class="chat-demo">
         <div class="chat">
-          <p class="chat-cap">Удачный ответ</p>
-          <div class="msg t">Открой «Терминал», введи команду и нажми Enter. Какое число появилось внизу?</div>
+          <p class="chat-cap" data-en="A good answer">Удачный ответ</p>
+          <div class="msg t" data-en="Open “Terminal”, type the command and press Enter. What number showed up at the bottom?">Открой «Терминал», введи команду и нажми Enter. Какое число появилось внизу?</div>
           <div class="msg u">200</div>
-          <div class="msg t">Отлично! 200 значит «сервер ответил, всё хорошо». Это число встретится сотни раз.</div>
+          <div class="msg t" data-en="Great! 200 means “the server answered, all good.” You’ll meet this number hundreds of times.">Отлично! 200 значит «сервер ответил, всё хорошо». Это число встретится сотни раз.</div>
         </div>
       </div>
     </figure>
-    <p class="muted mt18">А чуть позже, когда дойдёшь до автотестов, урок выглядит так:</p>
+    <p class="muted mt18" data-en="And a bit later, when you reach autotests, a lesson looks like this:">А чуть позже, когда дойдёшь до автотестов, урок выглядит так:</p>
     <figure class="figure">
       <div class="chat-demo">
         <div class="chat">
-          <p class="chat-cap">Разбор ошибки</p>
-          <div class="msg t">Запусти свой первый автотест и пришли последнюю строку.</div>
+          <p class="chat-cap" data-en="Working through an error">Разбор ошибки</p>
+          <div class="msg t" data-en="Run your first autotest and send me the last line.">Запусти свой первый автотест и пришли последнюю строку.</div>
           <div class="msg u">1 failed</div>
-          <div class="msg t">Ничего страшного, так и учатся. Покажи строку с ошибкой — разберём вместе.</div>
+          <div class="msg t" data-en="No big deal, that’s how people learn. Show me the error line — we’ll work through it together.">Ничего страшного, так и учатся. Покажи строку с ошибкой — разберём вместе.</div>
         </div>
       </div>
     </figure>
-    <p class="muted mt18">Маленький шаг, понятный результат, проверка. И так до тех пор, пока навык не станет твоим.</p>
+    <p class="muted mt18" data-en="A small step, a clear result, a check. And so on until the skill becomes yours.">Маленький шаг, понятный результат, проверка. И так до тех пор, пока навык не станет твоим.</p>
   </section>
 
   <section>
-    <p class="sec-eyebrow">06 · Что нужно</p>
-    <h2>Что понадобится</h2>
+    <p class="sec-eyebrow" data-en="06 · What you need">06 · Что нужно</p>
+    <h2 data-en="What you’ll need">Что понадобится</h2>
     <ul class="needs">
-      <li><span class="k">Ноутбук</span><span class="v">У тебя уже есть. Его мощности хватает с большим запасом.</span></li>
-      <li><span class="k">Интернет</span><span class="v">Тоже есть. Больше ничего покупать не нужно — все программы по ходу обучения бесплатные.</span></li>
-      <li><span class="k">Нейросеть</span><span class="v">Настоятельно используй <a href="https://chatgpt.com" target="_blank" rel="noopener">ChatGPT</a> — он лучше всего подходит для учёбы (нужен VPN). Только если доступа к нему нет — бери <a href="https://chat.deepseek.com" target="_blank" rel="noopener">DeepSeek</a>: он работает из России без VPN. Открой и начинай.</span></li>
-      <li><span class="k">Время</span><span class="v">Час-два примерно раз в три дня. Между занятиями ты почти ничего не делаешь — это нормально, преподаватель в начале каждой сессии повторит прошлое. Важнее не длина, а регулярность.</span></li>
+      <li><span class="k" data-en="Laptop">Ноутбук</span><span class="v" data-en="You already have one. It’s powerful enough with plenty to spare.">У тебя уже есть. Его мощности хватает с большим запасом.</span></li>
+      <li><span class="k" data-en="Internet">Интернет</span><span class="v" data-en="Also covered. Nothing else to buy — every program along the way is free.">Тоже есть. Больше ничего покупать не нужно — все программы по ходу обучения бесплатные.</span></li>
+      <li><span class="k" data-en="AI">Нейросеть</span><span class="v" id="nnV">Настоятельно используй <a href="https://chatgpt.com" target="_blank" rel="noopener">ChatGPT</a> — он лучше всего подходит для учёбы (нужен VPN). Только если доступа к нему нет — бери <a href="https://chat.deepseek.com" target="_blank" rel="noopener">DeepSeek</a>: он работает из России без VPN. Открой и начинай.</span></li>
+      <li><span class="k" data-en="Time">Время</span><span class="v" data-en="An hour or two roughly every three days. Between sessions you do almost nothing — that’s fine, the teacher recaps last time at the start of each one. Regularity matters more than length.">Час-два примерно раз в три дня. Между занятиями ты почти ничего не делаешь — это нормально, преподаватель в начале каждой сессии повторит прошлое. Важнее не длина, а регулярность.</span></li>
     </ul>
   </section>
 
   <section id="start">
-    <p class="sec-eyebrow">07 · Старт</p>
-    <h2>С чего начать прямо сейчас</h2>
-    <p>Скопируй текст ниже целиком кнопкой «Скопировать», вставь в нейросеть и отправь. Заранее ничего вписывать не нужно: преподаватель сам задаст тебе несколько вопросов — про твой компьютер, сколько у тебя времени, есть ли опыт и какой путь тебе ближе (Python + Locust или JavaScript + k6, он поможет определиться) — и только потом начнёт первый урок.</p>
+    <p class="sec-eyebrow" data-en="07 · Start">07 · Старт</p>
+    <h2 data-en="How to start right now">С чего начать прямо сейчас</h2>
+    <p data-en="Copy the whole text below with the “Copy” button, paste it into the AI and send. You don’t need to fill anything in beforehand: the teacher will ask you a few questions — about your computer, how much time you have, whether you have experience and which path suits you (Python + Locust or JavaScript + k6, it’ll help you decide) — and only then start the first lesson.">Скопируй текст ниже целиком кнопкой «Скопировать», вставь в нейросеть и отправь. Заранее ничего вписывать не нужно: преподаватель сам задаст тебе несколько вопросов — про твой компьютер, сколько у тебя времени, есть ли опыт и какой путь тебе ближе (Python + Locust или JavaScript + k6, он поможет определиться) — и только потом начнёт первый урок.</p>
 
+    <p class="os-hint" id="osHint" hidden></p>
     <div class="promptwrap">
       <div class="promptbar">
-        <span class="t">📈 Текст для нейросети</span>
-        <button class="copybtn" id="copy" type="button">Скопировать</button>
+        <span class="t" data-en="📈 Text for the AI">📈 Текст для нейросети</span>
+        <button class="copybtn" id="copy" type="button" data-en="Copy">Скопировать</button>
       </div>
       <pre id="prompt">Ты — мой персональный преподаватель. Я вне IT и хочу освоить профессию инженера по автоматизации тестов и нагрузочному тестированию (test automation / AQA + performance/load). Путь code-first: код, автотесты, нагрузка, CI. Веди меня с абсолютного нуля.
 
@@ -748,9 +756,9 @@
   </section>
 
   <footer>
-    <p class="foot-tag">📈 Гайд для входа в автоматизацию тестов и нагрузочное тестирование с нуля.</p>
+    <p class="foot-tag" data-en="📈 A guide to entering test automation and load testing from zero.">📈 Гайд для входа в автоматизацию тестов и нагрузочное тестирование с нуля.</p>
     <p class="foot-links">
-      <a href="https://vk.com/distinguished_sre" target="_blank" rel="noopener">ВКонтакте</a>
+      <a href="https://vk.com/distinguished_sre" target="_blank" rel="noopener" data-en="VK">ВКонтакте</a>
       <a href="https://t.me/distinguished_sre" target="_blank" rel="noopener">Telegram</a>
       <a href="https://www.linkedin.com/in/distinguished-sre/" target="_blank" rel="noopener">LinkedIn</a>
     </p>
@@ -758,8 +766,118 @@
 
 </main>
 
-<a href="#start" class="jump" id="jump">↓ К тексту</a>
+<a href="#start" class="jump" id="jump" data-en="↓ To the text">↓ К тексту</a>
 
+<script>
+(function(){
+  var EN_HTML = {
+    howto: 'Read it top to bottom once — about ten minutes. At the very bottom is the <a href="#start">text your learning starts with</a>. When you finish, you\u2019ll copy it and send it to the AI.',
+    rule1: '<strong>Don\u2019t pretend you understood.</strong><span>Not clear \u2014 say so directly: \u201cdidn\u2019t get it, explain it simpler.\u201d That\u2019s what the teacher is for; it\u2019s nothing to be ashamed of.</span>',
+    rule2: '<strong>Do it with your hands, don\u2019t just read.</strong><span>Told to type a command or run a program \u2014 type and run it yourself. Reading and nodding doesn\u2019t count; the skill won\u2019t appear that way.</span>',
+    rule3: '<strong>Don\u2019t study English separately.</strong><span>The teacher translates every English line on screen itself \u2014 that\u2019s built into the text. You\u2019ll remember a few common terms by sight, but you don\u2019t need to cram the language separately.</span>',
+    calloutP: 'Something won\u2019t install, throws an error, won\u2019t run \u2014 that\u2019s normal, it happens to everyone. Tell the teacher \u201cstuck on this step\u201d and describe what\u2019s on screen. It will walk you through it. If you\u2019re completely stuck \u2014 message Evgeny: <a href="https://vk.com/distinguished_sre" target="_blank" rel="noopener">VK</a>, <a href="https://t.me/distinguished_sre" target="_blank" rel="noopener">Telegram</a> or <a href="https://www.linkedin.com/in/distinguished-sre/" target="_blank" rel="noopener">LinkedIn</a>.',
+    nnV: 'Strongly use <a href="https://chatgpt.com" target="_blank" rel="noopener">ChatGPT</a> \u2014 it fits learning best. Only if you don\u2019t have access to it, use <a href="https://chat.deepseek.com" target="_blank" rel="noopener">DeepSeek</a>. Open one and start.'
+  };
+  var OS_HINT = {
+    mac:   { ru: '\u041f\u043e\u0445\u043e\u0436\u0435, \u0443 \u0442\u0435\u0431\u044f macOS. \u00ab\u0422\u0435\u0440\u043c\u0438\u043d\u0430\u043b\u00bb \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442\u0441\u044f \u0447\u0435\u0440\u0435\u0437 Spotlight: \u043d\u0430\u0436\u043c\u0438 Cmd+Space, \u043d\u0430\u0431\u0435\u0440\u0438 \u00abTerminal\u00bb \u0438 Enter.',
+             en: 'Looks like you\u2019re on macOS. Open \u201cTerminal\u201d via Spotlight: press Cmd+Space, type \u201cTerminal\u201d and hit Enter.' },
+    win:   { ru: '\u041f\u043e\u0445\u043e\u0436\u0435, \u0443 \u0442\u0435\u0431\u044f Windows. \u041e\u0442\u043a\u0440\u043e\u0439 \u00ab\u0422\u0435\u0440\u043c\u0438\u043d\u0430\u043b\u00bb \u0438\u043b\u0438 PowerShell: \u043d\u0430\u0436\u043c\u0438 Win, \u043d\u0430\u0431\u0435\u0440\u0438 \u00abPowerShell\u00bb \u0438 Enter.',
+             en: 'Looks like you\u2019re on Windows. Open \u201cTerminal\u201d or PowerShell: press Win, type \u201cPowerShell\u201d and hit Enter.' },
+    linux: { ru: '\u041f\u043e\u0445\u043e\u0436\u0435, \u0443 \u0442\u0435\u0431\u044f Linux. \u00ab\u0422\u0435\u0440\u043c\u0438\u043d\u0430\u043b\u00bb \u043e\u0431\u044b\u0447\u043d\u043e \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442\u0441\u044f \u0441\u043e\u0447\u0435\u0442\u0430\u043d\u0438\u0435\u043c Ctrl+Alt+T.',
+             en: 'Looks like you\u2019re on Linux. \u201cTerminal\u201d usually opens with Ctrl+Alt+T.' }
+  };
+  var titleEn = '\ud83d\udcc8 Test automation and load testing \u2014 a guide to entering IT from zero';
+  var metaEn  = 'A beginner\u2019s guide to entering IT through test automation and load testing \u2014 step by step from zero, with an AI tutor and a ready prompt.';
+  var EN_PROMPT = `You are my personal teacher. I\u2019m outside IT and want to learn the profession of a test automation and load/performance testing engineer (test automation / AQA + performance/load). The path is code-first: code, autotests, load, CI. Lead me from absolute zero.
+
+First, a quick intro \u2014 before any lesson:
+Before we start, ask me, in one short block, a few questions to tailor the course to me:
+- which operating system I use (Windows, macOS or Linux);
+- what my computer is like: how much RAM and disk space, how powerful it is;
+- how much time I can give and how often I can study;
+- my level of English;
+- whether I\u2019ve ever written code, any IT experience at all;
+- which path suits me \u2014 \u201cPython + Locust\u201d or \u201cJavaScript + k6\u201d. Explain the difference in plain words and help me choose if I\u2019m unsure. We go through every stage with the chosen stack \u2014 both autotests and load.
+For any of these: if I answer \u201cI don\u2019t know\u201d or I\u2019m unsure \u2014 don\u2019t skip it, but explain in plain words how to find out (where to click, where to look; computer specs \u2014 step by step for my OS once it\u2019s known), and help me find the answer. Ask in order, starting with the OS, so you can explain things for it. Avoid English and technical words in these hints, or explain them right away.
+Wait for my answers, and only then start the first lesson. From there, tailor everything to my answers: the language and depth of explanations, how much to translate, the size of steps, the frequency of recaps.
+
+How you must run the teaching:
+1. All communication is in English.
+2. Adapt to my level. Keep explanations as simple as my experience needs; introduce new terms gently and keep a short running glossary of new ones (latency, throughput, threshold, request, response, error rate, etc.). Don\u2019t assume I\u2019ll understand a screen on my own until you\u2019ve checked.
+3. Practice before theory. Only as much theory as the current step needs.
+4. One session = one small step + one tangible result: a command run, a working script, a number that appeared, a screenshot. We don\u2019t close a session without a result.
+5. At each step, explain what\u2019s happening: what we\u2019re doing, why, and what the thing I see on screen means. Everyday analogies; jargon only with a plain explanation.
+6. After each step and each task, check what I got and what I understood: ask follow-up questions, ask me to show the result or retell it in my own words. Until I\u2019ve confirmed both success and understanding \u2014 we don\u2019t move on; we work out what went wrong.
+7. If I take breaks between sessions, at the start of each one ask 3 short questions about the previous one; if I can\u2019t answer, we repeat it.
+8. If something didn\u2019t run \u2014 we work through it step by step, no \u201cit should work.\u201d Ask exactly what\u2019s on screen and lead me to a working result.
+9. Everything free. Exact install commands for my OS, current stable versions. Early stages \u2014 locally on my computer; later GitHub is added for the repository and CI.
+10. At the end of a session: what\u2019s learned, what to review in 5\u201310 minutes, where we\u2019ll start next time.
+11. Don\u2019t dump the whole plan at once \u2014 show only the nearest steps.
+12. At each stage \u2014 at least 2-3 different examples or variants, not one: for understanding and breadth. From stage 2 on they should differ in substance (different goals: an HTML page, a JSON API, a form with login; different kinds of autotests; different load profiles) and accumulate as separate artifacts in a portfolio repository with a short conclusion for each. On stages 0-1 several examples are just practice and don\u2019t go into the portfolio.
+13. Every external resource you suggest (URLs for curl, test and demo APIs, practice apps, package registries, repo hosting, documentation, any services) must be free and openly accessible. Prefer well-known, reliable sources; if there\u2019s no good free option, say so directly and offer an available replacement rather than silently handing me something that won\u2019t work.
+
+Route (a reference for you; reveal it to me gradually):
+- Stage 0. Basics: terminal and commands, files/folders, client-server, HTTP, request/response, status codes, what an API is. Tools: terminal, curl, Postman.
+- Stage 1. A thin testing foundation: test case, bug, checking an API by hand in Postman, reading a response. Just enough to understand what we\u2019ll automate next.
+- Stage 2. API autotests: write API autotests in the language of my path (Python \u2014 pytest; JavaScript \u2014 e.g. Jest or Playwright), run them, read the report. Several different autotests as the first portfolio artifacts.
+- Stage 3. UI autotests and framework structure: automate checks of the site itself in the language of my path (UI/E2E \u2014 clicks, forms, navigation; Python \u2014 Playwright or Selenium with pytest, JavaScript \u2014 Playwright); organize tests into a tidy structure (fixtures, shared functions, config) so they\u2019re easy to add and maintain. Several different checks in the portfolio.
+- Stage 4. Performance metrics in plain words and in numbers: latency, throughput, p95/p99 percentiles, error rate under load.
+- Stage 5. Load testing: spin up a simple app locally via Docker; write scenarios in the load tool of my path (Locust for Python, k6 for JavaScript), run them; different goals and load profiles (ramp-up, stages, spike), thresholds, finding the bottleneck.
+- Stage 6. Everything in CI/CD on GitHub Actions: both autotests (API and UI) and load runs trigger automatically on every push; thresholds as a gate \u2014 the build fails on a regression or a failed test. Honestly: load in CI is light, smoke-level, against a service spun up right there in the workflow; heavy runs stay local and aren\u2019t done from GitHub runners.
+- Stage 7. Portfolio and the market: for breadth, show the load tool of the other path (k6 or Locust \u2014 whichever isn\u2019t mine) and compare briefly; build a repository with autotests, load scenarios, a CI pipeline and a README with conclusions; help me frame my positioning for AQA/automation and performance roles.
+
+We start with the intro: ask me the questions above and wait for my answers before moving on to Stage 0.`;
+
+  var titleRu = document.title;
+  var metaDesc = document.querySelector('meta[name="description"]');
+  var metaRu = metaDesc ? metaDesc.getAttribute('content') : '';
+  var simple = [].slice.call(document.querySelectorAll('[data-en]'));
+  simple.forEach(function(el){ el.setAttribute('data-ru', el.textContent); });
+  var ariaEls = [].slice.call(document.querySelectorAll('[data-en-aria]'));
+  ariaEls.forEach(function(el){ el.setAttribute('data-ru-aria', el.getAttribute('aria-label') || ''); });
+  var htmlEls = {};
+  Object.keys(EN_HTML).forEach(function(id){ var el = document.getElementById(id); if (el) htmlEls[id] = { el: el, ru: el.innerHTML }; });
+  var promptEl = document.getElementById('prompt');
+  var promptRu = promptEl ? promptEl.textContent : '';
+  var osEl = document.getElementById('osHint');
+
+  function detectOS(){
+    var pf = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    var s = (pf + ' ' + (navigator.userAgent || '')).toLowerCase();
+    if (s.indexOf('android') > -1 || s.indexOf('iphone') > -1 || s.indexOf('ipad') > -1) return null;
+    if (s.indexOf('mac') > -1) return 'mac';
+    if (s.indexOf('win') > -1) return 'win';
+    if (s.indexOf('linux') > -1) return 'linux';
+    return null;
+  }
+  var os = detectOS();
+
+  function apply(lang){
+    var en = lang === 'en';
+    document.documentElement.lang = lang;
+    simple.forEach(function(el){ el.textContent = en ? el.getAttribute('data-en') : el.getAttribute('data-ru'); });
+    ariaEls.forEach(function(el){ el.setAttribute('aria-label', en ? el.getAttribute('data-en-aria') : el.getAttribute('data-ru-aria')); });
+    Object.keys(htmlEls).forEach(function(id){ htmlEls[id].el.innerHTML = en ? EN_HTML[id] : htmlEls[id].ru; });
+    if (promptEl) promptEl.textContent = en ? EN_PROMPT : promptRu;
+    document.title = en ? titleEn : titleRu;
+    if (metaDesc) metaDesc.setAttribute('content', en ? metaEn : metaRu);
+    if (osEl){ if (os){ osEl.textContent = OS_HINT[os][lang]; osEl.hidden = false; } else { osEl.hidden = true; } }
+    var tog = document.getElementById('langToggle');
+    if (tog) tog.textContent = en ? 'RU' : 'EN';
+  }
+
+  var saved = null; try { saved = localStorage.getItem('lang'); } catch (e) {}
+  var initial = (saved === 'en' || saved === 'ru') ? saved : ((navigator.language || '').toLowerCase().indexOf('en') === 0 ? 'en' : 'ru');
+  apply(initial);
+
+  var tog = document.getElementById('langToggle');
+  if (tog) tog.addEventListener('click', function(){
+    var next = document.documentElement.lang === 'en' ? 'ru' : 'en';
+    apply(next);
+    try { localStorage.setItem('lang', next); } catch (e) {}
+  });
+})();
+</script>
 <script>
   (function(){
     var pre = document.getElementById('prompt');
@@ -769,7 +887,7 @@
         var text = pre.innerText;
         var label = btn.textContent;
         var done = function(){
-          btn.textContent = 'Скопировано ✓';
+          btn.textContent = document.documentElement.lang === 'en' ? 'Copied ✓' : 'Скопировано ✓';
           setTimeout(function(){ btn.textContent = label; }, 1800);
         };
         if (navigator.clipboard && navigator.clipboard.writeText){
