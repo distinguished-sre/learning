@@ -1,0 +1,331 @@
+# _data/course.yml: единственный источник порядка уроков. prev/next вычисляет layout.
+# time темы = сумма time её уроков. layer и project выводятся на главной курса.
+topics:
+  - n: 1
+    dir: 01-linux
+    title: "Linux для нагрузочника"
+    subtitle: "Терминал, логи, ресурсы машины, сеть и скрипты: всё, чем смотрят на сервер под нагрузкой"
+    time: "12 ч"
+    layer: "Ubuntu · терминал"
+    project: "Готовим рабочее место и учимся видеть, чем занята машина"
+    lessons:
+      - id: "1.1"
+        slug: 01-workstation-terminal
+        title: "Рабочее место: Ubuntu, терминал, файлы и справка"
+        time: "2 ч"
+      - id: "1.2"
+        slug: 02-text-logs
+        title: "Текст и логи: less, grep, конвейеры, awk"
+        time: "2 ч"
+      - id: "1.3"
+        slug: 03-processes-resources
+        title: "Процессы и ресурсы: CPU, память, диск, load average"
+        time: "2.5 ч"
+      - id: "1.4"
+        slug: 04-network-cli
+        title: "Сеть из терминала: TCP/IP, порты, ping, ss, dig, curl"
+        time: "3 ч"
+      - id: "1.5"
+        slug: 05-bash-scripts
+        title: "Bash-скрипты: переменные, условия, циклы"
+        time: "2.5 ч"
+  - n: 2
+    dir: 02-web
+    title: "Как устроен веб-сервис"
+    subtitle: "Что происходит между нажатием кнопки и ответом сервера, и где здесь может стать тесно"
+    time: "9 ч"
+    layer: "HTTP · API · SQL"
+    project: "Разбираем «Магазин» снаружи: запросы, ответы, токены и таблицы"
+    lessons:
+      - id: "2.1"
+        slug: 01-client-server-http
+        title: "Клиент, сервер и HTTP: запрос, ответ, коды"
+        time: "2.5 ч"
+      - id: "2.2"
+        slug: 02-rest-json-auth
+        title: "REST API, JSON и авторизация"
+        time: "2 ч"
+      - id: "2.3"
+        slug: 03-backend-anatomy
+        title: "Из чего состоит бэкенд: приложение, база, кэш, пулы"
+        time: "2 ч"
+      - id: "2.4"
+        slug: 04-sql-basics
+        title: "SQL и PostgreSQL: таблицы, запросы, индексы"
+        time: "2.5 ч"
+  - n: 3
+    dir: 03-git
+    title: "Git и GitHub"
+    subtitle: "История изменений и место, где живут твои тесты и портфолио"
+    time: "4 ч"
+    layer: "git · GitHub"
+    project: "Заводим репозиторий perf-lab, куда до конца курса складываем тесты"
+    lessons:
+      - id: "3.1"
+        slug: 01-git-basics
+        title: "Git: история изменений на своей машине"
+        time: "2 ч"
+      - id: "3.2"
+        slug: 02-github
+        title: "GitHub: удалённый репозиторий, ветки и pull request"
+        time: "2 ч"
+  - n: 4
+    dir: 04-python
+    title: "Python для тестировщика"
+    subtitle: "Ровно столько языка, сколько нужно для автотестов и сценариев нагрузки"
+    time: "14.5 ч"
+    layer: "Python · pytest"
+    project: "Пишем первые скрипты, которые ходят в «Магазин», и первые тесты"
+    lessons:
+      - id: "4.1"
+        slug: 01-first-program
+        title: "Первая программа: интерпретатор, переменные, типы"
+        time: "2 ч"
+      - id: "4.2"
+        slug: 02-conditions-loops
+        title: "Условия, циклы, списки и словари"
+        time: "2.5 ч"
+      - id: "4.3"
+        slug: 03-functions-errors
+        title: "Функции, модули и исключения"
+        time: "2 ч"
+      - id: "4.4"
+        slug: 04-files-json-csv
+        title: "Файлы, JSON и CSV: данные для тестов"
+        time: "2 ч"
+      - id: "4.5"
+        slug: 05-venv-requests
+        title: "Виртуальное окружение, pip и HTTP-запросы из кода"
+        time: "2 ч"
+      - id: "4.6"
+        slug: 06-classes
+        title: "Классы и объекты: зачем они Locust"
+        time: "2 ч"
+      - id: "4.7"
+        slug: 07-pytest
+        title: "pytest: первые тесты"
+        time: "2 ч"
+  - n: 5
+    dir: 05-docker
+    title: "Docker и учебный стенд"
+    subtitle: "Поднимаем «Магазин» с базой и кэшем одной командой и учимся ограничивать ресурсы"
+    time: "8.5 ч"
+    layer: "Docker · Compose"
+    project: "Запускаем «Магазин», PostgreSQL и Redis в Docker Compose"
+    lessons:
+      - id: "5.1"
+        slug: 01-containers
+        title: "Контейнеры: образ, контейнер, docker run"
+        time: "2 ч"
+      - id: "5.2"
+        slug: 02-dockerfile
+        title: "Dockerfile: как собирается образ «Магазина»"
+        time: "2 ч"
+      - id: "5.3"
+        slug: 03-compose-shop
+        title: "Docker Compose: поднимаем «Магазин» с базой и кэшем"
+        time: "2.5 ч"
+      - id: "5.4"
+        slug: 04-limits-stats
+        title: "Ресурсы контейнеров: лимиты, docker stats и почему стенд не прод"
+        time: "2 ч"
+  - n: 6
+    dir: 06-api-testing
+    title: "Тестирование и автотесты API"
+    subtitle: "Что и зачем проверяют, и как превратить проверку в код, который запускается сам"
+    time: "6.5 ч"
+    layer: "pytest · CI"
+    project: "Покрываем API «Магазина» автотестами и запускаем их в GitHub Actions"
+    lessons:
+      - id: "6.1"
+        slug: 01-testing-basics
+        title: "Что такое тестирование: виды, тест-кейсы, баги"
+        time: "2 ч"
+      - id: "6.2"
+        slug: 02-api-autotests
+        title: "Автотесты API: pytest и requests против «Магазина»"
+        time: "2.5 ч"
+      - id: "6.3"
+        slug: 03-ci-actions
+        title: "Тесты в CI: GitHub Actions на каждый push"
+        time: "2 ч"
+  - n: 7
+    dir: 07-observability
+    title: "Метрики, логи и алерты"
+    subtitle: "Глаза нагрузочника: без них тест показывает только, что стало плохо, но не почему"
+    time: "15 ч"
+    layer: "Prometheus · Grafana · Loki"
+    project: "Подключаем Prometheus, Grafana, Loki и алерты к «Магазину»"
+    lessons:
+      - id: "7.1"
+        slug: 01-metrics-prometheus
+        title: "Метрики и Prometheus: типы метрик, сбор, /metrics"
+        time: "2.5 ч"
+      - id: "7.2"
+        slug: 02-promql
+        title: "PromQL: rate, sum by, histogram_quantile"
+        time: "3 ч"
+      - id: "7.3"
+        slug: 03-grafana
+        title: "Grafana: дашборд RED и USE для «Магазина»"
+        time: "2.5 ч"
+      - id: "7.4"
+        slug: 04-exporters
+        title: "Экспортеры: хост, контейнеры и PostgreSQL"
+        time: "2 ч"
+      - id: "7.5"
+        slug: 05-logs-loki
+        title: "Логи: уровни, структура, Loki и Alloy"
+        time: "2.5 ч"
+      - id: "7.6"
+        slug: 06-alerts-incidents
+        title: "Алерты, Alertmanager и первый инцидент"
+        time: "2.5 ч"
+  - n: 8
+    dir: 08-perf-theory
+    title: "Теория производительности"
+    subtitle: "Задержка, перцентили, очереди и закон Литтла: язык, на котором говорят о нагрузке"
+    time: "9.5 ч"
+    layer: "перцентили · SLO"
+    project: "Считаем, какую нагрузку «Магазин» должен держать, и пишем методику испытаний"
+    lessons:
+      - id: "8.1"
+        slug: 01-latency-throughput
+        title: "Задержка, пропускная способность и перцентили"
+        time: "2.5 ч"
+      - id: "8.2"
+        slug: 02-queues-littles-law
+        title: "Очереди и закон Литтла: почему всё ломается резко"
+        time: "2.5 ч"
+      - id: "8.3"
+        slug: 03-test-types
+        title: "Виды нагрузочных тестов: smoke, load, stress, soak, spike"
+        time: "2 ч"
+      - id: "8.4"
+        slug: 04-load-profile-slo
+        title: "Профиль нагрузки, SLO и методика испытаний"
+        time: "2.5 ч"
+  - n: 9
+    dir: 09-locust
+    title: "Locust"
+    subtitle: "Сценарии нагрузки на Python: от первого запроса до распределённого запуска"
+    time: "11 ч"
+    layer: "Locust"
+    project: "Нагружаем «Магазин» сценарием покупателя и читаем результат по метрикам"
+    lessons:
+      - id: "9.1"
+        slug: 01-first-locustfile
+        title: "Первый сценарий Locust"
+        time: "2 ч"
+      - id: "9.2"
+        slug: 02-user-journey
+        title: "Сценарий покупателя: логин, корзина, заказ, корреляция"
+        time: "2.5 ч"
+      - id: "9.3"
+        slug: 03-data-checks
+        title: "Тестовые данные, проверки ответов и ошибки"
+        time: "2 ч"
+      - id: "9.4"
+        slug: 04-headless-shape
+        title: "Запуск без интерфейса, профиль нагрузки и результаты"
+        time: "2.5 ч"
+      - id: "9.5"
+        slug: 05-distributed-generator
+        title: "Распределённый запуск и пределы генератора"
+        time: "2 ч"
+  - n: 10
+    dir: 10-k6
+    title: "k6"
+    subtitle: "Второй инструмент: открытая модель нагрузки, пороги и метрики прямо в Prometheus"
+    time: "7 ч"
+    layer: "k6"
+    project: "Повторяем сценарий в k6 с порогами и выводом метрик в Grafana"
+    lessons:
+      - id: "10.1"
+        slug: 01-js-first-script
+        title: "Минимум JavaScript и первый скрипт k6"
+        time: "2.5 ч"
+      - id: "10.2"
+        slug: 02-scenarios-thresholds
+        title: "Сценарии, открытая модель и пороги"
+        time: "2.5 ч"
+      - id: "10.3"
+        slug: 03-k6-prometheus
+        title: "k6 в Prometheus и Grafana, сравнение с Locust"
+        time: "2 ч"
+  - n: 11
+    dir: 11-bottlenecks
+    title: "Поиск узких мест"
+    subtitle: "Главная работа нагрузочника: найти, где тесно, доказать это цифрами и проверить исправление"
+    time: "12 ч"
+    layer: "py-spy · EXPLAIN"
+    project: "Находим и чиним узкие места «Магазина»: CPU, база, пул, память, зависимости"
+    lessons:
+      - id: "11.1"
+        slug: 01-method
+        title: "Методика: от симптома к причине, USE и RED"
+        time: "2 ч"
+      - id: "11.2"
+        slug: 02-cpu
+        title: "Процессор: воркеры, тяжёлые вычисления, профилировщик py-spy"
+        time: "2.5 ч"
+      - id: "11.3"
+        slug: 03-database
+        title: "База данных: медленный запрос, EXPLAIN, индекс, пул соединений"
+        time: "3 ч"
+      - id: "11.4"
+        slug: 04-memory-soak
+        title: "Память и утечки: тест на выносливость"
+        time: "2 ч"
+      - id: "11.5"
+        slug: 05-cache-dependencies
+        title: "Кэш, внешние зависимости, таймауты и ретраи"
+        time: "2.5 ч"
+  - n: 12
+    dir: 12-process
+    title: "Нагрузочное тестирование как процесс"
+    subtitle: "Отчёт, который читают, регресс производительности в CI и прогноз ёмкости"
+    time: "6 ч"
+    layer: "отчёт · CI · ёмкость"
+    project: "Пишем отчёт, ставим нагрузочный smoke в CI и считаем запас ёмкости"
+    lessons:
+      - id: "12.1"
+        slug: 01-report
+        title: "Отчёт по нагрузочному тесту"
+        time: "2 ч"
+      - id: "12.2"
+        slug: 02-perf-ci
+        title: "Нагрузка в CI: регресс производительности"
+        time: "2 ч"
+      - id: "12.3"
+        slug: 03-capacity
+        title: "Прогноз ёмкости: сколько выдержим через год"
+        time: "2 ч"
+  - n: 13
+    dir: 13-final
+    title: "Финал: работа и собеседования"
+    subtitle: "Инцидент под нагрузкой, тестовое задание за день, портфолио и пробные собеседования"
+    time: "12.5 ч"
+    layer: "дежурство · портфолио"
+    project: "Разбираем инцидент, сдаём тестовое и собираем портфолио perf-lab"
+    lessons:
+      - id: "13.1"
+        slug: 01-incident-under-load
+        title: "Инцидент под нагрузкой: дежурство, разбор, постмортем"
+        time: "2.5 ч"
+      - id: "13.2"
+        slug: 02-take-home
+        title: "Тестовое задание за один день"
+        time: "4 ч"
+      - id: "13.3"
+        slug: 03-portfolio-resume
+        title: "Портфолио и резюме"
+        time: "2 ч"
+      - id: "13.4"
+        slug: 04-mock-perf
+        title: "Пробное собеседование: инженер по нагрузочному тестированию"
+        time: "2 ч"
+      - id: "13.5"
+        slug: 05-mock-monitoring
+        title: "Пробное собеседование: инженер мониторинга"
+        time: "2 ч"
