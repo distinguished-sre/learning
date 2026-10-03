@@ -113,7 +113,7 @@
           if (s.kind === 'req') v.add('rect', { x: a, y: y, width: Math.max(3, b - a), height: 14, rx: 2, class: (m.sat ? 'danger' : 'response') + ' fill' });
         });
       });
-      v.label(right, lanesBottom + 20, 'цветные метки: запрос идёт; пустое место: пользователь делает паузу', 'muted small', 'end');
+      v.label(right, lanesBottom + 20, narrow ? 'метка: запрос; пусто: пауза' : 'цветные метки: запрос идёт; пустое место: пользователь делает паузу', 'muted small', 'end');
       v.label((left + right) / 2, lanesBottom + 38, 'последние ' + WINDOW + ' секунд', 'muted small');
       // кривая RPS от числа пользователей
       var uMax = L.scale(Math.max(users * 1.25, cap * (avgWait() + resp / 1000) * 1.5, 20), true).max;

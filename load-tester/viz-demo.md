@@ -203,7 +203,7 @@ Load average и ядра (`data-cores`, `data-load`):
 
 ### Тема 8: теория производительности
 
-Закон Литтла в кафе (`data-rate`: гостей в минуту, `data-time`: минут на гостя, `data-place`):
+Закон Литтла в кафе (`data-rate`: гостей в минуту, `data-time`: секунд на гостя, `data-place`):
 
 <div class="viz" data-viz="perf-little" data-rate="6" data-time="60" data-place="кафе"></div>
 
@@ -211,7 +211,7 @@ Load average и ядра (`data-cores`, `data-load`):
 
 <div class="viz" data-viz="perf-open-closed" data-rate="8" data-users="10" data-slow="3"></div>
 
-Из сессий в запросы в секунду (`data-sessions`, `data-peak`, `data-growth`, `data-ops` и `data-limit` в JSON):
+Из сессий в запросы в секунду (числа `data-sessions`, `data-peak`, `data-growth`; `data-ops` и `data-limit` в JSON):
 
 <div class="viz" data-viz="perf-mix" data-sessions="2400" data-peak="1.5" data-growth="2" data-limit='{"Вход (POST /api/login)":4}'></div>
 
