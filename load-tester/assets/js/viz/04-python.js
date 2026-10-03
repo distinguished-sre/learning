@@ -27,8 +27,9 @@
   /* ---------- общие стили ---------- */
   var css = [
     '.pyv-wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;max-width:100%}',
-    '.pyv-code{flex:2 1 300px;min-width:0;margin:0;border:1px solid var(--line);border-radius:10px;background:var(--bg-code);overflow-x:auto;padding:6px 0;font:13px/1.65 var(--mono)}',
-    '.pyv-line{display:flex;white-space:pre;padding:0 10px 0 0;border-left:3px solid transparent;cursor:default}',
+    '.pyv-code{flex:2 1 300px;min-width:0;margin:0;border:1px solid var(--line);border-radius:10px;background:var(--bg-code);overflow-x:auto;padding:6px 0;font:13px/1.65 var(--mono);font-variant-ligatures:none}',
+    '.pyv-line{display:flex;white-space:pre-wrap;overflow-wrap:anywhere;padding:0 10px 0 0;border-left:3px solid transparent;cursor:default}',
+    '.pyv-line>span:last-child{min-width:0;flex:1 1 auto}',
     '.pyv-line .no{flex:none;width:2.6em;text-align:right;padding-right:.9em;color:var(--muted);user-select:none}',
     '.pyv-line.cur{background:color-mix(in srgb,var(--accent-ink) 18%,transparent);border-left-color:var(--accent-ink)}',
     '.pyv-line.done{opacity:.62}',

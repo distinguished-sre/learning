@@ -608,3 +608,18 @@ li.checked .todo-text { color: var(--muted); text-decoration: line-through; text
 @media (prefers-reduced-motion: reduce) {
   .viz *, .mermaid-viz * { animation: none !important; transition: none !important; }
 }
+
+/* Лигатуры JetBrains Mono (>= как ⩾, -> как →) путают новичка: в коде и виджетах отключены. */
+code, pre, kbd, samp, .viz, .viz * { font-variant-ligatures: none !important; }
+
+/* узкий экран: компактнее отступы, чтобы пояснение не уезжало далеко от рисунка */
+@media (max-width: 520px) {
+  .viz { padding: 12px 10px; margin: 18px 0; }
+  .viz-controls { gap: 2px 12px; margin-top: 8px; }
+  .viz-controls label { flex-basis: 100%; gap: 0; font-size: .85rem; }
+  .viz-controls input[type=range] { height: 34px; }
+  .viz-buttons { margin-top: 8px; }
+  .viz-explain { margin-top: 10px; padding: 10px 12px; font-size: .9rem; line-height: 1.5; }
+  .viz-explain-head { margin-bottom: 4px; }
+  .viz-try { margin-top: 8px; padding-top: 6px; }
+}

@@ -109,8 +109,8 @@
     }
     function describe() {
       var exp = expected();
-      v.explain('Каждые <b>' + fmt(60 / rate, 1) + ' с</b> в ' + esc(place) + ' заходит человек (<b>' + fmt(rate, 0) + ' в минуту</b>) и сидит около <b>' + fmt(stay, 0) + ' с</b>. ' +
-        'Внутри в среднем: ' + fmt(rate, 0) + ' / 60 × ' + fmt(stay, 0) + ' = <b>' + fmt(exp, 1) + '</b> человека. Сейчас внутри <b>' + inside() + '</b>: число гуляет вокруг жёлтой линии, потому что люди приходят неровно, а в среднем держится у неё.<br>' +
+      v.explain('В среднем раз в <b>' + fmt(60 / rate, 1) + ' с</b> в ' + esc(place) + ' заходит человек (<b>' + fmt(rate, 0) + ' в минуту</b>) и сидит около <b>' + fmt(stay, 0) + ' с</b>. ' +
+        'Внутри в среднем: ' + fmt(rate, 0) + ' в минуту × ' + fmt(stay, 0) + ' с ÷ 60 с = <b>' + fmt(exp, 1) + '</b> человека. Сейчас внутри <b>' + inside() + '</b>: число гуляет вокруг жёлтой линии: интервалы между приходами случайные, а в среднем держится у неё.<br>' +
         'Это закон Литтла: <b>сколько внутри = скорость прихода × время, которое каждый проводит внутри</b>. Для сервера «внутри» это запросы в работе, «пришли» это RPS, «время» это задержка.');
     }
     v.slider('Приходит в минуту', 1, 40, 1, rate, function (n) { rate = n; describe(); if (ctl.reduced) still(); }, '');
@@ -263,8 +263,13 @@
       v.label(left, 14, 'запросов в секунду, нужно выдержать', 'muted small', 'start');
       ops.forEach(function (o, i) {
         var y = top + i * rowH, val = rps(o), lim = limits[o.name], cls = lim && val > lim * 0.7 ? (val > lim ? 'danger' : 'warning') : 'response';
-        var label = o.name; if (narrow && label.length > 14) label = label.replace(/ \(.*\)/, '').slice(0, 14);
-        v.label(labelW, y + rowH / 2 + 5, label, 'small', 'end');
+        var label = o.name;
+        if (narrow) {
+          var cut = function (t) { return t.length > 14 ? t.slice(0, 13) + '…' : t; };
+          label = label.replace(/ \(.*\)/, ''); var parts = label.split(' ');
+          if (parts.length > 1 && label.length > 12) { v.label(labelW, y + rowH / 2 - 1, cut(parts[0]), 'small', 'end'); v.label(labelW, y + rowH / 2 + 12, cut(parts.slice(1).join(' ')), 'small', 'end'); }
+          else v.label(labelW, y + rowH / 2 + 5, cut(label), 'small', 'end');
+        } else v.label(labelW, y + rowH / 2 + 5, label, 'small', 'end');
         v.add('rect', { x: left, y: y + 7, width: Math.max(1, (X(val) - left) * prog), height: rowH - 14, rx: 4, class: cls + ' fill', opacity: 0.85 });
         v.label(Math.max(X(val) * prog, left) + 6, y + rowH / 2 + 5, fmt(val * prog, val < 1 ? 2 : 1), 'small halo', 'start');
         if (lim) { v.add('line', { x1: X(lim), x2: X(lim), y1: y + 3, y2: y + rowH - 3, class: 'danger marker' }); }
