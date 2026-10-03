@@ -165,10 +165,10 @@
 
   /* ---------- dk-layers ---------- */
   var BASE = [
-    { id: 'from', cmd: 'FROM python:3.14.8-slim', sec: 9, mb: 125, why: 'Базовый образ: Debian и Python. Если тег не менялся, Docker берёт его из локального хранилища.' },
+    { id: 'from', cmd: 'FROM python:3.14.8-slim', sec: 18, mb: 125, why: 'Базовый образ: Debian и Python. Если тег не менялся, Docker берёт его из локального хранилища.' },
     { id: 'work', cmd: 'WORKDIR /app', sec: 0.1, mb: 0, why: 'Создаёт каталог /app и делает его рабочим. Почти бесплатно.' },
     { id: 'req', cmd: 'COPY requirements.txt .', sec: 0.1, mb: 0, why: 'Кладёт в образ один файл со списком библиотек. Слой пересоберётся, только если изменился этот файл.' },
-    { id: 'pip', cmd: 'RUN pip install ...', sec: 28, mb: 72, why: 'Скачивает и ставит библиотеки: самая долгая часть сборки.' },
+    { id: 'pip', cmd: 'RUN pip install ...', sec: 47, mb: 72, why: 'Скачивает и ставит библиотеки: самая долгая часть сборки.' },
     { id: 'app', cmd: 'COPY app ./app', sec: 0.1, mb: 0.2, why: 'Код магазина. Меняется чаще всего.' },
     { id: 'ent', cmd: 'COPY entrypoint.sh .', sec: 0.1, mb: 0, why: 'Скрипт запуска.' },
     { id: 'chmod', cmd: 'RUN chmod +x entrypoint.sh', sec: 0.3, mb: 0, why: 'Делает скрипт исполняемым.' }
@@ -176,7 +176,7 @@
   var BAD = [
     BASE[0], BASE[1],
     { id: 'all', cmd: 'COPY . .', sec: 0.2, mb: 0.2, why: 'Копирует в образ всё сразу: код, список библиотек и скрипт. Меняется при любой правке.' },
-    { id: 'pip', cmd: 'RUN pip install ...', sec: 28, mb: 72, why: 'Те же библиотеки, но слой стоит ПОСЛЕ копирования кода: любая правка кода сбивает кэш и тянет их заново.' },
+    { id: 'pip', cmd: 'RUN pip install ...', sec: 47, mb: 72, why: 'Те же библиотеки, но слой стоит ПОСЛЕ копирования кода: любая правка кода сбивает кэш и тянет их заново.' },
     BASE[6]
   ];
   var CHANGES = { none: 'ничего', app: 'правка app/main.py', requirements: 'правка requirements.txt', base: 'новый базовый образ' };
@@ -273,7 +273,7 @@
     rows.push(shop);
     return { rows: rows, pgOk: pgOk, done: done, verdict: verdict, shop: shop };
   }
-  var STATE_TXT = { init: 'идёт инициализация базы (схема и сид)', starting: 'запущен, healthcheck ещё не прошёл (starting)', healthy: 'healthy: проверка проходит', wait: 'контейнера ещё нет: Compose ждёт зависимости', dead: 'упал и не перезапускается (Exited 3)' };
+  var STATE_TXT = { init: 'идёт инициализация базы (схема и сид)', starting: 'запущен, healthcheck ещё не прошёл (starting)', healthy: 'healthy: проверка проходит', wait: 'контейнера ещё нет: Compose ждёт зависимости', dead: 'упал (Exited 3), Docker перезапускает по кругу' };
   var STATE_CLS = { init: 'c-vio', starting: 'c-warn', healthy: 'c-ok', wait: 'c-mut', dead: 'c-bad' };
   L.widgets['dk-startup'] = function (host) {
     injectStyle();
@@ -285,7 +285,7 @@
       var shopS = m.shop.segs;
       if (m.verdict === 'ok') v.explain('PostgreSQL заполняет базу ' + seed + ' с и становится healthy на ' + m.pgOk + '-й секунде (проверка идёт раз в 5 с). Только тогда Compose создаёт <b>shop</b>: он готов на ' + m.done + '-й секунде. Команда <code>up -d --wait</code> вернёт управление именно тогда, без единой ошибки в логах.');
       else if (m.verdict === 'lucky') v.explain('Без <code>condition: service_healthy</code> shop стартует на 1-й секунде и сам ждёт базу: пул соединений повторяет попытки до 60 с. База готова за ' + (seed + 2) + ' с, поэтому всё обошлось и shop healthy на ' + m.done + '-й секунде. Но это везение: на медленном диске сид идёт дольше.');
-      else v.explain('Сид занимает ' + seed + ' с, а shop без <code>condition: service_healthy</code> ждёт базу только 60 с. Он падает на ' + shopS[1][1] + '-й секунде с ошибкой запуска, а политики перезапуска нет: <code>docker compose ps</code> покажет <code>Exited (3)</code>, и тест не с чем запускать.');
+      else v.explain('Сид занимает ' + seed + ' с, а shop без <code>condition: service_healthy</code> ждёт базу только 60 с. Он падает на ' + shopS[1][1] + '-й секунде с ошибкой запуска, а <code>restart: unless-stopped</code> поднимает его снова: <code>docker compose ps</code> покажет <code>Restarting</code> и <code>Exited (3)</code> по очереди, пока база не станет доступна, и тест не с чем запускать.');
     }
     function stateAt(row, x) {
       for (var i = 0; i < row.segs.length; i++) if (x >= row.segs[i][0] && x < row.segs[i][1]) return row.segs[i][2];
@@ -341,7 +341,7 @@
   };
 
   /* ---------- dk-limits ---------- */
-  var CPU_COST = 0.006, MEM_BASE = 95, MEM_PER_RPS = 0.2, LEAK_MB_PER_REQ = 0.0098, SPAN = 600;
+  var CPU_COST = 0.0094, MEM_BASE = 95, MEM_PER_RPS = 0.2, LEAK_MB_PER_REQ = 0.0098, SPAN = 600;
   function simulate(p) {
     var out = [], alive = true, deadUntil = Infinity, leaked = 0, oomAt = [], cap = Math.max(0, p.cpus - 0.02) / CPU_COST;
     for (var s = 0; s <= SPAN; s++) {
