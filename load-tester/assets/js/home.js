@@ -55,6 +55,14 @@
       m.click();
       /* фокус в меню, чтобы Tab шёл по урокам, а не по странице под затемнением */
       var first = $('.sidebar a'); if (first) setTimeout(function () { first.focus(); }, 50);
+      /* меню закрыли (Escape, затемнение): фокус обратно на кнопку */
+      if (!('MutationObserver' in window)) return;
+      var mo = new MutationObserver(function () {
+        if (body.classList.contains('nav-open')) return;
+        mo.disconnect();
+        if (!doc.activeElement || doc.activeElement === body || $('.sidebar').contains(doc.activeElement)) b.focus();
+      });
+      mo.observe(body, { attributes: true, attributeFilter: ['class'] });
     });
   });
 
