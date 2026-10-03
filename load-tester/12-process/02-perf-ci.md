@@ -621,10 +621,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Стенд Магазин
+      - name: Код стенда (load-tester)
+        uses: actions/checkout@v5
+        with:
+          repository: distinguished-sre/load-tester
+          path: stand
+          persist-credentials: false
+
+      - name: Поднять стенд
+        working-directory: stand/project/shop
         run: |
-          git clone --depth 1 https://github.com/distinguished-sre/load-tester.git stand
-          cd stand/project/shop
           cp .env.example .env
           docker compose up -d --build --wait --wait-timeout 300
           curl --fail --silent http://localhost:8000/readyz
@@ -658,7 +664,7 @@ jobs:
 
       - name: Артефакты
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: perf-smoke
           path: results/
@@ -671,7 +677,7 @@ jobs:
 - `permissions: contents: read`: только чтение, больше проверке не нужно.
 - `concurrency` с `cancel-in-progress` отменяет прошлый запуск для той же ветки: два прогона одновременно мешали бы друг другу (общие процессоры).
 - `env: RATE` берёт значение из ввода через переменную окружения. Дальше в командах стоит `$RATE`, а не подстановка {% raw %}`${{ inputs.rate }}`{% endraw %}: это защита от внедрения чужого кода через поле ввода.
-- Шаг стенда повторяет приём из [урока 6.3](../06-api-testing/03-ci-actions.md): клон, `.env`, `docker compose up --wait`.
+- Два шага со стендом повторяют приём из [урока 6.3](../06-api-testing/03-ci-actions.md): второй `checkout` кладёт `load-tester` в `stand/`, затем `.env` и `docker compose up --wait`.
 - Прогрев отбрасывает холодный старт (15 секунд на 2 сценариях в секунду, результат игнорируется, `|| true`).
 - Шаг Smoke запускает k6 в контейнере (`--network host` чтобы видеть `localhost:8000`, `-v "$PWD:/work"` монтирует репозиторий, `-u` убирает проблему с владельцем файлов), затем `compare.py`. Если хоть что-то красное (код выхода k6 99 или compare 1), цикл делает вторую попытку. Две красных подряд: `exit 1` и красный статус.
 - Шаги «Сводка» и «Артефакты» с `if: always()` выполняются при любом исходе: сводка попадает в `$GITHUB_STEP_SUMMARY`, файлы сохраняются.
@@ -914,7 +920,7 @@ git add 12-process/baseline.json && git commit -m "12.2: baseline снят в CI
 
 ## Проверено на версиях
 
-GitHub Actions: `actions/checkout@v5`, `actions/upload-artifact@v5`, `ubuntu-latest`. k6 2.3 (образ `grafana/k6:2.3.0`), стенд «Магазин» из `project/shop` (PostgreSQL 18.6, Redis 8.10), Python 3.12+ (`statistics`, стандартная библиотека). Формат `--summary-export` менялся между версиями k6, поэтому `compare.py` читает оба варианта. Числа в примерах учебные: на твоём CI они другие. Октябрь 2026.
+GitHub Actions: `actions/checkout@v5`, `actions/upload-artifact@v4`, `ubuntu-latest`. k6 2.3 (образ `grafana/k6:2.3.0`), стенд «Магазин» из `project/shop` (PostgreSQL 18.6, Redis 8.10), Python 3.12+ (`statistics`, стандартная библиотека). Формат `--summary-export` менялся между версиями k6, поэтому `compare.py` читает оба варианта. Числа в примерах учебные: на твоём CI они другие. Октябрь 2026.
 
 ## Итог урока: ты умеешь
 
