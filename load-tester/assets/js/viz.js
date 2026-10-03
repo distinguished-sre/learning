@@ -231,7 +231,9 @@
         v.add('polyline', { points: partial.map(function (p) { return p.join(','); }).join(' '), class: palette[i % palette.length] + ' stroke' });
       });
     }
-    animate(v, function (dt) { progress = Math.min(1, progress + dt / 4); draw(); return progress < 1; }, function () { progress = 0; draw(); }, function () { progress = 1; draw(); });
+    // Первый кадр после «Пуск» (dt = 0) начинает рисовать заново, если формы уже показаны целиком.
+    animate(v, function (dt) { if (dt === 0 && progress >= 1) progress = 0; progress = Math.min(1, progress + dt / 4); draw(); return progress < 1; }, function () { progress = 0; draw(); }, function () { progress = 1; draw(); });
+    progress = 1; draw(); // до «Пуск» формы видны целиком, а не пустые оси
     new ResizeObserver(draw).observe(host);
   };
 
