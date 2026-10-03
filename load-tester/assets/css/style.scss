@@ -494,7 +494,17 @@ li.checked .todo-text { color: var(--muted); text-decoration: line-through; text
 .viz-controls:empty, .viz-buttons:empty { display: none; }
 .viz button[hidden], .viz-buttons:not(:has(> :not([hidden]))) { display: none; }
 .viz-controls label { flex: 1 1 220px; min-width: 0; display: grid; gap: 4px; font-size: .9rem; }
-.viz-controls input { width: 100%; min-height: 30px; accent-color: var(--accent-ink); }
+.viz-controls input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; margin: 0; padding: 0; background: transparent; cursor: pointer; touch-action: pan-y; --p: 50%; }
+.viz-controls input[type=range]::-webkit-slider-runnable-track { height: 10px; border-radius: 5px; background: linear-gradient(to right, var(--accent-ink) var(--p), var(--line) var(--p)); }
+.viz-controls input[type=range]::-moz-range-track { height: 10px; border-radius: 5px; background: var(--line); }
+.viz-controls input[type=range]::-moz-range-progress { height: 10px; border-radius: 5px; background: var(--accent-ink); }
+.viz-controls input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; margin-top: -10px; border-radius: 50%; background: var(--accent-ink); border: 5px solid var(--bg); box-shadow: 0 0 0 2px var(--accent-ink), 0 2px 6px rgba(0, 0, 0, .3); transition: transform .15s; }
+.viz-controls input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-ink); border: 5px solid var(--bg); box-shadow: 0 0 0 2px var(--accent-ink), 0 2px 6px rgba(0, 0, 0, .3); transition: transform .15s; }
+.viz-controls input[type=range]:hover::-webkit-slider-thumb, .viz-controls input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); }
+.viz-controls input[type=range]:hover::-moz-range-thumb, .viz-controls input[type=range]:active::-moz-range-thumb { transform: scale(1.15); }
+.viz-controls input[type=range]:focus-visible { outline: none; }
+.viz-controls input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--accent-ink), 0 0 0 6px color-mix(in srgb, var(--accent-ink) 35%, transparent); }
+.viz-controls input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--accent-ink), 0 0 0 6px color-mix(in srgb, var(--accent-ink) 35%, transparent); }
 .viz-controls label > span { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .viz-controls output { flex: none; white-space: nowrap; font-family: var(--mono); font-weight: 700; color: var(--accent-ink); }
 .viz-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
@@ -570,20 +580,20 @@ li.checked .todo-text { color: var(--muted); text-decoration: line-through; text
 }
 
 /* алгоритм по шагам */
-.flow-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: none; }
-.flow-list.flow-row { grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 24px; }
+.flow-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .flow-step { position: relative; margin: 0; }
-.flow-list:not(.flow-row) .flow-step + .flow-step::before { content: ''; position: absolute; left: 25px; top: -9px; height: 9px; border-left: 2px solid var(--line); }
-.flow-list.flow-row .flow-step + .flow-step::before { content: '→'; position: absolute; left: -12px; top: 50%; transform: translate(-50%, -50%); color: var(--muted); }
-.flow-step button { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; height: 100%; padding: 10px 12px; overflow: hidden;
-  text-align: left; border-width: 2px; border-radius: 10px; line-height: 1.35; }
-.flow-num { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); font-weight: 700; font-size: .85rem; }
-.flow-title { min-width: 0; overflow-wrap: anywhere; }
-.flow-step.passed .flow-num { border-color: var(--green); color: var(--green); }
-.flow-step.current button { border-color: var(--accent-ink); }
-.flow-step.current .flow-num { border-color: var(--accent-ink); background: var(--accent-ink); color: var(--bg); }
-.flow-timer { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--accent-ink); }
-.flow-title code { font-size: .85em; }
+.flow-step + .flow-step::before { content: ''; position: absolute; left: 27px; top: -14px; height: 14px; border-left: 2px solid var(--line); }
+.flow-step + .flow-step::after { content: ''; position: absolute; left: 23px; top: -6px; border: 5px solid transparent; border-top: 6px solid var(--line); border-bottom: 0; }
+.flow-card { display: flex; align-items: flex-start; gap: 14px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--bg-2); }
+.flow-num { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-ink); color: var(--on-accent); font-weight: 700; font-size: .9rem; }
+.flow-body { min-width: 0; padding-top: 3px; }
+.flow-title { margin: 0; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.flow-text { margin: 4px 0 0; color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
+.flow-card code { font-size: .85em; }
+.flow-hidden .flow-step { opacity: 0; transform: translateY(12px); }
+.flow-in .flow-step { animation: flow-in .45s ease-out both; animation-delay: calc(var(--i) * .35s); }
+@keyframes flow-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media print { .flow-hidden .flow-step, .flow-in .flow-step { opacity: 1; transform: none; animation: none; } }
 
 .viz details { margin-top: 12px; max-width: 100%; overflow: auto; }
 .viz table { border-collapse: collapse; width: 100%; font-size: .8rem; }

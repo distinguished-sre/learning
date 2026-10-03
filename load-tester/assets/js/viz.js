@@ -79,9 +79,10 @@
     }
     function slider(text, min, max, step, value, fn, unit) {
       var l = html('label'), name = html('span', text + ': '), out = html('output');
-      function show(n) { out.textContent = fmt(n, step < 1 ? 2 : 0) + (unit ? ' ' + unit : ''); }
-      show(value); name.appendChild(out); l.appendChild(name);
-      var input = html('input'); input.type = 'range'; input.min = min; input.max = max; input.step = step; input.value = value;
+      var input = html('input');
+      function show(n) { out.textContent = fmt(n, step < 1 ? 2 : 0) + (unit ? ' ' + unit : ''); input.style.setProperty('--p', ((n - min) / (max - min) * 100).toFixed(1) + '%'); }
+      name.appendChild(out); l.appendChild(name);
+      input.type = 'range'; input.min = min; input.max = max; input.step = step; input.value = value; show(value);
       input.setAttribute('aria-label', text); l.appendChild(input); sliders.appendChild(l);
       input.addEventListener('input', function () { show(+input.value); fn(+input.value); });
       return input;
@@ -100,13 +101,26 @@
       var m = svg && svg.getScreenCTM(); if (!m) return null;
       var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(m.inverse());
     }
+    /* Подсказка как в Grafana: в любой точке графика, а не только над линией или
+       столбиком. На телефоне ведёшь пальцем вбок, вертикальный жест листает страницу. */
+    function hover(move, leave) {
+      var on = false;
+      function off() { if (on) { on = false; hideTip(); if (leave) leave(); } }
+      function pick(e) {
+        if (!svg || !svg.contains(e.target)) return off();
+        var q = local(e); if (q) { on = true; move(e, q); }
+      }
+      stage.addEventListener('pointermove', pick); stage.addEventListener('pointerdown', pick);
+      stage.addEventListener('pointerleave', off);
+      if (svg) svg.style.touchAction = 'pan-y'; else stage.style.touchAction = 'pan-y';
+    }
     function onResize(fn) {
       var last = 0;
       new ResizeObserver(function () { var w = Math.round(stage.clientWidth); if (w && w !== last) { last = w; fn(); } }).observe(stage);
     }
     return {
       host: host, stage: stage, status: status, canvas: canvas, add: add, label: label, button: button, slider: slider,
-      explain: explain, tryIt: tryIt, showTip: showTip, hideTip: hideTip, local: local, onResize: onResize,
+      explain: explain, tryIt: tryIt, showTip: showTip, hideTip: hideTip, local: local, hover: hover, onResize: onResize,
       get svg() { return svg; }, get width() { return width; }
     };
   }
@@ -432,15 +446,13 @@
       if (slow) text += '<p>Если страница магазина делает 10 запросов, хотя бы на один медленный наткнётся <b>' + pct(1 - Math.pow(1 - slow / 100, 10)) + ' посетителей</b>.</p>';
       v.explain(text);
     }
-    function onMove(e) {
-      var q = v.local(e); if (!q) return;
-      var pos = Math.floor((q.x - geo.left) / geo.bw);
+    function onMove(e, q) {
+      var pos = Math.max(0, Math.min(99, Math.floor((q.x - geo.left) / geo.bw)));
       if (Math.abs(q.y - geo.Y(avg)) < 6 && t >= END) {
         hover = -1; draw();
         var below = values.filter(function (x) { return x < avg; }).length;
         return v.showTip('<b>Среднее: ' + ms(avg) + '</b><br>Сумма всех 100 времён, делённая на 100. Быстрее среднего ' + below + ' ' + plural(below, 'запрос', 'запроса', 'запросов') + ' из 100.', e.clientX, e.clientY);
       }
-      if (pos < 0 || pos > 99) { hover = -1; draw(); return v.hideTip(); }
       var i = t >= END ? byRank[pos] : pos, x = values[i], r = rank[i], note = { 49: 'Это p50 (медиана): половина запросов быстрее.', 94: 'Это p95: 95 запросов из 100 уложились в это время.', 98: 'Это p99: медленнее только один запрос.' }[r];
       hover = i; draw();
       v.showTip('<b>Запрос: ' + ms(x) + '</b><br>' + (t >= END ? '№' + (r + 1) + ' по скорости. Быстрее него ' + r + ', медленнее ' + (99 - r) + '.' : 'Пришёл ' + (i + 1) + '-м.') + (note && t >= END ? '<br>' + note : ''), e.clientX, e.clientY);
@@ -451,8 +463,7 @@
     v.tryIt('поставь 1 тормозящий запрос: p50 и p95 не шелохнутся, а среднее уже подрастёт. Потом поставь 10 и посмотри, когда тормоза заметит p95. Наведи на столбики и на линию среднего.');
     var ctl = animate(v, function (dt) { t += dt; draw(); return t < END; }, function () { t = END; draw(); }, function () { t = 0; draw(); });
     v.button('Новые 100 запросов', function () { sample(); describe(); t = 0; ctl.play(); if (ctl.reduced) { t = END; draw(); } });
-    host.addEventListener('pointermove', function (e) { if (v.svg && v.svg.contains(e.target)) onMove(e); });
-    host.addEventListener('pointerleave', function () { hover = -1; v.hideTip(); draw(); });
+    v.hover(onMove, function () { hover = -1; draw(); });
     draw(); v.onResize(draw);
   };
   widgets['latency-hist'] = widgets.percentiles; // старое имя из первых черновиков
@@ -493,8 +504,9 @@
       v.add('line', { x1: X(load), x2: X(load), y1: ly, y2: bottom, class: cls + ' marker' });
       v.add('circle', { cx: X(load), cy: ly, r: 8, class: cls + ' fill pulse' });
       v.label(X(load) + (X(load) > right - 120 ? -12 : 12), Math.max(top + 34, ly - 10), over ? 'очередь растёт без конца' : lat(load) > yMax ? 'уходит вверх' : ms(lat(load)), cls + ' halo', X(load) > right - 120 ? 'end' : 'start');
-      if (hoverX !== null && hoverX < cap) {
-        v.add('circle', { cx: X(hoverX), cy: Y(lat(hoverX)), r: 5, class: 'primary fill' });
+      if (hoverX !== null) {
+        v.add('line', { x1: X(hoverX), x2: X(hoverX), y1: top, y2: bottom, class: 'muted marker' });
+        if (hoverX < cap) v.add('circle', { cx: X(hoverX), cy: Math.max(top, Y(lat(hoverX))), r: 5, class: 'primary fill' });
       }
     }
     function describe() {
@@ -510,16 +522,12 @@
       v.explain(text);
     }
     v.slider('Нагрузка', 0, +(cap * 1.1).toFixed(2), +(cap / 100).toPrecision(2), load, function (n) { load = n; draw(); describe(); }, unit);
-    v.tryIt('веди ползунок медленно от 50% до 95% предела и следи, на сколько растёт задержка за каждый шаг. Наведи на кривую: увидишь задержку в любой точке.');
-    host.addEventListener('pointermove', function (e) {
-      if (!v.svg || !v.svg.contains(e.target)) return;
-      var q = v.local(e); if (!q) return;
-      var x = (q.x - geo.left) / (geo.right - geo.left) * xMax;
-      if (x < 0 || x > xMax) { hoverX = null; v.hideTip(); draw(); return; }
+    v.tryIt('веди ползунок медленно от 50% до 95% предела и следи, на сколько растёт задержка за каждый шаг. Наведи в любое место графика: увидишь задержку при такой нагрузке.');
+    v.hover(function (e, q) {
+      var x = Math.max(0, Math.min(xMax, (q.x - geo.left) / (geo.right - geo.left) * xMax));
       hoverX = x; draw();
       v.showTip(x >= cap ? '<b>' + fmt(x, cap < 20 ? 2 : 0) + ' ' + esc(unit) + '</b><br>Больше предела: очередь растёт без конца' : '<b>' + fmt(x, cap < 20 ? 2 : 0) + ' ' + esc(unit) + ' (' + pct(x / cap) + ' предела)</b><br>Задержка ' + ms(lat(x)) + ', из них ожидание ' + ms(lat(x) - base), e.clientX, e.clientY);
-    });
-    host.addEventListener('pointerleave', function () { hoverX = null; v.hideTip(); draw(); });
+    }, function () { hoverX = null; draw(); });
     draw(); describe(); v.onResize(draw);
   };
 
@@ -585,7 +593,10 @@
         v.add('circle', { cx: X(cut), cy: Y(value(pts, cut)), r: 6, class: 'primary fill' });
         v.label(X(cut) + (X(cut) > right - 90 ? -10 : 10), Y(value(pts, cut)) - 10, Math.round(value(pts, cut)) + ' польз.', 'primary halo', X(cut) > right - 90 ? 'end' : 'start');
       }
-      if (hoverT !== null) v.add('line', { x1: X(hoverT), x2: X(hoverT), y1: top, y2: bottom, class: 'muted marker' });
+      if (hoverT !== null) {
+        v.add('line', { x1: X(hoverT), x2: X(hoverT), y1: top, y2: bottom, class: 'muted marker' });
+        v.add('circle', { cx: X(hoverT), cy: Y(value(pts, hoverT)), r: 5, class: 'primary fill' });
+      }
       tabButtons.forEach(function (b, i) { b.setAttribute('aria-pressed', i === cur ? 'true' : 'false'); });
       v.status.textContent = auto ? 'Профили сменяют друг друга сами. Нажми на название, чтобы остановиться на одном.' : 'Показан профиль ' + pr.short + '.';
     }
@@ -598,17 +609,13 @@
       else { hold += dt; if (hold > 2.5) { hold = 0; prog = 0; if (auto) { cur = (cur + 1) % keys.length; describe(); } } }
       draw();
     }
-    v.tryIt(keys.length > 1 ? 'нажми на профиль, чтобы рассмотреть его. Наведи на линию: увидишь, сколько пользователей в каждый момент теста.' : 'наведи на линию: увидишь, сколько пользователей в каждый момент теста.');
+    v.tryIt(keys.length > 1 ? 'нажми на профиль, чтобы рассмотреть его. Наведи в любое место графика: увидишь, сколько пользователей в каждый момент теста.' : 'наведи в любое место графика: увидишь, сколько пользователей в каждый момент теста.');
     var ctl = animate(v, tick, function () { prog = 1; draw(); });
-    host.addEventListener('pointermove', function (e) {
-      if (!v.svg || !v.svg.contains(e.target)) return;
-      var q = v.local(e); if (!q) return;
-      var t = (q.x - geo.left) / (geo.right - geo.left) * geo.T;
-      if (t < 0 || t > geo.T) { hoverT = null; v.hideTip(); return; }
+    v.hover(function (e, q) {
+      var t = Math.max(0, Math.min(geo.T, (q.x - geo.left) / (geo.right - geo.left) * geo.T));
       hoverT = t; draw();
       v.showTip(fmt(t, geo.T < 10 ? 1 : 0) + ' ' + geo.pr.unit + ' от начала: <b>' + Math.round(value(geo.pr.pts, t)) + ' пользователей</b>', e.clientX, e.clientY);
-    });
-    host.addEventListener('pointerleave', function () { hoverT = null; v.hideTip(); draw(); });
+    }, function () { hoverT = null; draw(); });
     describe(); draw(); v.onResize(draw);
   };
 
@@ -757,15 +764,13 @@
         return hidden[j] ? '' : '<br><span class="viz-sw ' + palette[j % palette.length] + '"></span>' + esc(s.name) + ': <b>' + fmt(s.values[i], Math.abs(s.values[i]) < 10 ? 2 : 1) + (u(s) ? ' ' + esc(u(s)) : '') + '</b>';
       }).join('');
     }
-    function pick(e) {
-      var q = v.local(e); if (!q) return;
+    function pick(e, q) {
       sel = xs.reduce(function (best, _, i) { return Math.abs(geo.X(i) - q.x) < Math.abs(geo.X(best) - q.x) ? i : best; }, 0);
       draw(); v.showTip(tipFor(sel), e.clientX, e.clientY);
     }
     var svgReady = function () {
       v.svg.setAttribute('tabindex', '0');
-      v.svg.addEventListener('pointermove', pick); v.svg.addEventListener('pointerdown', pick);
-      v.svg.addEventListener('pointerleave', function () { sel = null; v.hideTip(); draw(); });
+      v.hover(pick, function () { sel = null; draw(); });
       v.svg.addEventListener('blur', function () { sel = null; v.hideTip(); draw(); });
       v.svg.addEventListener('keydown', function (e) {
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -793,35 +798,26 @@
       throw new Error('data-steps: массив из 1–20 строк или объектов {"title": "...", "text": "..."}.');
     var steps = raw.map(function (s) { return typeof s === 'string' ? { title: s, text: '' } : s; });
     var v = setup(host, host.dataset.title || 'Алгоритм по шагам');
-    var cur = 0, t = 0, PER = 5;
     function rich(s) { return esc(s).replace(/`([^`]+)`/g, '<code>$1</code>'); }
+    // Все шаги видны сразу, читаются сверху вниз. Анимация одна: при первом
+    // появлении на экране шаги выстраиваются по очереди, дальше ничего не двигается.
     var ol = html('ol', undefined, 'flow-list'); v.stage.appendChild(ol);
-    var cards = steps.map(function (s, i) {
-      var li = html('li', undefined, 'flow-step'), b = html('button'); b.type = 'button';
-      b.appendChild(html('span', String(i + 1), 'flow-num'));
-      var title = html('span', undefined, 'flow-title'); title.innerHTML = rich(s.title); b.appendChild(title);
-      var timer = html('span', undefined, 'flow-timer'); b.appendChild(timer);
-      b.addEventListener('click', function () { cur = i; t = 0; ctl.pause(); render(); });
-      li.appendChild(b); ol.appendChild(li); return { li: li, timer: timer, button: b };
+    steps.forEach(function (s, i) {
+      var li = html('li', undefined, 'flow-step'), card = html('div', undefined, 'flow-card');
+      li.style.setProperty('--i', i);
+      card.appendChild(html('span', String(i + 1), 'flow-num'));
+      var body = html('div', undefined, 'flow-body'), title = html('p', undefined, 'flow-title'); title.innerHTML = rich(s.title); body.appendChild(title);
+      if (s.text) { var text = html('p', undefined, 'flow-text'); text.innerHTML = rich(s.text); body.appendChild(text); }
+      card.appendChild(body); li.appendChild(card); ol.appendChild(li);
     });
-    function render() {
-      cards.forEach(function (c, i) {
-        c.li.classList.toggle('current', i === cur); c.li.classList.toggle('passed', i < cur);
-        c.button.setAttribute('aria-current', i === cur ? 'step' : 'false'); if (i !== cur) c.timer.style.width = '0';
-      });
-      back.disabled = cur === 0; next.disabled = cur === steps.length - 1;
-      v.explain('<b>Шаг ' + (cur + 1) + ' из ' + steps.length + ': ' + rich(steps[cur].title) + '</b>' + (steps[cur].text ? '<br>' + rich(steps[cur].text) : ''));
+    if (!motion.matches && 'IntersectionObserver' in window) {
+      ol.classList.add('flow-hidden');
+      var io = new IntersectionObserver(function (entries) {
+        if (!entries[0].isIntersecting) return;
+        io.disconnect(); ol.classList.remove('flow-hidden'); ol.classList.add('flow-in');
+      }, { threshold: 0.25 });
+      io.observe(ol);
     }
-    function layout() { ol.classList.toggle('flow-row', steps.length <= 4 && v.stage.clientWidth >= 640); }
-    var ctl = animate(v, function (dt) {
-      t += dt; var limit = cur === steps.length - 1 ? PER + 2 : PER;
-      cards[cur].timer.style.width = Math.min(100, t / limit * 100) + '%';
-      if (t >= limit) { t = 0; cur = (cur + 1) % steps.length; render(); }
-    }, function () { cards.forEach(function (c) { c.timer.style.width = '0'; }); });
-    var back = v.button('← Назад', function () { ctl.pause(); cur = Math.max(0, cur - 1); t = 0; render(); });
-    var next = v.button('Дальше →', function () { ctl.pause(); cur = Math.min(steps.length - 1, cur + 1); t = 0; render(); });
-    v.status.textContent = ctl.reduced ? 'Нажми на шаг или «Дальше», чтобы прочитать его.' : 'Шаги переключаются сами. Нажми на любой шаг, чтобы остановиться и прочитать его.';
-    render(); layout(); v.onResize(layout);
   };
 
   document.querySelectorAll('.viz[data-viz]').forEach(function (host) {
