@@ -820,11 +820,22 @@
     }
   };
 
-  document.querySelectorAll('.viz[data-viz]').forEach(function (host) {
-    try {
-      var build = widgets[host.dataset.viz];
-      if (!build) throw new Error('Неизвестный виджет: ' + host.dataset.viz);
-      build(host);
-    } catch (e) { host.replaceChildren(html('p', e.message, 'viz-error')); console.warn('Viz:', e); }
-  });
+  /* Виджеты тем лежат в assets/js/viz/<тема>.js и регистрируются через
+     LTViz.widgets['имя'] = function (host) { var v = LTViz.setup(host, 'Заголовок'); ... }.
+     Все скрипты подключены с defer, поэтому к DOMContentLoaded они уже загружены. */
+  window.LTViz = {
+    widgets: widgets, setup: setup, animate: animate, palette: palette, motion: motion,
+    node: node, html: html, num: num, list: list, json: json, fmt: fmt, ms: ms, sec: sec, pct: pct,
+    esc: esc, plural: plural, niceMax: niceMax, scale: scale, lerp: lerp
+  };
+  function init() {
+    document.querySelectorAll('.viz[data-viz]').forEach(function (host) {
+      try {
+        var build = widgets[host.dataset.viz];
+        if (!build) throw new Error('Неизвестный виджет: ' + host.dataset.viz);
+        build(host);
+      } catch (e) { host.replaceChildren(html('p', e.message, 'viz-error')); console.warn('Viz:', e); }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
