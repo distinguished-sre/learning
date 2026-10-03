@@ -363,6 +363,8 @@ cat > scripts/run_steps.sh <<'EOF'
 set -u
 cd "$(dirname "$0")/.."
 mkdir -p results
+rm -f results/step_*   # файлы прошлого прогона не должны попасть в сводку
+failed=0
 for users in 3 6 12 18 24; do
   echo "=== ступень: $users пользователей, $(date +%T)"
   locust -f scripts/locustfile.py --host http://localhost:8000 --headless \
@@ -370,7 +372,9 @@ for users in 3 6 12 18 24; do
   code=$?
   echo "$code" > "results/step_$users.exit"
   echo "    код выхода Locust: $code"
+  if [ "$code" -gt 1 ]; then failed=1; fi   # 0 и 1 значат, что ступень дошла до конца
 done
+exit "$failed"
 EOF
 chmod +x scripts/run_steps.sh
 cat > scripts/summary.py <<'EOF'
@@ -378,30 +382,48 @@ import csv
 import glob
 import os
 import re
+import sys
 
 # Критерии из задания: p95, мс, по каждому целевому запросу
 LIMITS = {"/api/products": 300, "/api/orders": 1000}
 MAX_ERRORS = 1.0  # процентов, по всей смеси
 
+
+def step_users(path):
+    return int(re.search(r"step_(\d+)", path).group(1))
+
+
+invalid = 0
 print(f"{'польз.':>6} {'RPS':>6} {'ошибки, %':>9} {'p95 каталога':>13} {'p95 заказа':>11}  вердикт")
-for path in sorted(glob.glob("results/step_*_stats.csv"), key=lambda p: int(re.search(r"step_(\d+)_", p).group(1))):
-    users = int(re.search(r"step_(\d+)_", path).group(1))
+# Ступени берём по файлам .exit: их пишет run_steps.sh этого прогона.
+for exit_file in sorted(glob.glob("results/step_*.exit"), key=step_users):
+    users = step_users(exit_file)
+    code = open(exit_file).read().strip()
+    path = f"results/step_{users}_stats.csv"
+    if code not in ("0", "1") or not os.path.exists(path):
+        print(f"{users:6d}  замер недействителен: Locust упал (код {code}), смотри results/step_{users}.log")
+        invalid += 1
+        continue
     rows = {row["Name"]: row for row in csv.DictReader(open(path))}
-    total = rows["Aggregated"]
-    errors = 100 * int(total["Failure Count"]) / max(int(total["Request Count"]), 1)
-    p95 = {name: float(rows[name]["95%"]) for name in LIMITS if name in rows}
-    bad = [name for name, limit in LIMITS.items() if p95.get(name, 0) >= limit]
+    total = rows.get("Aggregated")
+    missing = [name for name in LIMITS if name not in rows or int(rows[name]["Request Count"]) == 0]
+    if total is None or int(total["Request Count"]) == 0 or missing:
+        print(f"{users:6d}  замер недействителен: нет запросов {', '.join(missing) or 'вообще'} (код {code})")
+        invalid += 1
+        continue
+    errors = 100 * int(total["Failure Count"]) / int(total["Request Count"])
+    p95 = {name: float(rows[name]["95%"]) for name in LIMITS}
+    bad = [name for name, limit in LIMITS.items() if p95[name] >= limit]
     if errors >= MAX_ERRORS:
         bad.append("ошибки")
-    exit_file = f"results/step_{users}.exit"
-    code = open(exit_file).read().strip() if os.path.exists(exit_file) else "?"
     verdict = "ок" if not bad else "НАРУШЕНО: " + ", ".join(bad)
-    print(f"{users:6d} {float(total['Requests/s']):6.1f} {errors:9.1f} {p95.get('/api/products', 0):13.0f} "
-          f"{p95.get('/api/orders', 0):11.0f}  {verdict} (код {code})")
+    print(f"{users:6d} {float(total['Requests/s']):6.1f} {errors:9.1f} {p95['/api/products']:13.0f} "
+          f"{p95['/api/orders']:11.0f}  {verdict} (код {code})")
+sys.exit(1 if invalid else 0)
 EOF
 ```
 
-Скрипт `run_steps.sh` запускает Locust пять раз подряд по 3 минуты и сохраняет `results/step_<N>_stats.csv`. `summary.py` берёт из этих файлов строку «Aggregated» (RPS и долю ошибок) и p95 двух целевых запросов, каталога и заказа, и сверяет их с критериями из задания. Ступень с ошибками не обрывает прогон: `run_steps.sh` не использует `set -e` (иначе первый код выхода 1 остановил бы остальные ступени) и записывает код каждой ступени в `results/step_<N>.exit`, а вывод Locust в `step_<N>.log`. Запусти ступени в фоне и **наблюдай дашборд** (это и есть главная часть):
+Скрипт `run_steps.sh` запускает Locust пять раз подряд по 3 минуты и сохраняет `results/step_<N>_stats.csv`. `summary.py` берёт из этих файлов строку «Aggregated» (RPS и долю ошибок) и p95 двух целевых запросов, каталога и заказа, и сверяет их с критериями из задания. Ступень с ошибками не обрывает прогон: `run_steps.sh` не использует `set -e` (иначе первый код выхода 1 остановил бы остальные ступени) и записывает код каждой ступени в `results/step_<N>.exit`, а вывод Locust в `step_<N>.log`. В начале он стирает файлы прошлого прогона (`rm -f results/step_*`), а `summary.py` берёт только ступени с файлом `.exit`, так что старый CSV в сводку не попадёт. Ступень считается настоящим замером, только если Locust завершился кодом 0 или 1 и в CSV есть запросы к обоим целевым адресам. Иначе (Locust упал, не нашёл файл сценария, заказов не было вовсе) вместо цифр будет «замер недействителен», а `summary.py` завершится кодом 1: подставить ноль и написать «ок» было бы враньём. Запусти ступени в фоне и **наблюдай дашборд** (это и есть главная часть):
 
 ```bash
 ./scripts/run_steps.sh
