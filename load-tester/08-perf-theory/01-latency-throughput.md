@@ -18,7 +18,7 @@ time: "2.5 ч"
 
 - Терминал, `curl` и чтение HTTP-ответа: [урок 1.4](../01-linux/04-network-cli.md) и [урок 2.1](../02-web/01-client-server-http.md).
 - Python: функции, циклы, списки, `requests` и виртуальное окружение `~/perf-lab/.venv`: [уроки темы 4](../04-python/index.md), особенно [4.5](../04-python/05-venv-requests.md).
-- Стенд «Магазин» с профилем мониторинга: [урок 5.3](../05-docker/03-compose-shop.md).
+- Стенд «Магазин»: как он поднимается, [урок 5.3](../05-docker/03-compose-shop.md); профиль мониторинга с Prometheus и Grafana, [урок 7.1](../07-observability/01-metrics-prometheus.md).
 - PromQL: `rate`, `sum by`, `histogram_quantile` на уровне «запускал и видел график»: [урок 7.2](../07-observability/02-promql.md). Здесь мы наконец разберём, что именно считает `histogram_quantile`.
 
 ## Картина целиком
