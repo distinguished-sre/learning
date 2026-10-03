@@ -410,7 +410,7 @@ sudo apt update
 sudo apt install -y git curl jq htop tree dnsutils python3-venv python3-pip
 ```
 
-Что ставим: `git` (история изменений, [тема 3](../03-git/index.md)), `curl` (HTTP-запросы из терминала), `jq` (разбор JSON-ответов), `htop` (наблюдение за процессами), `tree` (дерево каталогов), `dnsutils` (команда `dig` для DNS, [урок 1.4](04-network-cli.md)), `python3-venv` и `python3-pip` (виртуальные окружения и пакеты Python, [тема 4](../04-python/index.md)). Docker ставим отдельно в [уроке 5.1](../05-docker/01-containers.md).
+Что ставим: `git` (история изменений, [тема 3](../03-git/index.md)), `curl` (HTTP-запросы из терминала), `jq` (разбор JSON-ответов), `htop` (наблюдение за процессами), `tree` (дерево каталогов), `dnsutils` (команда `dig` для DNS, [урок 1.4](04-network-cli.md)), `python3-venv` и `python3-pip` (виртуальные окружения и пакеты Python, [тема 4](../04-python/index.md)). Docker ставим отдельно в [уроке 2.1](../02-web/01-client-server-http.md), когда впервые поднимаем стенд, а подробно разбираем в [теме 5](../05-docker/index.md).
 
 Проверь:
 
