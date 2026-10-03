@@ -34,8 +34,8 @@ layout: default
     <div class="wrap hero-grid">
       <div class="hero-copy">
         <p class="eyebrow in" style="--i:0"><span class="spark" aria-hidden="true">✻</span> Бесплатный курс для тех, кто начинает с нуля</p>
-        <h1 id="hero-h" class="display in" style="--i:1">Научись запускать сервисы, <em>которые не&nbsp;падают</em></h1>
-        <p class="hero-lead in" style="--i:2">Курс DevOps на русском для человека, который не работал в IT. Ты сам поднимешь сервер, упакуешь приложение в контейнер, запустишь его в Kubernetes, настроишь мониторинг и научишься находить причину поломки. Каждое новое слово объясняется там, где встретилось.</p>
+        <h1 id="hero-h" class="display in" style="--i:1">Научись проверять сервисы <em>под&nbsp;нагрузкой</em></h1>
+        <p class="hero-lead in" style="--i:2">Курс нагрузочного тестирования и мониторинга на русском для новичка без опыта в IT. Ты освоишь Linux и Python, проверишь API, создашь нагрузку в Locust и k6 и найдёшь причины медленных ответов по метрикам и логам. Каждое новое слово объясняется там, где встретилось.</p>
         <div class="hero-cta in" style="--i:3">
           <a class="hbtn hbtn-primary" href="{{ first_url | relative_url }}" data-continue>
             <span data-continue-text>Начать с урока {{ first_lesson.id }}</span> <span class="arr" aria-hidden="true">→</span>
@@ -54,7 +54,7 @@ layout: default
       <div class="hero-visual in" style="--i:2" aria-hidden="true">
         <div class="big-spark">✻</div>
         <div class="term">
-          <div class="term-bar"><i></i><i></i><i></i><span>~/notes</span><span class="term-topic" data-term-topic>тема 1</span></div>
+          <div class="term-bar"><i></i><i></i><i></i><span>~/perf-lab</span><span class="term-topic" data-term-topic>тема 1</span></div>
           <pre class="term-body" data-term="hero"></pre>
         </div>
       </div>
@@ -62,44 +62,25 @@ layout: default
     <a class="scroll-hint" href="#what" aria-label="Листать дальше"><span></span></a>
   </section>
 
-  <!-- ============ Что такое DevOps ============ -->
+  <!-- ============ Что такое нагрузочное тестирование ============ -->
   <section id="what" class="band" aria-labelledby="what-h">
     <div class="wrap">
       <p class="kick reveal">Сначала о главном</p>
-      <h2 id="what-h" class="h2 reveal">Что такое DevOps, если по-простому</h2>
-      <p class="lead2 reveal">Программисты пишут код. Но чтобы им пользовались люди, код нужно где-то запустить, обновлять без перерывов, следить, что он жив, и быстро чинить, когда что-то сломалось. Этим занимается DevOps-инженер: строит дорогу, по которой код доезжает до пользователей, и следит, чтобы на ней не было аварий.</p>
+      <h2 id="what-h" class="h2 reveal">Что такое нагрузочное тестирование, если по-простому</h2>
+      <p class="lead2 reveal">Представь интернет-магазин: один покупатель быстро получает ответ, а тысяча покупателей может перегрузить базу. Нагрузочный тест воспроизводит действия людей, измеряет скорость и ошибки и помогает понять, сколько выдержит сервис и где ему тесно.</p>
 
       <div class="pipe reveal" data-pipe>
         <div class="pipe-track" aria-hidden="true"><i class="pipe-fill"></i><b class="pipe-dot"></b></div>
         <ol class="pipe-nodes">
-          <li class="pnode">
-            <span class="pic"><svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></svg></span>
-            <b>Код</b><span>Программа, которую написали разработчики</span><em>app.py</em>
-          </li>
-          <li class="pnode">
-            <span class="pic"><svg viewBox="0 0 24 24"><circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="8" r="2.2"/><path d="M6 7.2v9.6M18 10.2c0 4-6 3-11 7"/></svg></span>
-            <b>Git</b><span>Хранит каждую версию кода и кто что поменял</span><em>тема 3</em>
-          </li>
-          <li class="pnode">
-            <span class="pic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7.5 12.5l3 3 6-6.5"/></svg></span>
-            <b>CI</b><span>Робот сам проверяет каждое изменение</span><em>тема 3</em>
-          </li>
-          <li class="pnode">
-            <span class="pic"><svg viewBox="0 0 24 24"><path d="M12 2.8l8.5 4.6v9.2L12 21.2l-8.5-4.6V7.4z"/><path d="M3.5 7.4L12 12l8.5-4.6M12 12v9.2"/></svg></span>
-            <b>Контейнер</b><span>Коробка, где приложение со всем нужным ему</span><em>тема 4</em>
-          </li>
-          <li class="pnode">
-            <span class="pic"><svg viewBox="0 0 24 24"><path d="M12 2.5l8.2 4.7v9.6L12 21.5l-8.2-4.7V7.2z"/><circle cx="12" cy="12" r="3"/><path d="M12 5.5V9M12 15v3.5M6.4 8.7l3 1.7M14.6 13.6l3 1.7M6.4 15.3l3-1.7M14.6 10.4l3-1.7"/></svg></span>
-            <b>Кластер</b><span>Kubernetes запускает коробки и поднимает упавшие</span><em>тема 5</em>
-          </li>
-          <li class="pnode">
-            <span class="pic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-6 6-6s6 2.4 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c3 .2 5 2.4 5 5.8"/></svg></span>
-            <b>Пользователи</b><span>Открывают сайт и не знают, как сложно внутри</span><em>тема 2</em>
-          </li>
+          <li class="pnode"><span class="pic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10m-4-4 4 4-4 4"/></svg></span><b>Сценарий</b><span>Логин, корзина и заказ</span><em>действия покупателя</em></li>
+          <li class="pnode"><span class="pic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10m-4-4 4 4-4 4"/></svg></span><b>Генератор нагрузки</b><span>Воспроизводит действия многих покупателей</span><em>Locust, k6</em></li>
+          <li class="pnode"><span class="pic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10m-4-4 4 4-4 4"/></svg></span><b>Сервис «Магазин»</b><span>Обрабатывает запросы к приложению и базе</span><em>FastAPI</em></li>
+          <li class="pnode"><span class="pic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10m-4-4 4 4-4 4"/></svg></span><b>Метрики и логи</b><span>Показывают задержки, ошибки и ресурсы</span><em>Prometheus, Grafana, Loki</em></li>
+          <li class="pnode"><span class="pic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 12h10m-4-4 4 4-4 4"/></svg></span><b>Вывод и узкое место</b><span>Проверяем причину и сравниваем после исправления</span><em>отчёт</em></li>
         </ol>
         <div class="pipe-loop">
           <span class="pulse-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12h4l2.5-6 4 12 3-8 1.5 2H22"/></svg></span>
-          <p><b>А над всем этим мониторинг.</b> Графики и оповещения сообщают о проблеме раньше, чем пожалуются пользователи. Это тема 8, а темы 7 и 9 учат описывать всю дорогу кодом, чтобы её можно было пересобрать за минуты.</p>
+          <p><b>Мониторинг объясняет результат теста.</b> В теме 7 ты соберёшь метрики и логи, в темах 9 и 10 создашь нагрузку, а в теме 11 найдёшь и проверишь узкое место.</p>
         </div>
       </div>
     </div>
@@ -110,7 +91,7 @@ layout: default
     <div class="wrap">
       <p class="kick reveal">Сквозной проект</p>
       <h2 id="proj-h" class="h2 reveal">Один сервис растёт через весь курс</h2>
-      <p class="lead2 reveal">«Заметки» - маленькое веб-приложение на Python: хранит заметки и отвечает на запросы по сети. В первой теме это один файл на сервере. С каждой темой вокруг него появляется новый слой, и к концу у тебя всё, что есть у настоящего сервиса в компании. Листай и смотри, как собирается стек.</p>
+      <p class="lead2 reveal">«Магазин» - учебный интернет-магазин на Python (FastAPI) с PostgreSQL, Redis и заглушкой оплаты. У него есть логин, корзина и заказ, а внутри специально заложены узкие места. С каждой темой ты добавляешь тесты и инструменты наблюдения. Листай и смотри, как собирается стенд.</p>
 
       <div class="story">
         <div class="stack-wrap" aria-hidden="true">
@@ -118,7 +99,7 @@ layout: default
             {%- for t in site.data.course.topics %}
             <div class="layer" data-layer="{{ t.n }}" style="--n:{{ t.n }}"><span class="ln">{{ t.n }}</span><span class="lt">{{ t.layer }}</span></div>
             {%- endfor %}
-            <div class="stack-app"><span class="spark">✻</span> app.py</div>
+            <div class="stack-app"><span class="spark">✻</span> Магазин</div>
           </div>
           <p class="stack-cap"><span data-stack-count>1</span>/{{ site.data.course.topics.size }} · <span data-stack-label>{{ first_topic.layer }}</span></p>
         </div>
@@ -133,7 +114,7 @@ layout: default
           {%- endfor %}
         </ol>
       </div>
-      <p class="after-note reveal">К концу курса у тебя будет репозиторий <code>notes</code>, который не стыдно показать на собеседовании: код, CI, Helm-чарт, Terraform, Ansible, дашборды, алерты и runbook (инструкция дежурному, что делать при поломке).</p>
+      <p class="after-note reveal">К концу курса у тебя будет репозиторий <code>perf-lab</code>: автотесты, сценарии Locust и k6, дашборды, методика испытаний и отчёт с доказанными узкими местами.</p>
     </div>
   </section>
 
@@ -216,14 +197,14 @@ layout: default
       <div>
         <p class="kick reveal">Темп</p>
         <h2 id="time-h" class="h2 reveal">Сколько это займёт</h2>
-        <p class="lead2 reveal">Весь курс около {{ hours_round }} часов. Выбери свой темп и посмотри, когда закончишь.</p>
+        <p class="lead2 reveal">Весь курс около {{ hours_round }} часов. Если заниматься 5 дней в неделю по 1,5–2 часа, это около трёх месяцев. <a href="{{ '/schedule.html' | relative_url }}">Расписание</a> поможет распределить уроки. Выбери свой темп и посмотри, когда закончишь.</p>
         <div class="calc reveal" data-calc>
           <label><span>Часов в день <output data-out="h">2</output></span>
             <input type="range" min="0.5" max="6" step="0.5" value="2" data-in="h"></label>
           <label><span>Дней в неделю <output data-out="d">5</output></span>
             <input type="range" min="1" max="7" step="1" value="5" data-in="d"></label>
           <div class="calc-res">
-            <span class="calc-big" data-res-weeks>17</span>
+            <span class="calc-big" data-res-weeks>13</span>
             <span class="calc-unit" data-res-unit>недель</span>
             <p class="calc-date" data-res-date>&nbsp;</p>
           </div>
@@ -233,10 +214,10 @@ layout: default
         <p class="kick reveal">Что понадобится</p>
         <h2 class="h2 reveal">Подготовка</h2>
         <ul class="needs">
-          <li class="reveal" style="--d:0"><span class="nic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><div><b>Компьютер с 16 ГБ памяти</b><span>С 8 ГБ тоже пройдёшь: в уроках есть советы, как облегчить стенд.</span></div></li>
-          <li class="reveal" style="--d:1"><span class="nic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l4 4-4 4M12 17h7"/></svg></span><div><b>Ubuntu, Windows или macOS</b><span>Ubuntu 24.04, Windows с WSL2 (Linux внутри Windows) или macOS с Docker Desktop или Colima.</span></div></li>
+          <li class="reveal" style="--d:0"><span class="nic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><div><b>Минимум 8 ГБ памяти, лучше 16</b><span>Оставь 30 ГБ свободного места для образов, данных и результатов тестов.</span></div></li>
+          <li class="reveal" style="--d:1"><span class="nic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8l4 4-4 4M12 17h7"/></svg></span><div><b>Ubuntu или Windows с WSL2</b><span>Ubuntu 24.04 или 26.04, либо Windows с WSL2 (Linux внутри Windows).</span></div></li>
           <li class="reveal" style="--d:2"><span class="nic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 8v8M18 10c0 4-6 3-11.5 6.5"/></svg></span><div><b>Аккаунт на GitHub</b><span>Туда ты положишь свой проект, там же будет работать CI.</span></div></li>
-          <li class="reveal" style="--d:3"><span class="nic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 17.7 8.5 4.75 4.75 0 0 1 17 18z"/></svg></span><div><b>Yandex Cloud для тем 6, 7 и 10</b><span>Хватит пробного гранта. Для AWS в уроках есть таблица соответствия сервисов.</span></div></li>
+          <li class="reveal" style="--d:3"><span class="nic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 17.7 8.5 4.75 4.75 0 0 1 17 18z"/></svg></span><div><b>Нейросеть как помощник</b><span><a href="{{ '/' | relative_url }}">Гайд: с чего начать</a> содержит промпт нейросети-преподавателя: используй его для объяснений и подсказок к урокам, а команды проверяй сам.</span></div></li>
         </ul>
       </div>
     </div>
@@ -248,9 +229,9 @@ layout: default
       <p class="kick reveal">После курса</p>
       <h2 id="after-h" class="h2 reveal">Проверь себя в условиях, близких к рабочим</h2>
       <div class="after">
-        <a class="acard reveal" style="--d:0" href="{{ '/tasks/monitoring.html' | relative_url }}"><span class="ak">ТЗ 1</span><b>Инженер мониторинга</b><span>12–16 часов в одиночку: развернуть мониторинг, настроить осмысленные алерты, разобрать инцидент и написать документацию.</span><em>Открыть →</em></a>
-        <a class="acard reveal" style="--d:1" href="{{ '/tasks/sre.html' | relative_url }}"><span class="ak">ТЗ 2</span><b>SRE</b><span>Четыре рабочих дня: мониторинг, логи, Kubernetes, CI/CD, базы, инциденты и планирование мощностей.</span><em>Открыть →</em></a>
-        <a class="acard reveal" style="--d:2" href="{{ '/resources.html' | relative_url }}"><span class="ak">Ещё</span><b>Дополнительные материалы</b><span>Дорожная карта, внешние курсы и подборки.</span><em>Открыть →</em></a>
+        <a class="acard reveal" style="--d:0" href="{{ '/13-final/05-mock-monitoring.html' | relative_url }}"><span class="ak">Практика</span><b>Инженер мониторинга</b><span>Объясни метрики, настрой алерты и разбери инцидент на пробном собеседовании.</span><em>Открыть →</em></a>
+        <a class="acard reveal" style="--d:1" href="{{ '/13-final/02-take-home.html' | relative_url }}"><span class="ak">Тестовое</span><b>Инженер по нагрузке</b><span>Один день: составь сценарий, проведи тест и напиши понятный отчёт с выводами.</span><em>Открыть →</em></a>
+        <a class="acard reveal" style="--d:2" href="{{ '/13-final/03-portfolio-resume.html' | relative_url }}"><span class="ak">Ещё</span><b>Портфолио и резюме</b><span>Собери результаты экспериментов и покажи, как ты находишь причины проблем.</span><em>Открыть →</em></a>
       </div>
     </div>
   </section>
@@ -261,7 +242,7 @@ layout: default
     <div class="wrap">
       <div class="final-spark reveal" aria-hidden="true">✻</div>
       <h2 id="final-h" class="display reveal">Первый урок займёт пару часов</h2>
-      <p class="lead2 reveal">Получишь машину с Linux, освоишься в терминале и запустишь первую версию «Заметок». Дальше каждый урок добавляет по шагу.</p>
+      <p class="lead2 reveal">Подготовишь Ubuntu, освоишься в терминале и научишься работать с файлами. Дальше каждый урок добавляет по шагу.</p>
       <p class="reveal"><a class="hbtn hbtn-primary" href="{{ first_url | relative_url }}" data-continue><span data-continue-text>Начать с урока {{ first_lesson.id }}</span> <span class="arr" aria-hidden="true">→</span></a></p>
     </div>
   </section>

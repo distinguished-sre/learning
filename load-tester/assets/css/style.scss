@@ -438,3 +438,62 @@ li.checked .todo-text { color: var(--muted); text-decoration: line-through; text
 .prose .tool div.highlighter-rouge, .prose .tool .highlight { margin: 0; }
 .tool.bash .highlight .nv:first-child { color: var(--muted); }
 .card-id .mk { margin-right: 6px; }
+
+/* ---------- Визуальные объяснения в уроках ---------- */
+.viz, .mermaid-viz {
+  min-width: 0; max-width: 100%; margin: 24px 0; padding: 16px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--bg-code); color: var(--text);
+}
+.viz-title { margin: 0 0 12px; font-weight: 700; }
+.viz-svg, .mermaid-view svg { display: block; width: 100%; max-width: 100% !important; height: auto; }
+.viz-svg { overflow: hidden; touch-action: pan-y; }
+.viz-svg text { font: 16px var(--sans); fill: var(--text); }
+.viz-svg .muted { fill: var(--muted); }
+.viz-svg .box { fill: var(--bg-2); stroke: var(--line); stroke-width: 2; }
+.viz-svg .axis { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.viz-svg .grid { stroke: var(--line); stroke-width: 1; }
+.viz-svg .stroke { fill: none; stroke: currentColor; stroke-width: 3; stroke-linejoin: round; }
+.viz-svg .fill { fill: currentColor; }
+.viz-svg .marker { stroke: currentColor; stroke-width: 2; stroke-dasharray: 5 3; }
+.viz-svg .selected { fill: var(--bg-2); stroke: currentColor; stroke-width: 3; }
+.viz .primary { color: var(--accent-ink); }
+.viz .response { color: var(--blue); }
+.viz .violet { color: var(--violet); }
+.viz .warning { color: var(--yellow); }
+.viz .danger, .viz-error { color: var(--red); }
+.viz-svg text.primary, .viz-svg text.response, .viz-svg text.violet,
+.viz-svg text.warning, .viz-svg text.danger { fill: currentColor; }
+.viz-svg .label-bg { fill: var(--bg-code); }
+.viz-svg text.on-fill { fill: var(--bg); }
+.viz-status { font-family: var(--mono); font-size: .85rem; overflow-wrap: anywhere; min-height: 1.8em; }
+.viz-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.viz-controls button {
+  border: 1px solid var(--line); border-radius: 7px; padding: 9px 12px;
+  background: var(--bg-2); color: var(--text); cursor: pointer; font: inherit;
+  min-height: 44px;
+}
+.viz-controls button:hover:enabled { border-color: var(--accent-ink); }
+.viz-controls button:disabled { opacity: .5; cursor: default; }
+.viz-controls label { flex: 1 1 230px; min-width: 0; display: grid; gap: 5px; font-size: .85rem; }
+.viz-controls input { width: 100%; min-height: 30px; accent-color: var(--accent-ink); }
+.viz-controls output { font-family: var(--mono); }
+.viz-caption, .viz-tooltip { margin: 12px 0 0; color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
+.viz-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 10px 0; font-size: .85rem; }
+.viz-legend span::before { content: '━ '; }
+.viz details { margin-top: 12px; max-width: 100%; overflow: auto; }
+.viz table { border-collapse: collapse; width: 100%; font-size: .8rem; }
+.viz th, .viz td { padding: 6px; border: 1px solid var(--line); text-align: left; }
+.mermaid-view { min-width: 0; }
+.mermaid-viz pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .viz, .mermaid-viz { padding: 10px; }
+  .viz-svg text { font-size: 28px; }
+  .viz[data-viz="request-path"] .viz-svg text,
+  .viz[data-viz="flow"] .viz-svg text,
+  .viz[data-viz="load-profiles"] .viz-svg text { font-size: 30px; }
+  .viz-controls button { flex: 1 1 auto; padding: 8px; font-size: .85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .viz *, .mermaid-viz * { animation: none !important; transition: none !important; }
+}

@@ -140,7 +140,7 @@ html.leaving .home { opacity: 0; transform: translateY(-10px); }
 
 /* ---------- путь кода ---------- */
 .pipe { --p: 0; position: relative; margin-top: 10px; }
-.pipe-nodes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; position: relative; z-index: 1; }
+.pipe-nodes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; position: relative; z-index: 1; }
 .pnode { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; margin: 0; }
 .pic {
   width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; margin-bottom: 10px;
@@ -153,7 +153,7 @@ html.leaving .home { opacity: 0; transform: translateY(-10px); }
 .pnode em { font: 500 15px var(--mono); font-style: normal; color: var(--accent-ink); margin-top: 4px; }
 .pnode.passed .pic { color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 .pnode.hit .pic { background: var(--accent); color: #141413; border-color: var(--accent); transform: translateY(-4px) scale(1.06); box-shadow: 0 12px 30px -8px color-mix(in srgb, var(--accent) 80%, transparent); }
-.pipe-track { position: absolute; z-index: 0; top: 32px; left: calc(100% / 12); right: calc(100% / 12); height: 2px; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px); }
+.pipe-track { position: absolute; z-index: 0; top: 32px; left: calc(100% / 10); right: calc(100% / 10); height: 2px; background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px); }
 .pipe-fill { position: absolute; left: 0; top: 0; height: 100%; width: calc(var(--p) * 100%); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, transparent), var(--accent)); border-radius: 2px; }
 .pipe-dot { position: absolute; top: 50%; left: calc(var(--p) * 100%); width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 24px var(--accent); }
 .pipe-loop { display: flex; gap: 18px; align-items: flex-start; margin-top: 48px; padding: 22px 26px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 18px; background: color-mix(in srgb, var(--accent) 5%, transparent); }

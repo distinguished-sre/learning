@@ -1,13 +1,14 @@
-# Сайт курса: GitHub Pages проекта https://distinguished-sre.github.io/devops/
-title: Курс обучения DevOps от Евгения Быкова
-description: Десять блоков от Linux до Kubernetes, GitOps и сквозного проекта. Теория простым языком, вопросы с ответами и практика
+# Сайт курса: GitHub Pages проекта https://distinguished-sre.github.io/load-tester/
+title: Курс нагрузочного тестирования от Евгения Быкова
+description: "Нагрузочное тестирование и мониторинг с нуля: Linux, Python, автотесты API, Locust, k6 и поиск узких мест на учебном интернет-магазине"
 email: jenyabykov322@yandex.ru
 github_username: distinguished-sre
 lang: ru
 url: "https://distinguished-sre.github.io"
-baseurl: "/devops"
-repo_url: "https://github.com/distinguished-sre/devops"
+baseurl: "/load-tester"
+repo_url: "https://github.com/distinguished-sre/load-tester"
 logo: /assets/favicon.svg
+image: /og.jpg
 
 # Тему cayman убрали: оформление своё (_layouts, assets/css/style.scss).
 markdown: kramdown
@@ -34,8 +35,8 @@ relative_links:
 # Указав exclude, мы заменяем стандартный список Jekyll целиком, поэтому
 # служебные пути перечислены. CLAUDE.md намеренно содержит Liquid-теги как
 # текст и не должен попадать на сайт. project/ и _samples: это код, а не страницы.
-# versions.yml не исключаем: без front matter Jekyll его не публикует.
 exclude:
+  - README.md
   - CLAUDE.md
   - project/
   - _samples/
@@ -53,32 +54,35 @@ exclude:
   - .sass-cache
   - .jekyll-cache
 
-# Уроки получают layout lesson по умолчанию (scope по префиксу пути),
-# index.md тем задают layout: topic явно, README.md: layout home.
+# Уроки используют lesson, обзоры тем задают topic явно.
 defaults:
+  - scope: {path: ""}
+    values: {image: /og.jpg}
   - scope: {path: "01-linux"}
     values: {layout: lesson}
-  - scope: {path: "02-network"}
+  - scope: {path: "02-web"}
     values: {layout: lesson}
-  - scope: {path: "03-git-ci"}
+  - scope: {path: "03-git"}
     values: {layout: lesson}
-  - scope: {path: "04-docker"}
+  - scope: {path: "04-python"}
     values: {layout: lesson}
-  - scope: {path: "05-kubernetes"}
+  - scope: {path: "05-docker"}
     values: {layout: lesson}
-  - scope: {path: "06-cloud"}
+  - scope: {path: "06-api-testing"}
     values: {layout: lesson}
-  - scope: {path: "07-iac"}
+  - scope: {path: "07-observability"}
     values: {layout: lesson}
-  - scope: {path: "08-observability"}
+  - scope: {path: "08-perf-theory"}
     values: {layout: lesson}
-  - scope: {path: "09-secrets-gitops"}
+  - scope: {path: "09-locust"}
     values: {layout: lesson}
-  - scope: {path: "10-capstone"}
+  - scope: {path: "10-k6"}
     values: {layout: lesson}
-  - scope: {path: "tasks"}
+  - scope: {path: "11-bottlenecks"}
+    values: {layout: lesson}
+  - scope: {path: "12-process"}
+    values: {layout: lesson}
+  - scope: {path: "13-final"}
+    values: {layout: lesson}
+  - scope: {path: "schedule.md"}
     values: {layout: default}
-  - scope: {path: "resources.md"}
-    values: {layout: default}
-  - scope: {path: "README.md"}
-    values: {layout: home}

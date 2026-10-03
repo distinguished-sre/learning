@@ -8,7 +8,9 @@
     </label>
   </div>
   <nav class="course-nav" data-total="{{ total }}">
-    <a class="nav-home{% if page.url == '/' %} current{% endif %}" href="{{ '/' | relative_url }}">✻ Карта курса</a>
+    <a class="nav-home{% if page.url == '/course/' %} current{% endif %}" href="{{ '/course/' | relative_url }}">✻ Карта курса</a>
+    <a class="nav-home{% if page.url == '/schedule.html' %} current{% endif %}" href="{{ '/schedule.html' | relative_url }}">Расписание</a>
+    <a class="nav-home" href="{{ '/' | relative_url }}">Гайд: с чего начать</a>
     {%- for t in site.data.course.topics -%}
       {%- capture tpath %}/{{ t.dir }}/{% endcapture -%}
       {%- assign is_cur = false -%}

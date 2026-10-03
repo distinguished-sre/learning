@@ -135,6 +135,14 @@
     padding-left:16px;margin:0;
   }
   .howto a{font-weight:600;}
+  .course-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px;}
+  .course-button{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:11px 20px;border:1px solid var(--accent);border-radius:8px;
+    font-weight:600;line-height:1.4;background:var(--accent);color:var(--on-accent);
+  }
+  .course-button-secondary{background:var(--surface);color:var(--accent);}
+  .course-button:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
 
   section{padding:46px 0;border-top:1px solid var(--line);}
   h2{
@@ -356,6 +364,8 @@
   @media (max-width:520px){
     body{font-size:17px;}
     .hero{padding:60px 0 32px;}
+    .course-actions{flex-direction:column;}
+    .course-button{width:100%;}
     .needs .k{width:104px;}
     .jump{right:14px;bottom:14px;font-size:13px;padding:10px 16px;}
     .figure{padding:18px 16px 14px;}
@@ -445,6 +455,10 @@
     <h1 data-en="Test automation and load testing — you start from zero">Автоматизация и нагрузочное тестирование — туда входят с нуля</h1>
     <p class="lede" data-en="Two engineering tracks that are valued and well paid: test automation and load testing. This page takes you from “I know nothing about IT” to your first real engineering skill.">Две инженерные специализации, которые ценят и хорошо оплачивают: автоматизация тестов и нагрузка. Эта страница проведёт тебя от «я ничего не знаю про IT» до первого реального инженерного навыка.</p>
     <p class="howto" id="howto">Прочитай сверху вниз один раз — это займёт минут десять. В самом низу лежит <a href="#start">текст, с которого начнётся обучение</a>. Когда дочитаешь, скопируешь его и отправишь нейросети.</p>
+    <div class="course-actions">
+      <a class="course-button" href="course/" data-en="Course map">Карта курса</a>
+      <a class="course-button course-button-secondary" href="schedule.html" data-en="Schedule">Расписание</a>
+    </div>
   </header>
 
   <section>
@@ -579,61 +593,62 @@
   <section>
     <p class="sec-eyebrow" data-en="03 · Path">03 · Путь</p>
     <h2 data-en="Your path">Твой путь</h2>
-    <p class="muted" data-en="Nine stages from the basics to interview-ready. A thin foundation — then quickly into code. Each one is practice on your laptop, not theory from a textbook. Honestly about the timing: this is months of regular study, not one weekend — and that’s normal.">Девять этапов от основ до готовности к собеседованию. Тонкая база — и быстро в код. На каждом — практика на твоём ноутбуке, а не теория из учебника. Честно про сроки: это месяцы регулярных занятий, а не одни выходные — и это нормально.</p>
+    <p class="muted" data-en="Nine stages follow the ready-made free course “Load testing and monitoring from zero”: 13 topics, 52 lessons, about 128 hours. It includes explanations, diagrams and practice on your own lab. Following the schedule, with five 1.5–2 hour sessions a week, the path takes about three months.">Девять этапов — это темы готового бесплатного курса «Нагрузочное тестирование и мониторинг с нуля»: 13 тем, 52 урока, около 128 часов. Внутри — объяснения, схемы и практика на своём стенде. По расписанию, с пятью занятиями в неделю по 1,5–2 часа, путь займёт около трёх месяцев.</p>
     <div class="track">
       <div class="stop">
         <div class="dot">0</div>
         <h3 data-en="Get comfortable">Освоиться</h3>
-        <p data-en="How a computer works “inside”, terminal commands, how a site talks to a server, what an API is. The foundation — nothing works further without it.">Как устроен компьютер «изнутри», команды в терминале, как сайт общается с сервером, что такое API. Фундамент — без него дальше никак.</p>
+        <p data-en="Topics 1–2: work in Linux, find files and read command output. Understand a request’s path to a web service, read HTTP, REST, JSON and simple SQL queries.">Темы 1–2: работаешь в Linux, находишь файлы и читаешь вывод команд. Понимаешь путь запроса к веб-сервису, читаешь HTTP, REST, JSON и простые SQL-запросы.</p>
       </div>
       <div class="stop">
         <div class="dot">1</div>
-        <h3 data-en="Understand what’s tested and how">Понять, что и как тестируют</h3>
-        <p data-en="What “checking” means, what a bug and status codes are, how to check an API by hand — and a first idea of what gets tested: positive and negative cases, boundaries.">Что значит «проверить», что такое баг и статус-коды, как проверить API руками — и первое понятие, что вообще проверяют: позитивные и негативные случаи, границы.</p>
+        <h3 data-en="Git and Python">Git и Python</h3>
+        <p data-en="Topics 3–4: save your work with Git in the perf-lab repository on GitHub. Write and run Python scripts, work with functions, data and errors.">Темы 3–4: сохраняешь работу через Git в репозитории perf-lab на GitHub. Пишешь и запускаешь Python-скрипты, работаешь с функциями, данными и ошибками.</p>
       </div>
       <div class="stop">
         <div class="dot">2</div>
-        <h3 data-en="Coding basics">Основы кода</h3>
-        <p data-en="Just enough of the language to write your first test: variables, functions, running a script and the working environment. No coding experience — we go slowly; some — fast.">Ровно столько языка, чтобы написать первый тест: переменные, функции, запуск скрипта и рабочее окружение. Нет опыта в коде — пройдём подробно; есть — быстро.</p>
+        <h3 data-en="Docker and the “Shop” lab">Docker и стенд «Магазин»</h3>
+        <p data-en="Topic 5: start the local “Shop” lab with Docker Compose: FastAPI, PostgreSQL, Redis and a payment stub. Check that services are ready, read logs and stop the lab.">Тема 5: поднимаешь локальный «Магазин» через Docker Compose: FastAPI, PostgreSQL, Redis и заглушку оплаты. Проверяешь, что сервисы готовы, читаешь логи и останавливаешь стенд.</p>
       </div>
       <div class="stop">
         <div class="dot">3</div>
-        <h3 data-en="API autotests and your first repository">Автотесты API и первый репозиторий</h3>
-        <p data-en="Write code that checks the API for you, and set up a repository on GitHub. Here too — what exactly to check, and how to version your work with Git.">Написать код, который сам проверяет API, и завести репозиторий на GitHub. Здесь же — что именно проверять и как версионировать работу через Git.</p>
+        <h3 data-en="API autotests and CI">Автотесты API и CI</h3>
+        <p data-en="Topic 6: test the “Shop” API with pytest: successful requests, errors and boundary cases. Run automated checks in GitHub Actions and investigate failures.">Тема 6: проверяешь API «Магазина» с pytest: успешные запросы, ошибки и граничные случаи. Запускаешь автоматические проверки в GitHub Actions и разбираешь падения.</p>
       </div>
       <div class="stop">
         <div class="dot">4</div>
-        <h3 data-en="UI autotests and a framework">Автотесты интерфейса и фреймворк</h3>
-        <p data-en="Automate checks of the site itself — clicks, forms, navigation — and organize the tests into a tidy structure that’s easy to add to and run.">Автоматизировать проверки самого сайта — клики, формы, переходы — и собрать тесты в аккуратную структуру, чтобы их было легко добавлять и запускать.</p>
+        <h3 data-en="Metrics, logs and alerts">Метрики, логи и алерты</h3>
+        <p data-en="Topic 7: collect metrics in Prometheus, query them with PromQL and build Grafana dashboards. Find events in Loki, connect exporters and configure notifications with Alertmanager.">Тема 7: собираешь метрики в Prometheus, задаёшь вопросы данным через PromQL и строишь дашборды в Grafana. Находишь события в Loki, подключаешь экспортеры и настраиваешь уведомления через Alertmanager.</p>
       </div>
       <div class="stop">
         <div class="dot">5</div>
         <h3 data-en="Understand what to measure">Понять, что измерять</h3>
-        <p data-en="Response time, how many requests the system holds, how many fail. This is the language all load testing speaks.">Скорость ответа, сколько запросов система держит, сколько падает. Это язык, на котором говорит вся нагрузка.</p>
+        <p data-en="Topic 8: distinguish average latency from percentiles, explain queues and Little’s law. Choose a test type, a load profile and an SLO — a measurable service quality objective.">Тема 8: отличаешь среднюю задержку от перцентилей, объясняешь очереди и закон Литтла. Выбираешь вид теста, профиль нагрузки и SLO — измеримую цель качества сервиса.</p>
       </div>
       <div class="stop">
         <div class="dot">6</div>
-        <h3 data-en="A load test">Нагрузочный тест</h3>
-        <p data-en="Spin up a practice app via Docker, “load” it, read the result; different scenarios and profiles, finding the bottleneck — the point where the system breaks first.">Через Docker поднять учебное приложение, «нагрузить» его, прочитать результат; разные сценарии и профили, поиск узкого места — точки, где система ломается первой.</p>
+        <h3 data-en="Load testing: Locust and k6">Нагрузочный тест: Locust и k6</h3>
+        <p data-en="Topics 9–10: first write Python scenarios in Locust, then learn k6. Load-test only your own local lab, set profiles and thresholds, read latency and error rates.">Темы 9–10: сначала пишешь сценарии на Python в Locust, затем осваиваешь k6. Нагружаешь только свой локальный стенд, задаёшь профили и пороги, читаешь задержки и долю ошибок.</p>
       </div>
       <div class="stop">
         <div class="dot">7</div>
-        <h3 data-en="Everything in CI/CD on GitHub">Всё в CI/CD на GitHub</h3>
-        <p data-en="Both autotests and load runs trigger automatically on every code change. Speed drops below the threshold or a test fails — the check turns red. Employers value this skill especially.">И автотесты, и нагрузочные прогоны запускаются сами при каждом изменении кода. Просела скорость ниже порога или упал тест — проверка краснеет. Этот навык работодатели ценят особенно.</p>
+        <h3 data-en="Find a bottleneck and write a report">Найти узкое место и написать отчёт</h3>
+        <p data-en="Topics 11–12: use metrics and logs to test hypotheses about CPU, the database, memory, cache and dependencies. Write an evidence-based report, add light load tests to CI and estimate spare capacity.">Темы 11–12: по метрикам и логам проверяешь гипотезы о CPU, базе, памяти, кэше и зависимостях. Пишешь отчёт с доказательствами, добавляешь лёгкую нагрузку в CI и оцениваешь запас мощности.</p>
       </div>
       <div class="stop">
         <div class="dot">8</div>
-        <h3 data-en="Portfolio and job search">Портфолио и поиск работы</h3>
-        <p data-en="Assemble the repository, a resume for junior AQA/automation, and work through typical interview questions and your portfolio. This is your way into the market.">Собрать репозиторий, резюме под junior AQA/automation, разобрать типовые вопросы собеседования и портфолио. Это твой выход на рынок.</p>
+        <h3 data-en="Portfolio and interviews">Портфолио и собеседования</h3>
+        <p data-en="Topic 13: investigate an incident under load, complete a one-day take-home assignment and assemble a portfolio and resume. Practice two timed interviews aloud: load testing and monitoring.">Тема 13: разбираешь инцидент под нагрузкой, выполняешь тестовое задание за один день и собираешь портфолио с резюме. Проходишь два пробных собеседования вслух на время: по нагрузочному тестированию и мониторингу.</p>
       </div>
     </div>
+    <p class="mt18" id="courseMap"><a href="course/">Открыть карту курса →</a></p>
   </section>
 
   <section>
     <p class="sec-eyebrow" data-en="04 · How you learn">04 · Как учишься</p>
     <h2 data-en="How you’ll learn">Как ты будешь учиться</h2>
-    <p data-en="Your teacher won’t be a person but an AI — your personal tutor. It leads you by the hand, explains in plain words, gives small tasks and checks that you understood. The main principle of the whole course is understanding, not cramming. Every step ends with you actually having done something and seen the result with your own eyes.">Учить тебя будет не человек, а нейросеть — твой личный преподаватель. Она ведёт за руку, объясняет простыми словами, даёт маленькие задания и проверяет, что ты понял. Главный принцип всего обучения — понимание, а не зубрёжка. Каждый шаг заканчивается тем, что ты что-то реально сделал и увидел результат своими глазами.</p>
-    <p data-en="At each stage you’ll do not one but several different examples — that’s how the skill sticks more reliably. And from autotests on, these examples add up to your portfolio: the more of them and the more varied, the stronger you look at an interview.">На каждом этапе ты сделаешь не один, а несколько разных примеров — так навык закрепляется надёжнее. А начиная с автотестов эти примеры складываются в твоё портфолио: чем их больше и чем они разнообразнее, тем сильнее ты выглядишь на собеседовании.</p>
+    <p data-en="You study the course lessons: theory in plain words, diagrams and animations, practice on your own lab, “break and fix” tasks and interview questions. An AI tutor works alongside you: explains confusing parts, checks understanding, walks through errors and drills questions aloud.">Ты учишься по урокам курса: теория простыми словами, схемы и анимации, практика на своём стенде, «сломай и почини» и вопросы с собеседований. Нейросеть-преподаватель рядом: объясняет непонятное, проверяет понимание, разбирает ошибки по шагам и гоняет по вопросам вслух.</p>
+    <p data-en="Varied examples build the skill: you test different endpoints, change load profiles and build dashboards. Save everything in your own perf-lab repository: tests, scenarios, dashboards and reports with conclusions. Your portfolio grows throughout the course, ready to show at an interview.">Разные примеры закрепляют навык: ты проверяешь разные эндпоинты, меняешь профили нагрузки и собираешь дашборды. Всё складываешь в свой репозиторий perf-lab: тесты, сценарии, дашборды и отчёты с выводами. Так по ходу курса растёт портфолио, которое можно показать на собеседовании.</p>
     <ul class="rules">
       <li id="rule1"><strong>Не притворяйся, что понял.</strong><span>Непонятно — пиши прямо: «не понял, объясни проще». Преподаватель для этого и нужен, это не стыдно.</span></li>
       <li id="rule2"><strong>Делай руками, а не читай глазами.</strong><span>Сказано ввести команду или запустить программу — введи и запусти у себя. Прочитать и кивнуть не считается, навык так не появится.</span></li>
@@ -677,10 +692,11 @@
     <p class="sec-eyebrow" data-en="06 · What you need">06 · Что нужно</p>
     <h2 data-en="What you’ll need">Что понадобится</h2>
     <ul class="needs">
-      <li><span class="k" data-en="Laptop">Ноутбук</span><span class="v" data-en="You already have one. It’s powerful enough with plenty to spare.">У тебя уже есть. Его мощности хватает с большим запасом.</span></li>
+      <li><span class="k" data-en="Computer">Компьютер</span><span class="v" data-en="Ubuntu 24.04 or 26.04 (or Windows with WSL2, or a Mac with a virtual machine). At least 8 GB of RAM, preferably 16, and 30 GB of disk space.">Ubuntu 24.04 или 26.04 (или Windows с WSL2, или Mac с виртуальной машиной). Минимум 8 ГБ памяти, лучше 16, и 30 ГБ места на диске.</span></li>
       <li><span class="k" data-en="Internet">Интернет</span><span class="v" data-en="Also covered. Nothing else to buy — every program along the way is free.">Тоже есть. Больше ничего покупать не нужно — все программы по ходу обучения бесплатные.</span></li>
       <li><span class="k" data-en="AI">Нейросеть</span><span class="v" id="nnV">Рекомендую <a href="https://chatgpt.com" target="_blank" rel="noopener">ChatGPT</a> — он лучше всего подходит для учёбы (нужен VPN). Не хуже как преподаватель — <a href="https://claude.ai" target="_blank" rel="noopener">Claude</a> (тоже VPN). Без VPN из России бесплатно работают <a href="https://chat.deepseek.com" target="_blank" rel="noopener">DeepSeek</a> (силён в коде) и <a href="https://giga.chat" target="_blank" rel="noopener">GigaChat</a> (нативный русский). Открой любую и начинай.</span></li>
-      <li><span class="k" data-en="Time">Время</span><span class="v" data-en="An hour or two roughly every three days. Between sessions you do almost nothing — that’s fine, the teacher recaps last time at the start of each one. Regularity matters more than length.">Час-два примерно раз в три дня. Между занятиями ты почти ничего не делаешь — это нормально, преподаватель в начале каждой сессии повторит прошлое. Важнее не длина, а регулярность.</span></li>
+      <li><span class="k" data-en="GitHub">GitHub</span><span class="v" data-en="A free account for your portfolio and automated checks.">Бесплатный аккаунт — там будет портфолио и автоматические проверки.</span></li>
+      <li><span class="k" data-en="Time">Время</span><span class="v" data-en="Five 1.5–2 hour sessions a week, about three months following the course schedule. Less time means a longer path; regularity matters more than session length.">5 занятий в неделю по 1,5–2 часа, около трёх месяцев по расписанию курса. Если времени меньше, путь просто займёт дольше — регулярность важнее длины занятия.</span></li>
     </ul>
   </section>
 
@@ -691,7 +707,7 @@
     <ol class="steps">
       <li data-en="Press “Copy” — the whole text goes to your clipboard.">Нажми «Скопировать» — весь текст попадёт в буфер обмена.</li>
       <li data-en="Open the AI (the links are in “What you’ll need” above) and start a new chat.">Открой нейросеть (ссылки выше, в разделе «Что понадобится») и начни новый чат.</li>
-      <li data-en="Paste the text and send it. The teacher will ask a few questions — about your computer, your time, your experience and which path suits you — and only then start the first lesson.">Вставь текст и отправь. Преподаватель задаст несколько вопросов — про компьютер, время, опыт и какой путь тебе ближе — и только потом начнёт первый урок.</li>
+      <li data-en="Paste the text and send it. The teacher will ask about your computer, time, experience and current course lesson — then help with that lesson, or suggest starting at 1.1.">Вставь текст и отправь. Преподаватель спросит про компьютер, время, опыт и текущий урок курса — затем поможет с этим уроком или предложит начать с 1.1.</li>
     </ol>
 
     <p class="os-hint" id="osHint" hidden></p>
@@ -700,7 +716,9 @@
         <span class="t" data-en="📈 Text for the AI">📈 Текст для нейросети</span>
         <button class="copybtn" id="copy" type="button" data-en="Copy">Скопировать</button>
       </div>
-      <pre id="prompt">Ты — мой персональный преподаватель. Я вне IT и хочу освоить профессию инженера по автоматизации тестов и нагрузочному тестированию (test automation / AQA + performance/load). Путь code-first: код, автотесты, нагрузка, CI. Веди меня с абсолютного нуля.
+      <pre id="prompt">Ты — мой персональный преподаватель. Я вне IT и хочу освоить профессию инженера по нагрузочному тестированию и мониторингу (performance/load testing + observability). Веди меня с абсолютного нуля. Стек фиксированный: Python, Locust, затем k6.
+
+Я учусь по бесплатному курсу https://distinguished-sre.github.io/load-tester/course/ (13 тем, стенд «Магазин»). Ты мой преподаватель рядом с курсом: когда я приношу урок или его кусок, объясняй непонятное простыми словами, проверяй понимание, разбирай ошибки по шагам, гоняй по вопросам с собеседований из урока вслух. Не подменяй курс своим планом и не забегай вперёд него. Если я занимаюсь без курса, веди по маршруту ниже сам.
 
 ВАЖНО, прежде всего: не начинай Этап 0 и вообще обучение, пока я не отвечу на вопросы знакомства ниже.
 
@@ -711,9 +729,9 @@
 3) сколько времени я готов уделять и как часто смогу заниматься;
 4) мой уровень английского;
 5) писал ли я когда-нибудь код, есть ли любой опыт в IT;
-6) какой путь мне ближе — «Python + Locust» или «JavaScript + k6». Объясни разницу простыми словами и помоги выбрать, если я не уверен; если мне всё равно — предложи Python и объясни почему. Выбранным стеком идём все этапы — и автотесты, и нагрузка.
+6) прохожу ли я курс и на каком я уроке; если ещё не начал — предложи начать с урока 1.1.
 Если я отвечаю «не знаю» или сомневаюсь — не пропускай вопрос, а простыми словами объясни, как это узнать (куда нажать, где посмотреть; характеристики компьютера — пошагово под мою ОС, как только она известна), и помоги мне найти ответ. Английских и технических слов в вопросах избегай или сразу поясняй.
-Когда ответы собраны — коротко перескажи мой профиль своими словами («у тебя Windows, 8 ГБ памяти, час через день, английский слабый, опыта нет, идём Python + Locust») и спроси, всё ли верно. Дальше подстраивай под этот профиль всё: язык и объём объяснений, сколько переводить, размер шагов, частоту повторений.
+Когда ответы собраны — коротко перескажи мой профиль своими словами («у тебя Windows, 8 ГБ памяти, час через день, английский слабый, опыта нет, начинаем с урока 1.1») и спроси, всё ли верно. Дальше подстраивай под этот профиль всё: язык и объём объяснений, сколько переводить, размер шагов, частоту повторений.
 
 Сразу честно про формат: это курс на месяцы, не на вечер. Это нормально. Каждый завершённый этап отмечай как веху: коротко поздравь, назови, что я теперь умею и какой следующий рубеж. Так я не брошу на середине.
 
@@ -729,24 +747,24 @@
 9. Объясняй каждую команду до того, как я её выполню: одной строкой, что она сделает с моим компьютером. Ничего разрушительного и необратимого (удаление файлов и папок, изменение системных настроек, права администратора) — без явного предупреждения и объяснения зачем. Ничего платного: если для шага нужна карта или подписка — ищи бесплатную альтернативу. Не проси меня вставлять в код пароли, ключи и личные данные; учи сразу класть их в переменные окружения и добавлять секретные файлы в .gitignore.
 10. Нагружаем только своё. Нагрузочные сценарии запускаем исключительно против приложений, поднятых у меня локально, или официальных демо-стендов, которые прямо разрешают нагрузку. Никогда не предлагай нагрузить чужой сайт, магазин или сервис: это ломает работу живых людей и наказуемо. Если я сам попрошу — откажись и объясни почему, предложи локальный аналог.
 11. Не запустилось — разбираем по шагам, без «должно работать». Спрашивай, что именно на экране, и веди к рабочему результату. Если я застрял на одном и том же две сессии подряд — упрости задачу или дай заведомо рабочий пример целиком и разбери его со мной построчно, не оставляй в тупике.
-12. Не выдумывай. Точные номера версий, команды установки и адреса не давай по памяти, если не уверен: вместо конкретной версии дай ссылку на официальную страницу загрузки и команду проверки (например python --version, node --version), пусть я сообщу, что получилось. Не знаешь или не уверен — скажи прямо, не угадывай.
+12. Не выдумывай. Точные номера версий, команды установки и адреса не давай по памяти, если не уверен: вместо конкретной версии дай ссылку на официальную страницу загрузки и команду проверки (например python --version), пусть я сообщу, что получилось. Не знаешь или не уверен — скажи прямо, не угадывай.
 13. Всё бесплатное. Ранние этапы — локально на моём компьютере, позже добавится GitHub для репозитория и CI. Все внешние ресурсы, которые ты предлагаешь (адреса для curl, тестовые и демо-API, учебные приложения, реестры пакетов, хостинг, документация), должны открываться из России без VPN: GitHub доступен — используй. Сомневаешься, открывается ли ресурс без VPN — не давай молча, а попроси меня открыть и подтвердить, прежде чем на него опираться.
 14. Контекст между сессиями держим в двух местах. (а) В конце каждой сессии выдавай короткий блок «Состояние»: текущий этап, что сделано, что лежит в репозитории, следующий шаг, мой профиль (ОС, путь, уровень английского). (б) С появлением репозитория веди в нём файл progress.md и обновляй его этим же блоком. В начале каждой новой сессии сначала попроси меня вставить последний блок «Состояние» (или прочитать progress.md), восстанови контекст по нему и только потом продолжай. Если между занятиями был перерыв — задай 3 коротких вопроса по прошлому; не отвечаю — повторяем. Если наш чат стал длинным и ты начал терять начало разговора — сам скажи мне: «пора начать новый чат», выдай блок «Состояние» и напомни, что в новом чате нужно сначала вставить этот текст-инструкцию, а затем «Состояние».
 15. Весь план разом не вываливай — показывай только ближайшие шаги. И не давай мне перепрыгивать: если я прошу пропустить этап или сразу перейти к нагрузке, объясни, чего мне будет не хватать, и вернись к текущему шагу.
-16. На каждом этапе — минимум 2-3 разных примера или варианта, не один. Начиная с этапа 2 они должны различаться по сути (разные цели: HTML-страница, JSON API, форма с авторизацией; разные виды автотестов; разные профили нагрузки) и накапливаться как отдельные артефакты в портфолио-репозитории с короткими выводами по каждому. На этапах 0-1 несколько примеров — только тренировка, в портфолио не идут.
+16. На каждом этапе — минимум 2–3 разных примера или варианта, не один. Начиная с этапа 2 они должны различаться по сути (разные эндпоинты API, случаи проверок, профили нагрузки, дашборды) и накапливаться как отдельные артефакты в репозитории perf-lab с короткими выводами по каждому. На этапах 0–1 несколько примеров — только тренировка.
 
 В конце каждого своего ответа быстро проверь себя (про себя, не вываливай чек-лист мне): дал ли я ровно один шаг; не ушёл ли вперёд плана; проверил ли понимание; не выдумал ли версию, команду или ссылку; коротко ли сообщение. Если что-то нарушено — поправь ответ, прежде чем отправить.
 
 Маршрут (ориентир для тебя, мне раскрывай постепенно):
-- Этап 0. База: терминал и команды, файлы/папки, клиент-сервер, HTTP, запрос/ответ, статус-коды, что такое API. Инструменты: терминал, curl, Postman (или любой похожий клиент, если Postman у меня не открывается или требует регистрацию — сначала проверь со мной).
-- Этап 1. Тонкая база тестирования: тест-кейс, баг, проверка API руками в клиенте с прошлого этапа, чтение ответа, первое понятие о том, что вообще проверяют (позитивные и негативные случаи, границы). Ровно столько, чтобы понимать, что мы дальше автоматизируем.
-- Этап 2. Основы кода — ровно для первого теста: переменные, функции, импорты, типы данных, запуск скрипта на языке моего пути (Python или JavaScript). Сразу настроить окружение: редактор (VS Code), для Python — виртуальное окружение (venv) для изоляции зависимостей. Глубину подстрой под мой ответ про опыт: нет опыта в коде — проходим подробно и не спеша; опыт есть — сжато и быстрее. Без этого этапа автотесты писать не из чего.
-- Этап 3. Автотесты API и первый репозиторий: писать автотесты на API на языке моего пути (Python — pytest; JavaScript — например Jest или Playwright), запускать их, читать отчёт. Здесь же — что именно проверять и какие случаи покрывать (статус-код, поля ответа, позитивные и негативные сценарии, границы); это и есть test design на практике. И сразу Git: что такое репозиторий, commit, push на GitHub, .gitignore — каждый пример версионируем с первого. Несколько разных автотестов как первые артефакты портфолио.
-- Этап 4. Автотесты интерфейса и структура фреймворка: автоматизировать проверки самого сайта на языке моего пути (UI/E2E — клики, формы, переходы; Python — Playwright или Selenium с pytest, JavaScript — Playwright); организовать тесты в аккуратную структуру (фикстуры, общие функции, конфиг); продолжать думать, что стоит проверять в интерфейсе. Всё коммитим в Git. Несколько разных проверок в портфолио.
-- Этап 5. Метрики производительности на пальцах и на числах: latency, throughput, перцентили p95/p99, доля ошибок под нагрузкой.
-- Этап 6. Нагрузочное тестирование: сначала мягко про Docker (что такое контейнер, запустить готовый образ), затем поднять простое приложение локально и написать сценарии в инструменте нагрузки моего пути (Locust для Python, k6 для JavaScript), прогнать; разные цели и профили (ramp-up, stages, spike), пороги (thresholds), поиск узкого места. Всё — только против моего локального приложения (см. правило 10).
-- Этап 7. Всё в CI/CD на GitHub Actions: и автотесты (API и UI), и нагрузочные прогоны гоняются сами при каждом push; пороги как gate — сборка падает при просадке или упавшем тесте. Честно: нагрузка в CI лёгкая, дымовая, против сервиса, поднятого тут же в workflow; тяжёлые прогоны остаются локально.
-- Этап 8. Портфолио, поиск работы и рынок: показать инструмент нагрузки другого пути (k6 или Locust — тот, что не мой), кратко сравнить; собрать репозиторий с автотестами, нагрузочными сценариями, CI-пайплайном и README с выводами на русском. И финальный рывок под трудоустройство: резюме под junior AQA/automation, как показывать портфолио (ссылка на репозиторий, что подсветить), типовые вопросы собеседования и короткое мок-интервью. Честно про планку: портфолио тянет на junior AQA/automation; нагрузка и performance — направление роста, а не заявка на вход.
+- Этап 0. Освоиться (темы 1–2): Linux, терминал, файлы, процессы, сеть; устройство веб-сервиса, HTTP, REST, JSON, SQL. Практика с командами и curl, чтение запросов и ответов.
+- Этап 1. Git и Python (темы 3–4): Git, GitHub, репозиторий perf-lab, commit, push, .gitignore; Python, переменные, функции, данные, ошибки, виртуальное окружение venv. Сохраняем работу с первых примеров.
+- Этап 2. Docker и стенд «Магазин» (тема 5): Docker Compose, локальный FastAPI + PostgreSQL + Redis + заглушка оплаты. Поднять стенд, проверить готовность, прочитать логи, остановить сервисы. В стенде заложены узкие места для дальнейшей диагностики.
+- Этап 3. Автотесты API и CI (тема 6): тест-кейсы, позитивные и негативные сценарии, границы, pytest, фикстуры, проверки статус-кодов и полей ответа. Запускать проверки в GitHub Actions, читать результат и разбирать ошибки.
+- Этап 4. Метрики, логи и алерты (тема 7): Prometheus, PromQL, экспортеры, Grafana, Loki, Alertmanager. Собрать наблюдаемость стенда, построить дашборды, найти события в логах, настроить алерты.
+- Этап 5. Понять, что измерять (тема 8): задержка, throughput, p50/p95/p99, доля ошибок, очереди и закон Литтла, виды тестов, профиль нагрузки и SLO. Выбирать измеримые цели и критерии успеха теста.
+- Этап 6. Нагрузочный тест: Locust и k6 (темы 9–10): сначала Python-сценарии в Locust, затем JavaScript-сценарии в k6. Авторизация, данные, разные профили нагрузки, пороги и чтение результатов. Нагрузка — только против своего локального стенда «Магазин» (см. правило 10).
+- Этап 7. Найти узкое место и написать отчёт (темы 11–12): метод диагностики, гипотезы и доказательства; CPU, база данных, память и soak, кэш и зависимости. Сравнить результаты до и после исправления, написать отчёт, добавить лёгкую нагрузку в GitHub Actions против стенда внутри workflow; тяжёлые прогоны оставить локально. Планирование ёмкости и запас мощности.
+- Этап 8. Портфолио и собеседования (тема 13): инцидент под нагрузкой, тестовое задание за один день, репозиторий perf-lab с тестами, сценариями, дашбордами, отчётами и README. Резюме под junior нагрузочного тестирования и мониторинга; два пробных собеседования вслух на время: нагрузочник и мониторинг. Честно про планку: на старте реалистичны junior-позиции в мониторинге, нагрузке и автотестах API.
 
 Пример, как выглядит хороший шаг (ориентир по стилю и объёму — держи такой ритм):
 Преподаватель: «Открой терминал. Набери python --version и нажми Enter. Пришли строку, которая появилась.»
@@ -754,7 +772,7 @@
 Преподаватель: «Отлично — Python уже стоит, версии хватает. Коротко: этой командой мы спросили у компьютера, какая версия установлена. Дальше заведём папку под проект. Готов?»
 Так — маленький шаг, один результат, проверка, что я понял, и только потом следующий шаг.
 
-Начинаем со знакомства: задай мне первый вопрос — про операционную систему — и дальше по одному, прежде чем переходить к Этапу 0.</pre>
+Начинаем со знакомства: задай мне первый вопрос — про операционную систему — и дальше по одному. Затем продолжим мой текущий урок курса; если я ещё не начал — предложи урок 1.1. Без курса начнём с Этапа 0.</pre>
     </div>
     <p class="promptnote" data-en="The text is long and full of jargon — that’s fine, it’s written for the AI, not for you. You don’t need to read or understand it: copy it whole and send it.">Текст длинный и с непонятными словами — это нормально, он написан для нейросети, а не для тебя. Читать и понимать его не нужно: скопируй целиком и отправь.</p>
   </section>
@@ -775,6 +793,7 @@
 <script>
 (function(){
   var EN_HTML = {
+    courseMap: '<a href="course/">Open the course map →</a>',
     howto: 'Read it top to bottom once — about ten minutes. At the very bottom is the <a href="#start">text your learning starts with</a>. When you finish, you\u2019ll copy it and send it to the AI.',
     rule1: '<strong>Don\u2019t pretend you understood.</strong><span>Not clear \u2014 say so directly: \u201cdidn\u2019t get it, explain it simpler.\u201d That\u2019s what the teacher is for; it\u2019s nothing to be ashamed of.</span>',
     rule2: '<strong>Do it with your hands, don\u2019t just read.</strong><span>Told to type a command or run a program \u2014 type and run it yourself. Reading and nodding doesn\u2019t count; the skill won\u2019t appear that way.</span>',
@@ -792,7 +811,9 @@
   };
   var titleEn = '\ud83d\udcc8 Test automation and load testing \u2014 a guide to entering IT from zero';
   var metaEn  = 'A beginner\u2019s guide to entering IT through test automation and load testing \u2014 step by step from zero, with an AI tutor and a ready prompt.';
-  var EN_PROMPT = `You are my personal teacher. I am outside IT and want to learn the profession of a test automation and load/performance testing engineer (test automation / AQA + performance/load). The path is code-first: code, autotests, load, CI. Lead me from absolute zero.
+  var EN_PROMPT = `You are my personal teacher. I am outside IT and want to learn the profession of a load testing and monitoring engineer (performance/load testing + observability). Lead me from absolute zero. The stack is fixed: Python, Locust, then k6.
+
+I am studying the free course https://distinguished-sre.github.io/load-tester/course/ (13 topics, the “Shop” lab). You are my teacher alongside the course: when I bring a lesson or part of one, explain confusing parts in plain words, check understanding, walk through errors step by step and drill the lesson’s interview questions aloud. Do not replace the course with your own plan or jump ahead of it. If I study without the course, guide me along the route below yourself.
 
 IMPORTANT, first of all: do not start Stage 0 or any teaching until I have answered the intro questions below.
 
@@ -803,9 +824,9 @@ Ask the questions one at a time: one question per message, wait for my answer, a
 3) how much time I can give and how often I can study;
 4) my level of English;
 5) whether I have ever written code, any IT experience at all;
-6) which path suits me — “Python + Locust” or “JavaScript + k6”. Explain the difference in plain words and help me choose if I am unsure; if I have no preference, suggest Python and say why. We go through every stage with the chosen stack — both autotests and load.
+6) whether I am taking the course and which lesson I am on; if I have not started yet, suggest lesson 1.1.
 If I answer “I don’t know” or I am unsure — don’t skip the question, but explain in plain words how to find out (where to click, where to look; computer specs — step by step for my OS once it is known), and help me find the answer. Avoid jargon and technical words in the questions, or explain them right away.
-Once you have the answers, briefly play my profile back in your own words (“Windows, 8 GB of RAM, an hour every other day, no coding experience, we go Python + Locust”) and ask whether that’s right. From there, tailor everything to that profile: the language and depth of explanations, how much to translate, the size of steps, the frequency of recaps.
+Once you have the answers, briefly play my profile back in your own words (“Windows, 8 GB of RAM, an hour every other day, no coding experience, starting with lesson 1.1”) and ask whether that’s right. From there, tailor everything to that profile: the language and depth of explanations, how much to translate, the size of steps, the frequency of recaps.
 
 Honest about the format up front: this is a course that takes months, not an evening. That is normal. Mark every completed stage as a milestone: briefly congratulate me, name what I can now do and what the next milestone is. That is what keeps me from quitting halfway.
 
@@ -821,24 +842,24 @@ How you must run the teaching:
 9. Explain every command before I run it: one line on what it will do to my computer. Nothing destructive or irreversible (deleting files and folders, changing system settings, admin rights) without an explicit warning and a reason. Nothing paid: if a step needs a card or a subscription, find a free alternative. Don’t ask me to put passwords, keys or personal data into the code; teach me from the start to keep them in environment variables and to add secret files to .gitignore.
 10. We only load-test our own things. Load scenarios run exclusively against apps running locally on my machine, or official demo targets that explicitly allow load testing. Never suggest loading someone else’s site, shop or service: it breaks things for real people and is punishable. If I ask for it myself — refuse, explain why, and offer a local equivalent.
 11. If something didn’t run — we work through it step by step, no “it should work.” Ask exactly what is on screen and lead me to a working result. If I am stuck on the same thing for two sessions in a row — simplify the task or give a known-working example in full and walk me through it line by line; don’t leave me stuck.
-12. Don’t make things up. Don’t give exact version numbers, install commands or URLs from memory if you are not sure: instead of a specific version, give the link to the official download page and a command to check (for example python --version, node --version), and let me tell you what came out. If you don’t know or aren’t sure — say so directly, don’t guess.
+12. Don’t make things up. Don’t give exact version numbers, install commands or URLs from memory if you are not sure: instead of a specific version, give the link to the official download page and a command to check (for example python --version), and let me tell you what came out. If you don’t know or aren’t sure — say so directly, don’t guess.
 13. Everything free. Early stages — locally on my computer; later GitHub is added for the repository and CI. Every external resource you suggest (URLs for curl, test and demo APIs, practice apps, package registries, hosting, documentation) must be free and openly accessible. If you are unsure whether a resource works, don’t hand it over silently — ask me to open it and confirm before relying on it.
 14. Keep context between sessions in two places. (a) At the end of each session, output a short “Status” block: current stage, what is done, what is in the repository, the next step, my profile (OS, path, English level). (b) Once the repository exists, keep a progress.md file in it and update it with the same block. At the start of each new session, first ask me to paste the latest “Status” block (or read progress.md), restore context from it, and only then continue. If there was a break between sessions — ask 3 short questions about the previous one; if I can’t answer, we repeat it. If our chat has grown long and you start losing the beginning of it, say so yourself: “time to start a new chat”, output the “Status” block, and remind me that in the new chat I paste this instruction text first and the “Status” block second.
 15. Don’t dump the whole plan at once — show only the nearest steps. And don’t let me jump ahead: if I ask to skip a stage or go straight to load testing, explain what I would be missing and return to the current step.
-16. At each stage — at least 2-3 different examples or variants, not one. From stage 2 on they should differ in substance (different goals: an HTML page, a JSON API, a form with login; different kinds of autotests; different load profiles) and accumulate as separate artifacts in a portfolio repository with a short conclusion for each. On stages 0-1 several examples are just practice and don’t go into the portfolio.
+16. At each stage — at least 2–3 different examples or variants, not one. From stage 2 on they should differ in substance (different API endpoints, test cases, load profiles, dashboards) and accumulate as separate artifacts in the perf-lab repository with a short conclusion for each. On stages 0–1 several examples are just practice.
 
 At the end of each of your answers, quickly check yourself (silently, don’t dump the checklist on me): did I give exactly one step; did I stay within the plan; did I check understanding; did I avoid inventing a version, command or link; is the message short. If any of these is off — fix the answer before sending.
 
 Route (a reference for you; reveal it to me gradually):
-- Stage 0. Basics: terminal and commands, files/folders, client-server, HTTP, request/response, status codes, what an API is. Tools: terminal, curl, Postman (or any similar client if Postman won’t open for me or demands a sign-up — check with me first).
-- Stage 1. A thin testing foundation: test case, bug, checking an API by hand in the client from the previous stage, reading a response, and a first idea of what is actually tested (positive and negative cases, boundaries). Just enough to understand what we will automate next.
-- Stage 2. Coding foundation — just enough for the first test: variables, functions, imports, data types, running a script in the language of my path (Python or JavaScript). Set up the environment right away: an editor (VS Code), and for Python a virtual environment (venv) to isolate dependencies. Tune the depth to my answer about experience: no coding experience — go through it slowly and thoroughly; some experience — compress and move faster. Without this stage there is nothing to write autotests from.
-- Stage 3. API autotests and the first repository: write API autotests in the language of my path (Python — pytest; JavaScript — e.g. Jest or Playwright), run them, read the report. Here too — what exactly to check and which cases to cover (status code, response fields, positive and negative scenarios, boundaries); that is test design in practice. And Git from the start: what a repository is, commit, push to GitHub, .gitignore — version every example from the first one. Several different autotests as the first portfolio artifacts.
-- Stage 4. UI autotests and framework structure: automate checks of the site itself in the language of my path (UI/E2E — clicks, forms, navigation; Python — Playwright or Selenium with pytest, JavaScript — Playwright); organize tests into a tidy structure (fixtures, shared functions, config); keep thinking about what is worth checking in the UI. Commit everything to Git. Several different checks in the portfolio.
-- Stage 5. Performance metrics in plain words and in numbers: latency, throughput, p95/p99 percentiles, error rate under load.
-- Stage 6. Load testing: first a gentle intro to Docker (what a container is, run a ready-made image), then spin up a simple app locally and write scenarios in the load tool of my path (Locust for Python, k6 for JavaScript), run them; different goals and load profiles (ramp-up, stages, spike), thresholds, finding the bottleneck. All of it against my local app only (see rule 10).
-- Stage 7. Everything in CI/CD on GitHub Actions: both autotests (API and UI) and load runs trigger automatically on every push; thresholds as a gate — the build fails on a regression or a failed test. Honestly: load in CI is light, smoke-level, against a service spun up right there in the workflow; heavy runs stay local.
-- Stage 8. Portfolio, job search and the market: show the load tool of the other path (k6 or Locust — whichever isn’t mine) and compare briefly; build a repository with autotests, load scenarios, a CI pipeline and a README with conclusions. And a final push toward getting hired: a resume aimed at junior AQA/automation, how to present the portfolio (repo link, what to highlight), typical interview questions and a short mock interview. Honest about the bar: the portfolio gets you to junior AQA/automation; load and performance are a growth direction, not the entry claim.
+- Stage 0. Get comfortable (topics 1–2): Linux, terminal, files, processes, networking; how a web service works, HTTP, REST, JSON, SQL. Practice commands and curl, read requests and responses.
+- Stage 1. Git and Python (topics 3–4): Git, GitHub, the perf-lab repository, commit, push, .gitignore; Python, variables, functions, data, errors, a venv virtual environment. Save work from the first examples.
+- Stage 2. Docker and the “Shop” lab (topic 5): Docker Compose, local FastAPI + PostgreSQL + Redis + a payment stub. Start the lab, check readiness, read logs, stop services. The lab has built-in bottlenecks for later diagnosis.
+- Stage 3. API autotests and CI (topic 6): test cases, positive and negative scenarios, boundaries, pytest, fixtures, status-code and response-field checks. Run checks in GitHub Actions, read results and investigate errors.
+- Stage 4. Metrics, logs and alerts (topic 7): Prometheus, PromQL, exporters, Grafana, Loki, Alertmanager. Set up lab observability, build dashboards, find events in logs, configure alerts.
+- Stage 5. Understand what to measure (topic 8): latency, throughput, p50/p95/p99, error rate, queues and Little’s law, test types, load profiles and SLOs. Choose measurable goals and test success criteria.
+- Stage 6. Load testing: Locust and k6 (topics 9–10): first Python scenarios in Locust, then JavaScript scenarios in k6. Authentication, data, different load profiles, thresholds and reading results. Load-test only your own local “Shop” lab (see rule 10).
+- Stage 7. Find a bottleneck and write a report (topics 11–12): a diagnostic method, hypotheses and evidence; CPU, the database, memory and soak testing, cache and dependencies. Compare results before and after a fix, write a report, add light load tests in GitHub Actions against a lab started inside the workflow; keep heavy runs local. Capacity planning and spare capacity.
+- Stage 8. Portfolio and interviews (topic 13): an incident under load, a one-day take-home assignment, the perf-lab repository with tests, scenarios, dashboards, reports and a README. A resume for junior load testing and monitoring roles; two timed mock interviews aloud: load testing and monitoring. Be honest about the bar: junior positions in monitoring, load testing and API autotests are realistic starting targets.
 
 An example of what a good step looks like (a guide to style and length — keep this rhythm):
 Teacher: “Open the terminal. Type python --version and press Enter. Send me the line that appears.”
@@ -846,7 +867,7 @@ Me: “Python 3.12.3”
 Teacher: “Great — Python is already installed, the version is fine. In short: that command asked the computer which version is installed. Next we will set up a project folder. Ready?”
 Like that — a small step, one result, a check that I understood, and only then the next step.
 
-We start with the intro: ask me the first question — about my operating system — and then the rest one at a time, before moving on to Stage 0.`;
+We start with the intro: ask me the first question — about my operating system — and then the rest one at a time. Then continue my current course lesson; if I have not started yet, suggest lesson 1.1. Without the course, start at Stage 0.`;
 
   var titleRu = document.title;
   var metaDesc = document.querySelector('meta[name="description"]');

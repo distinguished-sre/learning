@@ -5,6 +5,7 @@
   var doc = document, root = doc.documentElement;
   var mem = {};
   function store(k, v) {
+    if (k !== 'theme') k = 'lt:' + k;
     try {
       if (v === undefined) { var r = localStorage.getItem(k); return r === null ? (mem[k] === undefined ? null : mem[k]) : r; }
       localStorage.setItem(k, v);
@@ -151,6 +152,7 @@
   }
   $$('[data-prose] div.highlighter-rouge').forEach(function (box) {
     var lang = langOf(box), pre = $('pre', box), tool = el('div', 'tool');
+    if (lang === 'mermaid' || $('code.language-mermaid', box)) return;
     if (OUT.test(lang)) {
       tool.className = 'tool out';
       box.parentNode.insertBefore(tool, box); tool.appendChild(box);
@@ -296,4 +298,92 @@
   var cur = $('.nav-lesson.current, .nav-overview.current');
   var sb = $('.sidebar');
   if (cur && sb) { var r = cur.getBoundingClientRect(); if (r.bottom > window.innerHeight - 40 || r.top < 60) sb.scrollTop += r.top - window.innerHeight / 3; }
+})();
+
+/* Mermaid загружается только на страницах с диаграммами. Исходник сохраняется
+   отдельно от SVG, чтобы смена темы не теряла текст и не ломала повторный рендер. */
+(function () {
+  'use strict';
+  var blocks = Array.from(document.querySelectorAll('pre code.language-mermaid, .language-mermaid pre code'));
+  if (!blocks.length) return;
+  var root = document.documentElement;
+  var diagrams = blocks.map(function (code) {
+    var pre = code.closest('pre');
+    var box = pre.closest('.highlighter-rouge') || pre;
+    var figure = document.createElement('figure');
+    figure.className = 'mermaid-viz';
+    box.parentNode.insertBefore(figure, box);
+    figure.appendChild(box);
+    return { source: code.textContent, figure: figure, original: box };
+  });
+  var pending = true, busy = false, mermaid;
+  var narrow = matchMedia('(max-width: 600px)');
+  narrow.addEventListener('change', function () { render(); });
+  function color(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
+  async function render() {
+    pending = true;
+    if (busy || !mermaid) return;
+    busy = true;
+    while (pending) {
+      pending = false;
+      mermaid.initialize({
+        startOnLoad: false, securityLevel: 'strict', theme: 'base',
+        themeVariables: {
+          darkMode: root.dataset.theme !== 'light',
+          fontFamily: getComputedStyle(document.body).fontFamily,
+          primaryColor: color('--bg-2'), primaryTextColor: color('--text'),
+          primaryBorderColor: color('--accent-ink'), lineColor: color('--muted'),
+          secondaryColor: color('--bg-code'), tertiaryColor: color('--bg'),
+          background: color('--bg'), mainBkg: color('--bg-2'), textColor: color('--text'),
+          nodeTextColor: color('--text'), edgeLabelBackground: color('--bg'),
+          actorBkg: color('--bg-2'), actorBorder: color('--accent-ink'), actorTextColor: color('--text'),
+          signalColor: color('--text'), signalTextColor: color('--text'),
+          labelBoxBkgColor: color('--bg-2'), labelBoxBorderColor: color('--line'),
+          labelTextColor: color('--text'), loopTextColor: color('--text'),
+          noteBkgColor: color('--bg-code'), noteTextColor: color('--text'), noteBorderColor: color('--line'),
+          activationBkgColor: color('--bg-code'), activationBorderColor: color('--accent-ink'),
+          sequenceNumberColor: color('--on-accent')
+        },
+        flowchart: { useMaxWidth: true }, sequence: { useMaxWidth: true }
+      });
+      for (var i = 0; i < diagrams.length; i++) {
+        var d = diagrams[i];
+        try {
+          // На телефоне длинный горизонтальный flowchart становится вертикальным.
+          var source = narrow.matches ? d.source.replace(/^(\s*(?:flowchart|graph))\s+(LR|RL)\b/m, function (_, kind, dir) { return kind + (dir === 'LR' ? ' TB' : ' BT'); }) : d.source;
+          var result = await mermaid.render('lt-mermaid-' + i, source);
+          var view = d.figure.querySelector('.mermaid-view');
+          if (!view) { view = document.createElement('div'); view.className = 'mermaid-view'; d.figure.appendChild(view); }
+          view.innerHTML = result.svg;
+          var svg = view.querySelector('svg');
+          svg.setAttribute('role', 'img');
+          svg.setAttribute('aria-label', 'Диаграмма: ' + d.source.trim());
+          d.original.hidden = true;
+          var error = d.figure.querySelector('.viz-error');
+          if (error) error.remove();
+        } catch (e) {
+          d.original.hidden = false;
+          var old = d.figure.querySelector('.mermaid-view');
+          if (old) old.remove();
+          if (!d.figure.querySelector('.viz-error')) {
+            var msg = document.createElement('figcaption'); msg.className = 'viz-error';
+            msg.textContent = 'Не удалось нарисовать диаграмму. Ниже доступен её исходник.';
+            d.figure.prepend(msg);
+          }
+          console.warn('Mermaid:', e);
+        }
+      }
+    }
+    busy = false;
+  }
+  new MutationObserver(function () { render(); }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  import('https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.esm.min.mjs')
+    .then(function (module) { mermaid = module.default; render(); })
+    .catch(function (e) {
+      diagrams.forEach(function (d) {
+        var msg = document.createElement('figcaption'); msg.className = 'viz-error';
+        msg.textContent = 'Диаграмма недоступна без CDN. Её исходник сохранён ниже.'; d.figure.prepend(msg);
+      });
+      console.warn('Mermaid CDN:', e);
+    });
 })();

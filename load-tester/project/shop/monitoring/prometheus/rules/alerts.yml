@@ -1,0 +1,38 @@
+groups:
+  - name: shop
+    rules:
+      - alert: ShopDown
+        expr: up{job="shop"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: Магазин недоступен
+          description: Prometheus не может получить метрики магазина больше минуты.
+      - alert: ShopHighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[1m])) / sum(rate(http_requests_total[1m])) > 0.05
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Много ошибок магазина
+          description: Доля HTTP 5xx превышает 5 процентов две минуты.
+      - alert: ShopHighLatencyP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[1m]))) > 1
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: Магазин отвечает медленно
+          description: p95 запросов превышает секунду в течение пяти минут.
+      - alert: ShopDbPoolExhausted
+        expr: shop_db_pool_waiting > 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: Очередь в пуле БД
+          description: Запросы ждут свободного соединения больше минуты.
+      - alert: HostHighCpu
+        expr: 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) > 0.9
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: Высокая загрузка CPU
+          description: Средняя загрузка CPU хоста превышает 90 процентов две минуты.

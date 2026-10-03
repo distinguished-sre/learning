@@ -54,7 +54,7 @@
 
   /* ---------- прогресс: продолжить с первого непройденного урока ---------- */
   var done = {};
-  try { (JSON.parse(localStorage.getItem('done') || '[]') || []).forEach(function (i) { done[i] = 1; }); } catch (e) {}
+  try { (JSON.parse(localStorage.getItem('lt:done') || '[]') || []).forEach(function (i) { done[i] = 1; }); } catch (e) {}
   $$('[data-dot]').forEach(function (d) { d.classList.toggle('on', !!done[d.getAttribute('data-dot')]); });
   var lessons = $$('.nav-lesson');
   var nDone = lessons.filter(function (a) { return done[a.getAttribute('data-id')]; }).length;
@@ -72,25 +72,23 @@
   /* ---------- терминалы: печатают команды курса по очереди ---------- */
   var SCRIPTS = {
     hero: [
-      { tag: 'тема 1', cmd: 'systemctl status notes', out: [['● notes.service - Сервис Заметки', 'g'], ['     Active: active (running)', 'g']] },
-      { tag: 'тема 2', cmd: 'curl -si http://notes.lab/healthz | head -1', out: [['HTTP/1.1 200 OK', 'g']] },
-      { tag: 'тема 3', cmd: 'git push origin main', out: [['   3f2a1c9..8b7e0d4  main -> main', 'c'], ['# GitHub Actions: ✓ test  ✓ build', 'g']] },
-      { tag: 'тема 4', cmd: 'docker compose up -d', out: [[' ✔ Container notes-db-1     Healthy', 'g'], [' ✔ Container notes-notes-1  Started', 'g'], [' ✔ Container notes-proxy-1  Started', 'g']] },
-      { tag: 'тема 5', cmd: 'kubectl get pods -n notes', out: [['NAME                     READY   STATUS', 'c'], ['notes-6d9c7b8f5d-4kx2p   1/1     Running', 'g'], ['notes-6d9c7b8f5d-9zq7w   1/1     Running', 'g']] },
-      { tag: 'тема 7', cmd: 'terraform apply', out: [['Apply complete! Resources: 0 added, 0 changed, 0 destroyed.', 'g']] },
-      { tag: 'тема 8', cmd: 'curl -s notes.lab/metrics | grep requests_total', out: [['notes_http_requests_total{path="/notes",status="200"} 10', 'y']] },
-      { tag: 'тема 9', cmd: 'flux get kustomizations', out: [['NAME   SUSPENDED  READY  MESSAGE', 'c'], ['notes  False      True   Applied revision: main@sha1:8b7e0d4', 'g']] }
+      {"tag": "тема 1", "cmd": "uptime", "out": [["load average: 0.12, 0.18, 0.15", "g"]]},
+      {"tag": "тема 1", "cmd": "ss -tlnp", "out": [["LISTEN 0 128 0.0.0.0:8000", "g"]]},
+      {"tag": "тема 2", "cmd": "curl -i localhost:8000/api/products", "out": [["HTTP/1.1 200 OK", "g"]]},
+      {"tag": "тема 5", "cmd": "docker compose up -d", "out": [["✔ shop, postgres, redis: Started", "g"]]},
+      {"tag": "тема 7", "cmd": "sum(rate(http_requests_total[1m]))", "out": [["50 запросов/с (PromQL в Prometheus)", "g"]]},
+      {"tag": "тема 9", "cmd": "locust --headless -u 50 -r 5", "out": [["50 пользователей, p95: 120 ms", "g"]]},
+      {"tag": "тема 10", "cmd": "k6 run shop.js", "out": [["✓ http_req_duration: p(95)<500", "g"]]},
+      {"tag": "тема 11", "cmd": "py-spy top --pid 1234", "out": [["CPU: 94%   slow_discount()", "g"]]},
+      {"tag": "тема 12", "cmd": "cat reports/load-test.md", "out": [["Итог: индекс снизил p95 с 900 до 120 мс", "g"]]}
     ],
     brk: [
-      { state: ['ok', 'работает'], cmd: 'curl -si http://notes.lab/ | head -1', out: [['HTTP/1.1 200 OK', 'g']] },
-      { cmd: '# ломаем: останавливаем приложение', out: [] },
-      { cmd: 'sudo systemctl stop notes', out: [] },
-      { state: ['bad', 'сломано'], cmd: 'curl -si http://notes.lab/ | head -1', out: [['HTTP/1.1 502 Bad Gateway', 'r']] },
-      { cmd: '# nginx жив, но за ним пусто. Почему?', out: [] },
-      { cmd: 'sudo tail -1 /var/log/nginx/error.log', out: [['connect() failed (111: Connection refused)', 'r'], ['while connecting to upstream', 'r']] },
-      { cmd: 'systemctl is-active notes', out: [['inactive', 'y']] },
-      { cmd: 'sudo systemctl start notes', out: [] },
-      { state: ['ok', 'починено'], cmd: 'curl -si http://notes.lab/ | head -1', out: [['HTTP/1.1 200 OK', 'g']] }
+      {"state": ["ok", "работает"], "cmd": "curl -i localhost:8000/api/products", "out": [["HTTP/1.1 200 OK", "g"]]},
+      {"cmd": "docker compose stop shop", "out": []},
+      {"state": ["bad", "сломано"], "cmd": "curl -i localhost:8000/api/products", "out": [["curl: (7) Failed to connect", "r"]]},
+      {"cmd": "docker compose ps -a", "out": [["shop   Exited", "y"]]},
+      {"cmd": "docker compose start shop", "out": []},
+      {"state": ["ok", "починено"], "cmd": "curl -i localhost:8000/api/products", "out": [["HTTP/1.1 200 OK", "g"]]}
     ]
   };
 
@@ -240,7 +238,7 @@
   /* ---------- калькулятор темпа ---------- */
   var calc = $('[data-calc]');
   if (calc) {
-    var HOURS = parseFloat(home.getAttribute('data-hours')) || 165;
+    var HOURS = parseFloat(home.getAttribute('data-hours')) || 128;
     var inH = $('[data-in="h"]', calc), inD = $('[data-in="d"]', calc);
     var MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     var plural = function (n, a, b, c) { var m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c); };

@@ -141,6 +141,8 @@ def audit(only=None):
     orig = {}   # термин (lower) -> как записан в словарике
     info = []
     for l in ls:
+        if not l["path"].exists():  # урок есть в course.yml, но ещё не написан
+            continue
         text = l["path"].read_text()
         rows = strip_code(text)
         secs = sections(rows)

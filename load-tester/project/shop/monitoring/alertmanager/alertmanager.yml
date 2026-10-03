@@ -1,0 +1,9 @@
+route:
+  receiver: classroom
+  group_by: [alertname]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+# Без внешних интеграций: активные алерты видны в UI.
+receivers:
+  - name: classroom
