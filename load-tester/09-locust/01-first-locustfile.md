@@ -3,7 +3,7 @@ layout: lesson
 title: "Первый сценарий Locust"
 topic: 9
 lesson: "9.1"
-time: "2 ч"
+time: "2.5 ч"
 ---
 
 ## Зачем это нужно

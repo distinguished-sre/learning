@@ -26,7 +26,7 @@ cd project/shop && cp .env.example .env && docker compose --profile monitoring u
 
 ## Структура курса
 
-- `_data/course.yml`: **единственный источник порядка курса** (13 тем, 56 уроков): `topics[].{n, dir, title, subtitle, time, layer, project, lessons[].{id, slug, title, time}}`. Время темы равно сумме уроков. Новый урок без записи здесь недостижим.
+- `_data/course.yml`: **единственный источник порядка курса** (13 тем, 57 уроков): `topics[].{n, dir, title, subtitle, time, layer, project, lessons[].{id, slug, title, time}}`. Время темы равно сумме уроков. Новый урок без записи здесь недостижим.
 - `<NN-тема>/index.md`: страница темы (`layout: topic`). `<NN-тема>/<NN-slug>.md`: урок, front matter `layout: lesson`, `title`, `topic` (число), `lesson` ("5.3"), `time`.
 - `course/index.md`: главная курса (`layout: home`, тексты в `_layouts/home.html`). `schedule.md`: расписание по неделям.
 - Ссылки только относительные на `.md`: в своей теме `03-dns.md`, в чужой `../05-docker/03-compose-shop.md`.
@@ -88,7 +88,7 @@ cd project/shop && cp .env.example .env && docker compose --profile monitoring u
 
 ### Вопросы с собеседований
 
-Раздел начинается строкой «Раздел для повторения: ответь вслух, потом открой ответ». Формат `### N. [junior|middle] Вопрос`; первые 2–3 самые частые помечены `[junior] [часто]`. Далее `<details markdown="1">` с `<summary>Ответ</summary>`, ответ, `**Что хотят услышать:**`, `**Красный флаг:**`. Ответы опираются только на пройденное. Учимся отвечать вслух и на время: часть вопросов в каждой теме короткие «на скорость» (базовые факты, которые на собеседовании забывают от волнения).
+Раздел начинается строкой «Раздел для повторения: ответь вслух, потом открой ответ». Формат `### N. [junior|middle] Вопрос`; первые 2–3 самые частые помечены `[junior] [часто]`. Далее `<details markdown="1">` с `<summary>Ответ</summary>`, ответ, `**Что хотят услышать:**`, `**Красный флаг:**`. Ответы опираются только на пройденное. Учимся отвечать вслух и на время: часть вопросов в каждой теме короткие «на скорость» (базовые факты, которые на собеседовании забывают от волнения). Исключение: 13.4 и 13.5 (пробные собеседования) держат банки по 30–40 вопросов для тренировки.
 
 ## Сквозной проект «Магазин» (`project/shop/`)
 
@@ -96,8 +96,8 @@ cd project/shop && cp .env.example .env && docker compose --profile monitoring u
 
 - `shop`: FastAPI, порт 8000, `/healthz`, `/readyz`, `/metrics`, `/api/register`, `/api/login` (Bearer-токен в Redis), `/api/categories`, `/api/products[?category_id,q,page,size]`, `/api/products/{id}`, `/api/cart`, `/api/cart/items`, `/api/orders`. Пользователи `user0001@shop.lab`…`user1000@shop.lab`, пароль `password`; 10 000 товаров, 200 000 исторических заказов.
 - `payment`: заглушка оплаты, порт 8001, `/pay`, `/admin/config` (задержка и доля ошибок на лету).
-- PostgreSQL 5432 (`shop/shop/shop`, pg_stat_statements), Redis 6379. Профиль `monitoring`: Prometheus 9090, Alertmanager 9093, Grafana 3000, Loki 3100, Alloy 12345, node-exporter, cAdvisor, postgres-exporter.
-- Метрики: `http_requests_total{method,route,status}`, `http_request_duration_seconds`, `http_requests_in_progress`, `shop_db_pool_{size,available,waiting}`, `shop_db_connection_wait_seconds`, `shop_cache_requests_total{result}`, `shop_orders_created_total`, `shop_payment_requests_total{result}`, `shop_payment_duration_seconds`. Логи JSON со `request_id`.
+- PostgreSQL 5432 (`shop/shop/shop`, pg_stat_statements), Redis 6379. Профиль `monitoring`: Prometheus 9090, Alertmanager 9093, Grafana 3000, Loki 3100, Tempo 3200, Alloy 12345 (OTLP/HTTP 4318 внутри сети), node-exporter, cAdvisor, postgres-exporter.
+- Метрики: `http_requests_total{method,route,status}`, `http_request_duration_seconds`, `http_requests_in_progress`, `shop_db_pool_{size,available,waiting}`, `shop_db_connection_wait_seconds`, `shop_cache_requests_total{result}`, `shop_orders_created_total`, `shop_payment_requests_total{result}`, `shop_payment_duration_seconds`. Логи JSON со `request_id` и `trace_id` (рядом, в таком порядке). Трейсы OpenTelemetry (SDK + автоинструментация FastAPI, httpx, psycopg, Redis; `traceparent` shop → payment, спан `db.pool.getconn`) идут OTLP/HTTP → Alloy → Tempo; в Grafana источник Tempo, из лога Loki переход по `trace_id` в трейс и обратно; `TRACING_ENABLED`, `OTEL_*`. Всем долгоживущим сервисам `restart: unless-stopped`.
 - Заложенные узкие места (переменные в `.env`, список с починкой в `project/shop/README.md`): bcrypt-логин и один воркер (`BCRYPT_ROUNDS`, `WEB_CONCURRENCY`, урок 11.2), нет индекса `orders.user_id` и N+1 (`BUG_N_PLUS_ONE`, 11.3), маленький пул (`DB_POOL_MAX`, 11.3), утечка (`LEAK_ENABLED`, 11.4), кэш (`CACHE_ENABLED`) и оплата внутри транзакции с ретраями без паузы (`PAYMENT_TIMEOUT`, `PAYMENT_RETRIES`, 11.5).
 - Нагрузку даём только на свой локальный стенд. В уроках прямо сказано, что нагружать чужие сайты нельзя.
 
@@ -105,7 +105,7 @@ cd project/shop && cp .env.example .env && docker compose --profile monitoring u
 
 ## Версии
 
-Закреплены явно, текст ссылается на 2026 год. Сейчас: Ubuntu 24.04/26.04, Python 3.12+ у ученика (образ сервиса `python:3.14.8-slim`), Locust 2.46, k6 2.3, pytest 9.1, PostgreSQL 18.6, Redis 8.10, Prometheus 3.15, Grafana 13.2, Loki 3.7, Alloy 1.20. Точные теги в `project/shop/compose.yaml` и `requirements.txt`; при обновлении сверяй уроки (`git grep`).
+Закреплены явно, текст ссылается на 2026 год. Сейчас: Ubuntu 24.04/26.04, Python 3.12+ у ученика (образ сервиса `python:3.14.8-slim`), Locust 2.46, k6 2.3, pytest 9.1, PostgreSQL 18.6, Redis 8.10, Prometheus 3.15, Grafana 13.2, Loki 3.7, Alloy 1.20, Tempo 2.10, OpenTelemetry Python 1.45. Точные теги в `project/shop/compose.yaml` и `requirements.txt`; при обновлении сверяй уроки (`git grep`).
 
 ## Jekyll и двойные фигурные скобки
 

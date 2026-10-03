@@ -3,7 +3,7 @@ layout: lesson
 title: "Git: история изменений на своей машине"
 topic: 3
 lesson: "3.1"
-time: "2 ч"
+time: "3 ч"
 ---
 
 ## Зачем это нужно

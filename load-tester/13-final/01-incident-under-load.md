@@ -3,7 +3,7 @@ layout: lesson
 title: "Инцидент под нагрузкой: дежурство, разбор, постмортем"
 topic: 13
 lesson: "13.1"
-time: "2.5 ч"
+time: "3 ч"
 ---
 
 ## Зачем это нужно
@@ -385,7 +385,7 @@ q 'sum by (result) (rate(shop_payment_requests_total[1m]))'
 Строки выглядят так (сокращено):
 
 ```text
-{"ts":"2026-10-03T11:42:07+00:00","level":"ERROR","msg":"Запрос завершён","method":"GET","route":"/api/products","status":503,"duration_ms":5003.1,"request_id":"c1f0...","error":"couldn't get a connection after 5.00 sec"}
+{"ts":"2026-10-03T11:42:07+00:00","level":"ERROR","msg":"Запрос завершён","method":"GET","route":"/api/products","status":503,"duration_ms":5003.1,"request_id":"c1f0...","trace_id":"8e2b...","error":"couldn't get a connection after 5.00 sec"}
 ```
 
 **Как читать вывод:** `status` 503 и `error` «couldn't get a connection after 5.00 sec» подтверждают, что запросы не получают соединение из пула за `DB_POOL_TIMEOUT` (5 секунд, поэтому `duration_ms` около 5000). Заметь `route`: пострадал `/api/products`, который к оплате отношения не имеет. Это и есть доказательство, что проблема общая (пул), а не локальная. В полях логов нет «виновника», он только в метриках оплаты: поэтому нужен и тот, и другой источник.

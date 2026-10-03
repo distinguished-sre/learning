@@ -2,7 +2,7 @@
 layout: topic
 title: "Git и GitHub"
 topic: 3
-time: "4 ч"
+time: "6.5 ч"
 ---
 
 ## О чём тема

@@ -2,7 +2,7 @@
 layout: topic
 title: "Python для тестировщика"
 topic: 4
-time: "14.5 ч"
+time: "21.5 ч"
 ---
 
 ## О чём тема

@@ -3,7 +3,7 @@ layout: lesson
 title: "Контейнеры: образ, контейнер, docker run"
 topic: 5
 lesson: "5.1"
-time: "2 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно
@@ -843,7 +843,7 @@ curl -s -m 3 localhost:8082 | head -2
 <details markdown="1">
 <summary>Ответ</summary>
 
-128 + 9: процесс убит сигналом SIGKILL. Чаще всего это `docker kill`, `docker stop` по таймауту или нехватка памяти (OOM-kill). Подробности `docker inspect` покажет в поле `OOMKilled`.
+128 + 9: процесс убит сигналом SIGKILL. Чаще всего это `docker kill`, `docker stop` по таймауту или нехватка памяти (OOM-kill). Подробности: `docker inspect` покажет поле `OOMKilled` (до автоперезапуска), а `docker events` событие `oom`.
 
 </details>
 

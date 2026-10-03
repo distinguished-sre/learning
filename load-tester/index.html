@@ -593,7 +593,7 @@
   <section>
     <p class="sec-eyebrow" data-en="03 · Path">03 · Путь</p>
     <h2 data-en="Your path">Твой путь</h2>
-    <p class="muted" data-en="Nine stages follow the ready-made free course “Load testing and monitoring from zero”: 13 topics, 56 lessons, about 128 hours. It includes explanations, diagrams and practice on your own lab. Following the schedule, with five 1.5–2 hour sessions a week, the path takes about three months.">Девять этапов — это темы готового бесплатного курса «Нагрузочное тестирование и мониторинг с нуля»: 13 тем, 56 уроков, около 128 часов. Внутри — объяснения, схемы и практика на своём стенде. По расписанию, с пятью занятиями в неделю по 1,5–2 часа, путь займёт около трёх месяцев.</p>
+    <p class="muted" data-en="Nine stages follow the ready-made free course “Load testing and monitoring from zero”: 13 topics, 57 lessons, about 170 hours. It includes explanations, diagrams and practice on your own lab. Following the schedule, with five 1.5–2 hour sessions a week, the path takes about five months.">Девять этапов — это темы готового бесплатного курса «Нагрузочное тестирование и мониторинг с нуля»: 13 тем, 57 уроков, около 170 часов. Внутри — объяснения, схемы и практика на своём стенде. По расписанию, с пятью занятиями в неделю по 1,5–2 часа, путь займёт около пяти месяцев.</p>
     <div class="track">
       <div class="stop">
         <div class="dot">0</div>
@@ -617,8 +617,8 @@
       </div>
       <div class="stop">
         <div class="dot">4</div>
-        <h3 data-en="Metrics, logs and alerts">Метрики, логи и алерты</h3>
-        <p data-en="Topic 7: collect metrics in Prometheus, query them with PromQL and build Grafana dashboards. Find events in Loki, connect exporters and configure notifications with Alertmanager.">Тема 7: собираешь метрики в Prometheus, задаёшь вопросы данным через PromQL и строишь дашборды в Grafana. Находишь события в Loki, подключаешь экспортеры и настраиваешь уведомления через Alertmanager.</p>
+        <h3 data-en="Metrics, logs, traces and alerts">Метрики, логи, трейсы и алерты</h3>
+        <p data-en="Topic 7: collect metrics in Prometheus, query them with PromQL and build Grafana dashboards. Find events in Loki, follow a single request through a trace in Tempo, connect exporters and configure notifications with Alertmanager.">Тема 7: собираешь метрики в Prometheus, задаёшь вопросы данным через PromQL и строишь дашборды в Grafana. Находишь события в Loki, проходишь путь одного запроса по трейсу в Tempo, подключаешь экспортеры и настраиваешь уведомления через Alertmanager.</p>
       </div>
       <div class="stop">
         <div class="dot">5</div>
@@ -696,7 +696,7 @@
       <li><span class="k" data-en="Internet">Интернет</span><span class="v" data-en="Also covered. Nothing else to buy — every program along the way is free.">Тоже есть. Больше ничего покупать не нужно — все программы по ходу обучения бесплатные.</span></li>
       <li><span class="k" data-en="AI">Нейросеть</span><span class="v" id="nnV">Рекомендую <a href="https://chatgpt.com" target="_blank" rel="noopener">ChatGPT</a> — он лучше всего подходит для учёбы (нужен VPN). Не хуже как преподаватель — <a href="https://claude.ai" target="_blank" rel="noopener">Claude</a> (тоже VPN). Без VPN из России бесплатно работают <a href="https://chat.deepseek.com" target="_blank" rel="noopener">DeepSeek</a> (силён в коде) и <a href="https://giga.chat" target="_blank" rel="noopener">GigaChat</a> (нативный русский). Открой любую и начинай.</span></li>
       <li><span class="k" data-en="GitHub">GitHub</span><span class="v" data-en="A free account for your portfolio and automated checks.">Бесплатный аккаунт — там будет портфолио и автоматические проверки.</span></li>
-      <li><span class="k" data-en="Time">Время</span><span class="v" data-en="Five 1.5–2 hour sessions a week, about three months following the course schedule. Less time means a longer path; regularity matters more than session length.">5 занятий в неделю по 1,5–2 часа, около трёх месяцев по расписанию курса. Если времени меньше, путь просто займёт дольше — регулярность важнее длины занятия.</span></li>
+      <li><span class="k" data-en="Time">Время</span><span class="v" data-en="Five 1.5–2 hour sessions a week, about five months following the course schedule. Less time means a longer path; regularity matters more than session length.">5 занятий в неделю по 1,5–2 часа, около пяти месяцев по расписанию курса. Если времени меньше, путь просто займёт дольше — регулярность важнее длины занятия.</span></li>
     </ul>
   </section>
 
@@ -760,7 +760,7 @@
 - Этап 1. Git и Python (темы 3–4): Git, GitHub, репозиторий perf-lab, commit, push, .gitignore; Python, переменные, функции, данные, ошибки, виртуальное окружение venv. Сохраняем работу с первых примеров.
 - Этап 2. Docker и стенд «Магазин» (тема 5): Docker Compose, локальный FastAPI + PostgreSQL + Redis + заглушка оплаты. Поднять стенд, проверить готовность, прочитать логи, остановить сервисы. В стенде заложены узкие места для дальнейшей диагностики.
 - Этап 3. Автотесты API и CI (тема 6): тест-кейсы, позитивные и негативные сценарии, границы, pytest, фикстуры, проверки статус-кодов и полей ответа. Запускать проверки в GitHub Actions, читать результат и разбирать ошибки.
-- Этап 4. Метрики, логи и алерты (тема 7): Prometheus, PromQL, экспортеры, Grafana, Loki, Alertmanager. Собрать наблюдаемость стенда, построить дашборды, найти события в логах, настроить алерты.
+- Этап 4. Метрики, логи, трейсы и алерты (тема 7): Prometheus, PromQL, экспортеры, Grafana, Loki, Tempo, Alertmanager. Собрать наблюдаемость стенда, построить дашборды, найти события в логах, пройти путь запроса по трейсу, настроить алерты.
 - Этап 5. Понять, что измерять (тема 8): задержка, throughput, p50/p95/p99, доля ошибок, очереди и закон Литтла, виды тестов, профиль нагрузки и SLO. Выбирать измеримые цели и критерии успеха теста.
 - Этап 6. Нагрузочный тест: Locust и k6 (темы 9–10): сначала Python-сценарии в Locust, затем JavaScript-сценарии в k6. Авторизация, данные, разные профили нагрузки, пороги и чтение результатов. Нагрузка — только против своего локального стенда «Магазин» (см. правило 10).
 - Этап 7. Найти узкое место и написать отчёт (темы 11–12): метод диагностики, гипотезы и доказательства; CPU, база данных, память и soak, кэш и зависимости. Сравнить результаты до и после исправления, написать отчёт, добавить лёгкую нагрузку в GitHub Actions против стенда внутри workflow; тяжёлые прогоны оставить локально. Планирование ёмкости и запас мощности.
@@ -855,7 +855,7 @@ Route (a reference for you; reveal it to me gradually):
 - Stage 1. Git and Python (topics 3–4): Git, GitHub, the perf-lab repository, commit, push, .gitignore; Python, variables, functions, data, errors, a venv virtual environment. Save work from the first examples.
 - Stage 2. Docker and the “Shop” lab (topic 5): Docker Compose, local FastAPI + PostgreSQL + Redis + a payment stub. Start the lab, check readiness, read logs, stop services. The lab has built-in bottlenecks for later diagnosis.
 - Stage 3. API autotests and CI (topic 6): test cases, positive and negative scenarios, boundaries, pytest, fixtures, status-code and response-field checks. Run checks in GitHub Actions, read results and investigate errors.
-- Stage 4. Metrics, logs and alerts (topic 7): Prometheus, PromQL, exporters, Grafana, Loki, Alertmanager. Set up lab observability, build dashboards, find events in logs, configure alerts.
+- Stage 4. Metrics, logs, traces and alerts (topic 7): Prometheus, PromQL, exporters, Grafana, Loki, Tempo, Alertmanager. Set up lab observability, build dashboards, find events in logs, follow a request in a trace, configure alerts.
 - Stage 5. Understand what to measure (topic 8): latency, throughput, p50/p95/p99, error rate, queues and Little’s law, test types, load profiles and SLOs. Choose measurable goals and test success criteria.
 - Stage 6. Load testing: Locust and k6 (topics 9–10): first Python scenarios in Locust, then JavaScript scenarios in k6. Authentication, data, different load profiles, thresholds and reading results. Load-test only your own local “Shop” lab (see rule 10).
 - Stage 7. Find a bottleneck and write a report (topics 11–12): a diagnostic method, hypotheses and evidence; CPU, the database, memory and soak testing, cache and dependencies. Compare results before and after a fix, write a report, add light load tests in GitHub Actions against a lab started inside the workflow; keep heavy runs local. Capacity planning and spare capacity.

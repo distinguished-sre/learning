@@ -3,7 +3,7 @@ layout: lesson
 title: "Клиент, сервер и HTTP: запрос, ответ, коды"
 topic: 2
 lesson: "2.1"
-time: "2.5 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно

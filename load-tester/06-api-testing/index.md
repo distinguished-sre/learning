@@ -2,7 +2,7 @@
 layout: topic
 title: "Тестирование и автотесты API"
 topic: 6
-time: "6.5 ч"
+time: "10.5 ч"
 ---
 
 ## О чём тема

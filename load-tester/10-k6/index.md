@@ -2,7 +2,7 @@
 layout: topic
 title: "k6"
 topic: 10
-time: "7 ч"
+time: "10.5 ч"
 ---
 
 ## О чём тема

@@ -3,7 +3,7 @@ layout: lesson
 title: "Алерты и первый инцидент"
 topic: 7
 lesson: "7.6"
-time: "2.5 ч"
+time: "3 ч"
 ---
 
 ## Зачем это нужно
@@ -61,13 +61,13 @@ flowchart TD
 - `expr`: условие. Здесь доля 5xx среди всех запросов за минуту: `sum(rate(5xx)) / sum(rate(все))`, и `> 0.05` оставляет результат, только когда доля больше 5%. Если запросов нет, делитель равен 0: либо рядов нет совсем (результат пуст), либо получается `0 / 0`, то есть `NaN` (не число), а `NaN > 0.05` ложно. В обоих случаях алерт молчит. Для этого правила тишина при нулевом трафике опасна: упавший фронт тоже даёт ноль запросов. Как закрыть эту дыру, смотри ниже, в разделе про хорошие и плохие алерты.
 - `for`: **выдержка**. Условие должно держаться непрерывно 2 минуты, прежде чем алерт станет боевым. Подробнее в следующем разделе.
 - `labels`: метки, которые добавятся к алерту. Здесь `severity: critical` (важность). По меткам Alertmanager маршрутизирует.
-- `annotations`: подписи для человека: что случилось, что делать, ссылка на инструкцию (`runbook_url`, см. ниже). Они не участвуют в маршрутизации. В правилах стенда `runbook_url` нет: они учебные, а инструкцию ты напишешь сам в практике. В боевых правилах ссылка обязательна.
+- `annotations`: подписи для человека: что случилось, что делать, ссылка на инструкцию (`runbook_url`, см. ниже). Они не участвуют в маршрутизации. В правилах стенда `runbook_url` указывает на урок курса, где разобрана эта ситуация (в бою тут ссылка на страницу вашей вики). В боевых правилах ссылка обязательна.
 
 Окно `[1m]` в правилах стенда годится, потому что скрейп идёт раз в 5 секунд и в окне 12 точек. На боевых системах со скрейпом 15-30 секунд берут `[2m]`-`[5m]`, иначе алерт будет дрожать от одной пропущенной точки (урок 7.2).
 
 Prometheus вычисляет все правила раз в `evaluation_interval` (в нашем `prometheus.yml` это 5 секунд, на боевых системах обычно 15-60 с).
 
-**Все пять правил стенда** сведены в таблицу, потому что на них построен урок:
+**Семь правил стенда** (пять основных и два «страховочных», о них ниже) сведены в таблицу, потому что на них построен урок:
 
 | Алерт | Условие | for | Важность | Что за ним стоит |
 |---|---|---|---|---|
@@ -76,8 +76,10 @@ Prometheus вычисляет все правила раз в `evaluation_interv
 | `ShopHighLatencyP95` | p95 > 1 с | 5m | warning | пользователи ждут слишком долго |
 | `ShopDbPoolExhausted` | `shop_db_pool_waiting > 0` | 1m | warning | запросы стоят в очереди за соединением |
 | `HostHighCpu` | CPU хоста > 90% | 2m | warning | хост перегружен |
+| `ExporterDown` | `up == 0` у `payment`, `node`, `cadvisor`, `postgres`, `alertmanager`, `alloy` | 1m | warning | пропал источник метрик |
+| `ShopNoTraffic` | трафик был за 30 минут, а за 5 минут запросов нет | 10m | info | запросы прекратились |
 
-В наборе четыре алерта из пяти смотрят на **симптомы для пользователя** (недоступен, ошибки, медленно, очередь), и только один на ресурс (процессор хоста). Об этом принципе подробнее ниже.
+Из пяти основных алертов четыре смотрят на **симптомы для пользователя** (недоступен, ошибки, медленно, очередь), и только один на ресурс (процессор хоста). Ещё четыре алерта на **сгорание бюджета ошибок** лежат в отдельном файле `slo.yml`: о них в конце раздела про хорошие алерты и в [уроке 8.4](../08-perf-theory/04-load-profile-slo.md). Об этом принципе подробнее ниже.
 
 **Что путают.** Алерт и метрика: алерт это не новые данные, а правило над существующими метриками. Prometheus также создаёт для каждого активного алерта служебную метрику `ALERTS{alertname, alertstate}`, её можно выводить на график.
 
@@ -224,35 +226,38 @@ route:
 
 **Что путают.** Желание «мониторить всё»: на каждую метрику не нужен алерт. Метрик сотни, алертов должно быть десятки. Всё остальное это панели на дашборде для разбора.
 
-**Слепое пятно, которое мы нашли в уроке 7.4:** набор стенда не проверяет `up` экспортёров. Если упадёт `cadvisor` или `node-exporter`, ты ослепнешь молча. Нужно правило вида:
+**Слепое пятно, которое мы нашли в уроке 7.4:** набор стенда не проверяет `up` экспортёров. Если упадёт `cadvisor` или `node-exporter`, ты ослепнешь молча. Нужно правило вида (оно есть в стенде, группа `shop-meta`):
 
 {% raw %}
 ```yaml
 - alert: ExporterDown
-  expr: up{job=~"node|cadvisor|postgres|payment|alloy|alertmanager"} == 0
-  for: 2m
+  expr: up{job=~"payment|node|cadvisor|postgres|alertmanager|alloy"} == 0
+  for: 1m
   labels: {severity: warning}
   annotations:
     summary: "Цель {{ $labels.job }} недоступна"
-    description: "Prometheus не может скрейпить {{ $labels.instance }} две минуты. Метрики этого источника не обновляются."
-    runbook_url: "https://wiki.example.com/runbooks/exporter-down"
+    description: "Prometheus не может скрейпить {{ $labels.instance }} больше минуты: метрики этого источника не обновляются."
+    runbook_url: https://distinguished-sre.github.io/load-tester/07-observability/04-exporters.html
 ```
 {% endraw %}
 
-Адрес в `runbook_url` примерный: подставь ссылку на свой runbook. В стенде этого правила нет, ты добавишь его сам в практике (шаг 7).
+Самого магазина в списке нет: его сторожит `ShopDown`. Самого Prometheus тоже нет: упавший Prometheus алерт не пришлёт, за ним следит внешняя проверка. Правило проверишь в практике (шаг 7).
 
 У `up == 0` есть своё слепое пятно: если цель убрали из конфигурации Prometheus или переименовали `job`, серия `up` просто исчезает, и условие `== 0` молчит. Для критичных целей добавляют проверку на пропажу самой метрики: `absent(up{job="cadvisor"})` возвращает ряд со значением 1, когда ни одной серии с такими метками нет.
 
 **Слепое пятно номер два: пропал трафик.** `ShopHighErrorRate` смотрит на долю ошибок. Если балансировщик перед магазином отвалился, пользователи не могут зайти, запросов 0, ошибок 0, и алерт молчит (см. про `NaN` выше). Нужен второй алерт на сам факт тишины:
 
 ```yaml
+# боевой вариант
 - alert: ShopNoTraffic
   expr: sum(rate(http_requests_total[5m])) == 0 or absent(http_requests_total)
   for: 5m
   labels: {severity: critical}
 ```
 
-`== 0` ловит случай, когда серии есть, но счётчики не растут; `absent(...)` случай, когда метрика пропала целиком (сервис не отдаёт метрики или Prometheus его не видит). В учебном стенде без нагрузки трафика и так нет, поэтому такое правило тут шумело бы постоянно, и в `alerts.yml` стенда его нет. На боевом сервисе, куда ходят пользователи круглые сутки, оно обязательно. Для сервисов с ночными паузами порог времени делают длиннее или не ставят алерт на ночь.
+`== 0` ловит случай, когда серии есть, но счётчики не растут; `absent(...)` случай, когда метрика пропала целиком (сервис не отдаёт метрики или Prometheus его не видит). В учебном стенде без нагрузки трафика и так нет, поэтому боевой вариант шумел бы постоянно. Версия в `alerts.yml` стенда мягче: `sum(rate(http_requests_total[5m])) == 0 and sum(increase(http_requests_total[30m])) > 0` (трафик был полчаса назад, а сейчас его нет), `for: 10m` и важность `info`. Она молчит в стенде, куда никто не ходил, и срабатывает через 15 минут после конца нагрузочного теста: это ожидаемо, не пугайся. Ветки `absent(...)` в учебной версии нет, потому что без истории трафика её нельзя отличить от «стенд только что поднят». На боевом сервисе, куда ходят пользователи круглые сутки, ставят боевой вариант. Для сервисов с ночными паузами порог времени делают длиннее или не ставят алерт на ночь.
+
+**Алерты на сгорание бюджета ошибок.** Пять основных алертов смотрят на порог «сейчас». Для SLO на месяц нужен другой взгляд: не «плохо ли сейчас», а «как быстро мы тратим бюджет». Такие правила (multiwindow multi-burn-rate: скорость сгорания 14,4 на окнах 1 час и 5 минут, скорость 6 на окнах 6 часов и 30 минут) лежат в `monitoring/prometheus/rules/slo.yml` вместе с recording rules, на которых они построены (`sli:http_error_ratio:rate5m` и другие). Смысл правил и расчёт на числах разобраны в [уроке 8.4](../08-perf-theory/04-load-profile-slo.md), здесь важна разница: они срабатывают не от всплеска, а от устойчивой потери бюджета, и поэтому в `critical` попадают реже, чем `ShopHighErrorRate`.
 
 {% raw %}В `annotations` двойные фигурные скобки подставляют значения: `{{ $labels.job }}` это значение метки `job` у сработавшего ряда, а `{{ $value }}` значение выражения. Это шаблоны Go (язык Prometheus), и в Jekyll-уроке они защищены тегом raw; в твоём YAML-файле они пишутся как есть.{% endraw %}
 
@@ -343,13 +348,13 @@ curl -s -X POST localhost:8001/admin/config -H 'Content-Type: application/json' 
 
 ### 1. Посмотри правила и их состояние
 
-В браузере `http://localhost:9090/alerts` (раздел Alerts в Prometheus). Должны быть видны пять правил со статусом `inactive`. Через консоль:
+В браузере `http://localhost:9090/alerts` (раздел Alerts в Prometheus). Должны быть видны одиннадцать алертов со статусом `inactive` (пять основных, `ExporterDown`, `ShopNoTraffic` и четыре на сгорание бюджета). Через консоль:
 
 ```bash
-curl -s localhost:9090/api/v1/rules | jq -r '.data.groups[].rules[] | [.name, .state, .duration] | @tsv'
+curl -s localhost:9090/api/v1/rules | jq -r '.data.groups[].rules[] | select(.type == "alerting") | [.name, .state, .duration] | @tsv'
 ```
 
-Разбор: `/api/v1/rules` отдаёт JSON со всеми правилами; `jq -r` печатает без кавычек; выражение `.data.groups[].rules[]` проходит по всем правилам всех групп; `[.name, .state, .duration] | @tsv` собирает три поля в строку с табуляциями.
+Разбор: `/api/v1/rules` отдаёт JSON со всеми правилами; `jq -r` печатает без кавычек; выражение `.data.groups[].rules[]` проходит по всем правилам всех групп; `select(.type == "alerting")` оставляет только алерты (в этом же списке лежат recording rules из `slo.yml`, у них нет состояния); `[.name, .state, .duration] | @tsv` собирает три поля в строку с табуляциями.
 
 ```text
 ShopDown	inactive	60
@@ -357,9 +362,15 @@ ShopHighErrorRate	inactive	120
 ShopHighLatencyP95	inactive	300
 ShopDbPoolExhausted	inactive	60
 HostHighCpu	inactive	120
+ExporterDown	inactive	60
+ShopNoTraffic	inactive	600
+ShopErrorBudgetBurnFast	inactive	120
+ShopErrorBudgetBurnSlow	inactive	900
+ShopLatencyBudgetBurnFast	inactive	120
+ShopLatencyBudgetBurnSlow	inactive	900
 ```
 
-**Как читать вывод:** колонки имя, состояние, выдержка `for` в секундах (60, 120, 300 это `1m`, `2m`, `5m`). Все пять `inactive`: стенд здоров. Если у тебя `pending` или `firing`, стенд кто-то нагружает или он болен, найди причину до продолжения.
+**Как читать вывод:** колонки имя, состояние, выдержка `for` в секундах (60, 120, 300, 600, 900 это `1m`, `2m`, `5m`, `10m`, `15m`). Все `inactive`: стенд здоров. Если у тебя `pending` или `firing`, стенд кто-то нагружает или он болен, найди причину до продолжения.
 
 Также открой `http://localhost:9093`: интерфейс Alertmanager. Он пока пуст (раздел Alerts без записей), и это нормально.
 
@@ -373,11 +384,11 @@ HostHighCpu	inactive	120
 source ~/perf-lab/.venv/bin/activate
 python ~/perf-lab/07-monitoring/orders_load.py orders 3 120 &
 sleep 100
-curl -s localhost:9090/api/v1/rules | jq -r '.data.groups[].rules[] | [.name, .state] | @tsv'
+curl -s localhost:9090/api/v1/rules | jq -r '.data.groups[].rules[] | select(.type == "alerting") | [.name, .state] | @tsv'
 wait
 ```
 
-Все пять должны остаться `inactive`: это **базовая линия**. Если срабатывает что-то при умеренной нагрузке, алерт слишком чувствителен (или у тебя слишком слабый хост).
+Все одиннадцать должны остаться `inactive`: это **базовая линия**. Если срабатывает что-то при умеренной нагрузке, алерт слишком чувствителен (или у тебя слишком слабый хост).
 
 ### 3. Подготовь журнал и запусти инцидент
 
@@ -523,62 +534,50 @@ wait
 
 Заполни все `____`.
 
-### 7. Добавь алерт на экспортёры и проверь его
+### 7. Проверь алерт на экспортёры
 
-Алерт `ExporterDown` из теории: добавим в файл правил. Сначала сохрани оригинал **вне** репозитория стенда:
+Правило `ExporterDown` из теории уже есть в стенде: оно в группе `shop-meta` файла `monitoring/prometheus/rules/alerts.yml`. Проверь, что оно живое. Сначала синтаксис правил (утилита `promtool` лежит в образе Prometheus, отдельно её ставить не надо):
 
 ```bash
 cd ~/load-tester/project/shop
-cp monitoring/prometheus/rules/alerts.yml ~/perf-lab/07-monitoring/alerts.yml.orig
+docker run --rm -v "$PWD/monitoring/prometheus/rules:/r:ro" --entrypoint promtool prom/prometheus:v3.15.0 check rules /r/alerts.yml /r/slo.yml
 ```
 
-Добавь правило в конец списка `rules:` в `monitoring/prometheus/rules/alerts.yml` (отступы как у соседних правил):
-
-{% raw %}
-```yaml
-      - alert: ExporterDown
-        expr: up{job=~"node|cadvisor|postgres|payment|alloy|alertmanager"} == 0
-        for: 1m
-        labels: {severity: warning}
-        annotations:
-          summary: "Цель {{ $labels.job }} недоступна"
-          description: "Prometheus не может скрейпить {{ $labels.instance }} минуту."
-          runbook_url: "https://wiki.example.com/runbooks/exporter-down"
-```
-{% endraw %}
-
-Проверь синтаксис и перечитай конфигурацию (контейнер Prometheus читает правила только по сигналу):
-
-```bash
-docker run --rm -v "$PWD/monitoring/prometheus/rules:/r:ro" --entrypoint promtool prom/prometheus:v3.15.0 check rules /r/alerts.yml
-docker compose --profile monitoring kill -s HUP prometheus
-```
-
-Разбор: `promtool check rules` проверяет файл правил (запускается из образа Prometheus, где эта утилита уже есть); `--rm` удаляет временный контейнер; `kill -s HUP` посылает контейнеру сигнал «перечитай конфиг» (так делает любой Prometheus: адреса `/-/reload` без флага `--web.enable-lifecycle` у него нет, а в стенде этот флаг не включён. На боевых системах его включают и закрывают от посторонних).
+Разбор: `promtool check rules` проверяет файлы правил; `--rm` удаляет временный контейнер; `-v ...:/r:ro` подключает папку с правилами только для чтения; два файла в конце: алерты и правила SLO (о них урок [8.4](../08-perf-theory/04-load-profile-slo.md)).
 
 ```text
 Checking /r/alerts.yml
-  SUCCESS: 6 rules found
+  SUCCESS: 7 rules found
+
+Checking /r/slo.yml
+  SUCCESS: 12 rules found
 ```
 
-Теперь проверь срабатывание: останови `cadvisor`, подожди 1,5 минуты и выполни запрос из шага 1 (`/api/v1/rules`) или открой `/alerts`: `ExporterDown` должен быть `firing` для `job="cadvisor"`. Запусти его снова (`docker compose --profile monitoring start cadvisor`), через минуту алерт погаснет.
-
-Когда закончишь, **верни оригинал** в репозиторий стенда, чтобы позже не было конфликтов при обновлении:
+Теперь останови `cadvisor`, подожди 1,5 минуты и выполни запрос из шага 1 (`/api/v1/rules`) или открой `/alerts`: `ExporterDown` должен быть `firing` для `job="cadvisor"`. Запусти его снова (`docker compose --profile monitoring start cadvisor`), через минуту алерт погаснет.
 
 ```bash
-git checkout -- monitoring/prometheus/rules/alerts.yml && docker compose --profile monitoring kill -s HUP prometheus
+docker compose --profile monitoring stop cadvisor
+sleep 90
+curl -s localhost:9090/api/v1/alerts | jq -r '.data.alerts[] | [.labels.alertname, .labels.job, .state] | @tsv'
+docker compose --profile monitoring start cadvisor
 ```
 
-Свою версию правила сохрани копией: `~/perf-lab/07-monitoring/exporter-down.yml` (допиши туда текст правила).
+```text
+ExporterDown	cadvisor	firing
+```
+
+**Как читать вывод:** колонки имя алерта, цель, состояние. Если вместо `firing` стоит `pending`, не прошла минута `for`: подожди ещё немного. Пустой вывод значит, что алерт не сработал: проверь, что `cadvisor` действительно остановлен (`docker compose --profile monitoring ps`).
+
+Открой в Alertmanager (`http://localhost:9093`) этот же алерт и посмотри, что в нём лежит в аннотации `runbook_url`: это ссылка на урок курса, а в боевой системе здесь стоит страница вашей вики.
 
 **Типичные ошибки:**
 
-- `yaml: line 61: did not find expected key`: сломаны отступы; соседние правила начинаются с `- alert:` на 6 пробелов.
-- Правило не появилось на `/alerts`: забыл `kill -s HUP`, или промахнулся с путём (`promtool check rules` должен показать SUCCESS).
+- `SUCCESS` не появился, вместо него `yaml: line 61: did not find expected key`: сломаны отступы (в своей правке правил; соседние правила начинаются с `- alert:` на 6 пробелов).
+- `ExporterDown` не появился в `/alerts`: Prometheus не перечитал правила. Для своих правок используй `docker compose --profile monitoring kill -s HUP prometheus` (сигнал «перечитай конфиг»: адреса `/-/reload` без флага `--web.enable-lifecycle` у стенда нет).
 - `command not found: promtool`: запускай через `docker run ... --entrypoint promtool`, как показано.
 
 ```bash
-cd ~/perf-lab && git add 07-monitoring && git commit -m "7.6: инцидент 01, runbook, ExporterDown" && git push
+cd ~/perf-lab && git add 07-monitoring && git commit -m "7.6: инцидент 01, runbook" && git push
 ```
 
 ## Сломай и почини
@@ -785,7 +784,7 @@ RED: какие маршруты и статусы. USE: какой ресурс
 <details markdown="1">
 <summary>Ответ</summary>
 
-Тот же `up == 0` для `job` экспортёров (node, cadvisor, postgres): иначе при их падении метрики пропадут молча. И алерт на пропавший трафик (`absent(...)`): при нулевых запросах доля ошибок даёт `NaN`, и алерт на неё молчит.
+Тот же `up == 0` для `job` экспортёров (node, cadvisor, postgres): иначе при их падении метрики пропадут молча (в стенде это `ExporterDown`). И алерт на пропавший трафик (`absent(...)`, в стенде `ShopNoTraffic`): при нулевых запросах доля ошибок даёт `NaN`, и алерт на неё молчит.
 
 </details>
 
@@ -795,7 +794,7 @@ Ubuntu 24.04, Docker Compose v2, стенд «Магазин» из `project/sho
 
 ## Итог урока: ты умеешь
 
-- [ ] Прочитать правило алерта: `expr`, `for`, метки, подписи; назвать все пять правил стенда и что стоит за каждым.
+- [ ] Прочитать правило алерта: `expr`, `for`, метки, подписи; назвать пять основных правил стенда, `ExporterDown` и `ShopNoTraffic` и что стоит за каждым.
 - [ ] Объяснить состояния inactive, pending, firing и что делает `for` (включая сброс отсчёта).
 - [ ] Объяснить, что делают `group_by`, `group_wait`, `group_interval`, `repeat_interval`, тишина, маршруты.
 - [ ] Отличить хороший алерт от плохого и объяснить, почему симптом лучше причины.
@@ -804,6 +803,6 @@ Ubuntu 24.04, Docker Compose v2, стенд «Магазин» из `project/sho
 - [ ] Объяснить цепочку «медленная оплата, занятый пул, 503 даже на каталоге».
 - [ ] Составить runbook и проверить, что алерт реально срабатывает, а не молчит из-за опечатки.
 
-Дальше: [тема 8. Теория производительности](../08-perf-theory/index.md): ты умеешь видеть систему, теперь научишься объяснять, почему она ведёт себя так под нагрузкой.
+Дальше: [урок 7.7. Трейсы: путь одного запроса](07-traces.md): метрики и логи ты уже связал, теперь добавишь третий сигнал и научишься находить медленный участок одного запроса.
 
 **Глубже:** Alertmanager, маршрутизация и тишины в [курсе DevOps](https://distinguished-sre.github.io/devops/08-observability/05-alertmanager.html).

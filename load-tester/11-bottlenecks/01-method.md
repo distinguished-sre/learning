@@ -3,7 +3,7 @@ layout: lesson
 title: "Методика: от симптома к причине, USE и RED"
 topic: 11
 lesson: "11.1"
-time: "2 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно

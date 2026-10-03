@@ -3,7 +3,7 @@ layout: lesson
 title: "SQL и PostgreSQL: таблицы, запросы, индексы"
 topic: 2
 lesson: "2.4"
-time: "2.5 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно

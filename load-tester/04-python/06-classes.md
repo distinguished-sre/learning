@@ -3,7 +3,7 @@ layout: lesson
 title: "Классы и объекты: зачем они Locust"
 topic: 4
 lesson: "4.6"
-time: "2 ч"
+time: "3 ч"
 ---
 
 ## Зачем это нужно

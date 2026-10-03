@@ -3,7 +3,7 @@ layout: lesson
 title: "Функции, модули и исключения"
 topic: 4
 lesson: "4.3"
-time: "2 ч"
+time: "2.5 ч"
 ---
 
 ## Зачем это нужно

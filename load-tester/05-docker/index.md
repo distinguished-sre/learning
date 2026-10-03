@@ -2,7 +2,7 @@
 layout: topic
 title: "Docker и учебный стенд"
 topic: 5
-time: "8.5 ч"
+time: "13.5 ч"
 ---
 
 ## О чём тема

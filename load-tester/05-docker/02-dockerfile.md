@@ -3,7 +3,7 @@ layout: lesson
 title: "Dockerfile: как собирается образ «Магазина»"
 topic: 5
 lesson: "5.2"
-time: "2 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно

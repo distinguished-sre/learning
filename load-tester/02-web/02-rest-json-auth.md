@@ -3,7 +3,7 @@ layout: lesson
 title: "REST API, JSON и авторизация"
 topic: 2
 lesson: "2.2"
-time: "2 ч"
+time: "2.5 ч"
 ---
 
 ## Зачем это нужно

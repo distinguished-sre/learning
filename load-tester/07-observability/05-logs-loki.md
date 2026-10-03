@@ -3,7 +3,7 @@ layout: lesson
 title: "Логи: уровни, JSON, Loki и LogQL"
 topic: 7
 lesson: "7.5"
-time: "2 ч"
+time: "2.5 ч"
 ---
 
 ## Зачем это нужно
@@ -105,7 +105,7 @@ flowchart TD
 {"ts": "2026-10-03T12:03:41.512390+00:00", "level": "ERROR", "msg": "Запрос завершён",
  "method": "POST", "route": "/api/orders", "path": "/api/orders", "status": 502,
  "duration_ms": 212.4, "request_id": "9f3c2b7a41d84c1e8b6a0d5e7f213a90",
- "user_id": 17, "error": "payment failed"}
+ "trace_id": "5b8aa5a2d2c872e8321cf37308d69df2", "user_id": 17, "error": "payment failed"}
 ```
 
 Разбор каждого поля (формирует их `JsonFormatter` в `logging_setup.py` и `middleware` в `main.py`):
@@ -121,6 +121,7 @@ flowchart TD
 | `status` | HTTP-код ответа |
 | `duration_ms` | сколько миллисекунд обработка заняла внутри сервиса |
 | `request_id` | уникальный номер запроса (32 символа), объясняем ниже |
+| `trace_id` | номер трейса запроса (32 символа): по нему лог связывается с трейсом, разберём в [уроке 7.7](07-traces.md); сейчас пропусти |
 | `user_id` | номер пользователя, если запрос был авторизован |
 | `error` | причина сбоя, **только** у ответов 5xx (например, `payment failed`, `payment timeout`, `database pool timeout`) |
 
@@ -423,7 +424,7 @@ quantile_over_time(0.95, {service="shop"} | json | route="/api/orders" | unwrap 
 Ожидаемый вид первого результата (строки в панели Logs, поля свёрнуты):
 
 ```text
-12:41:07.318  {"ts": "2026-10-03T12:41:07.318044+00:00", "level": "INFO", "msg": "Запрос завершён", "method": "POST", "route": "/api/orders", "path": "/api/orders", "status": 201, "duration_ms": 71.62, "request_id": "e1b4...", "user_id": 2}
+12:41:07.318  {"ts": "2026-10-03T12:41:07.318044+00:00", "level": "INFO", "msg": "Запрос завершён", "method": "POST", "route": "/api/orders", "path": "/api/orders", "status": 201, "duration_ms": 71.62, "request_id": "e1b4...", "trace_id": "9c1d...", "user_id": 2}
 ```
 
 И для второго:
@@ -461,7 +462,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -H 'X-Request-ID: lesson-7-5-demo' loca
 ```
 
 ```text
-{"ts": "2026-10-03T12:44:52.117201+00:00", "level": "INFO", "msg": "Запрос завершён", "method": "GET", "route": "/api/categories", "path": "/api/categories", "status": 200, "duration_ms": 6.84, "request_id": "lesson-7-5-demo"}
+{"ts": "2026-10-03T12:44:52.117201+00:00", "level": "INFO", "msg": "Запрос завершён", "method": "GET", "route": "/api/categories", "path": "/api/categories", "status": 200, "duration_ms": 6.84, "request_id": "lesson-7-5-demo", "trace_id": "d2f0a8c4b1e94f3a8c7b6a5d4e3f2a1b"}
 ```
 
 **Как читать вывод:** ровно одна строка с твоим идентификатором. Даже если в логах миллионы запросов, текстовый поиск по уникальной строке находит её быстро, а селектор `service="shop"` сузил выбор до одного сервиса. Точный вариант: `{service="shop"} | json | request_id="lesson-7-5-demo"`.

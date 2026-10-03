@@ -3,7 +3,7 @@ layout: lesson
 title: "Процессы и ресурсы: CPU, память, диск, load average"
 topic: 1
 lesson: "1.3"
-time: "2.5 ч"
+time: "3 ч"
 ---
 
 ## Зачем это нужно

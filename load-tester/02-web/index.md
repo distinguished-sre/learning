@@ -2,7 +2,7 @@
 layout: topic
 title: "Как устроен веб-сервис"
 topic: 2
-time: "9 ч"
+time: "12 ч"
 ---
 
 ## О чём тема

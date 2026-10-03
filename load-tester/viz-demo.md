@@ -201,6 +201,10 @@ Load average и ядра (`data-cores`, `data-load`):
 
 <div class="viz" data-viz="obs-alert-life" data-threshold="5" data-for="120"></div>
 
+Водопад спанов одного запроса (`data-scenario`: `order`, `payment`, `retries`, `n1`; кнопки «Свернуть повторы», клик по строке открывает детали спана):
+
+<div class="viz" data-viz="trace-waterfall" data-scenario="n1"></div>
+
 ### Тема 8: теория производительности
 
 Закон Литтла в кафе (`data-rate`: гостей в минуту, `data-time`: секунд на гостя, `data-place`):

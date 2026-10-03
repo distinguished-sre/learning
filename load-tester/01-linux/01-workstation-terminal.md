@@ -3,7 +3,7 @@ layout: lesson
 title: "Рабочее место: Ubuntu, терминал, файлы и справка"
 topic: 1
 lesson: "1.1"
-time: "2 ч"
+time: "2.5 ч"
 ---
 
 ## Зачем это нужно

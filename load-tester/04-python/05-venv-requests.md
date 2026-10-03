@@ -3,7 +3,7 @@ layout: lesson
 title: "Виртуальное окружение, pip и HTTP-запросы из кода"
 topic: 4
 lesson: "4.5"
-time: "2 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно

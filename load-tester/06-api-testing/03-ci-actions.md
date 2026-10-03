@@ -3,7 +3,7 @@ layout: lesson
 title: "Тесты в CI: GitHub Actions на каждый push"
 topic: 6
 lesson: "6.3"
-time: "2 ч"
+time: "3 ч"
 ---
 
 ## Зачем это нужно
@@ -390,11 +390,11 @@ git status --short
 ```text
 pytest==9.1.1
 requests==2.34.2
-...........................                                              [100%]
-27 passed, 1 xfailed in 6.2s
+.............................x                                        [100%]
+29 passed, 1 xfailed in 7.1s
 ```
 
-**Как читать вывод:** в `requirements.txt` должны быть и `pytest`, и `requests` с точными версиями: CI поставит ровно их. Тесты должны быть зелёными ещё до CI: иначе ты не отличишь поломку CI от красных тестов. `git status` лучше без изменений в `06-api-tests/`.
+**Как читать вывод:** в `requirements.txt` должны быть и `pytest`, и `requests` с точными версиями: CI поставит ровно их. Тесты должны быть зелёными ещё до CI (с `slow`-тестом: набор целиком, без `-m`): иначе ты не отличишь поломку CI от красных тестов. `git status` лучше без изменений в `06-api-tests/`.
 
 **Типичные ошибки:**
 
@@ -475,6 +475,8 @@ jobs:
         run: docker compose down -v
 ```
 
+Про маркеры и `conftest.py`: шаг запуска выполняется с `working-directory: 06-api-tests`, а там лежат и `pytest.ini` (с `--strict-markers` и списком маркеров `smoke`, `negative`, `slow`), и `conftest.py`. Поэтому pytest в CI находит настройки и фикстуры так же, как у тебя в терминале, а опечатка в маркере обрушит шаг, как и локально. Тесты запускаются все, включая `slow`: CI не торопится. Если когда-нибудь понадобится быстрый предварительный шаг, добавь к команде `-m smoke`, остальное не меняется.
+
 Разбор незнакомого. `cache: pip` включает кэш скачанных пакетов, ключом служит содержимое `requirements.txt`. `python -m pip` вызывает `pip` именно той версии Python, которую поставил предыдущий шаг. `curl --fail --silent .../readyz` после запуска стенда это контрольный выстрел: `--fail` делает ненулевой код выхода, если сервер ответил ошибкой, `--silent` убирает индикатор прогресса. `python -m pytest` запускает pytest как модуль, что гарантирует тот же Python с теми же пакетами.
 
 Проверь отступы глазами: все шаги начинаются с `-` на одном уровне, а `name`, `uses`, `with` внутри шага на два пробела глубже.
@@ -531,10 +533,10 @@ head -c 500 junit-report/junit.xml
 Ожидаемо:
 
 ```text
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="1" tests="28" time="8.214" ...
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="1" tests="30" time="8.214" ...
 ```
 
-**Как читать вывод:** `tests="28"`, `failures="0"`. `skipped="1"` это `xfail`-тест про BUG-001 из [6.2](02-api-autotests.md). Если `unzip` не установлен: `sudo apt install unzip`.
+**Как читать вывод:** `tests="30"`, `failures="0"`. `skipped="1"` это `xfail`-тест про BUG-001 из [6.2](02-api-autotests.md). Если `unzip` не установлен: `sudo apt install unzip`.
 
 ### 5. Добавь бейдж
 
@@ -775,4 +777,4 @@ GitHub Actions: `actions/checkout@v5`, `actions/setup-python@v6`, `actions/uploa
 - [ ] Добавить бейдж статуса в README.
 - [ ] Объяснить, зачем нужны `--wait`, `timeout-minutes`, ограничение прав и запуск по расписанию.
 
-Дальше: [тема 7. Метрики, логи и алерты](../07-observability/index.md). Нагрузочный регресс в CI ты соберёшь в [уроке 12.2](../12-process/02-perf-ci.md).
+Дальше: [тема 7. Метрики, логи, трейсы и алерты](../07-observability/index.md). Нагрузочный регресс в CI ты соберёшь в [уроке 12.2](../12-process/02-perf-ci.md).

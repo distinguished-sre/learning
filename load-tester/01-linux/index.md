@@ -2,7 +2,7 @@
 layout: topic
 title: "Linux для нагрузочника"
 topic: 1
-time: "12 ч"
+time: "15 ч"
 ---
 
 ## О чём тема

@@ -3,7 +3,7 @@ layout: lesson
 title: "Метрики и Prometheus: типы метрик, сбор, /metrics"
 topic: 7
 lesson: "7.1"
-time: "2.5 ч"
+time: "3 ч"
 ---
 
 ## Зачем это нужно

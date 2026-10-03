@@ -3,7 +3,7 @@ layout: lesson
 title: "Docker Compose: поднимаем «Магазин» с базой и кэшем"
 topic: 5
 lesson: "5.3"
-time: "2.5 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно
@@ -578,7 +578,7 @@ shop-redis-1      redis:8.10.2          Exited (0) 3 seconds ago
 shop-shop-1       shop-shop             Exited (0) 3 seconds ago
 ```
 
-**Как читать вывод:** после `stop` все четыре контейнера остановлены, код `0` значит «завершились чисто» (спасибо `exec` из [урока 5.2](02-dockerfile.md): остановка шла быстро). Контейнеры не удалены: `start` их поднимает с теми же данными. Проверь, что данные на месте: после `start` `docker compose exec postgres psql -U shop -d shop -c "SELECT count(*) FROM orders;"` вернёт те же 200 000 (или больше, если ты делал заказы).
+**Как читать вывод:** после `stop` все четыре контейнера остановлены, код `0` значит «завершились чисто» (спасибо `exec` из [урока 5.2](02-dockerfile.md): остановка шла быстро). Руками остановленные контейнеры политика `restart: unless-stopped` сама не поднимает (в этом её смысл). Контейнеры не удалены: `start` их поднимает с теми же данными. Проверь, что данные на месте: после `start` `docker compose exec postgres psql -U shop -d shop -c "SELECT count(*) FROM orders;"` вернёт те же 200 000 (или больше, если ты делал заказы).
 
 Теперь проверь `down` и `down -v`. **Внимание:** вторая команда сотрёт базу стенда. На учебном стенде это безопасно, но следующий подъём займёт около минуты:
 
@@ -657,9 +657,9 @@ git push
 | `permission denied while trying to connect to the Docker daemon socket` | пользователь не в группе `docker` (см. [урок 5.1](01-containers.md)) | `groups`, при необходимости `sudo usermod -aG docker $USER` и новая сессия |
 | `Error response from daemon: ... no space left on device` | кончилось место на диске | `docker system df` покажет, кто занял; `docker image prune` убирает ненужные образы |
 | `exec: "ps": executable file not found in $PATH` | в образе `slim` нет программы `ps` | читай `docker compose exec shop cat /proc/1/cmdline` или используй `docker top` |
-| контейнеры «пропали» после перезагрузки компьютера | в `compose.yaml` нет `restart:`, Docker не поднимает контейнеры сам | `docker compose up -d` после каждой перезагрузки |
+| после перезагрузки компьютера контейнеры не поднялись | Docker (Docker Desktop или служба `docker`) не запущен: политика `restart` работает только при живом демоне; или контейнеры остановлены руками (`stop`, `down`) | запусти Docker и проверь `docker compose ps`; остановленное руками поднимай `docker compose up -d` |
 
-Последняя строка заслуживает пояснения. На учебном стенде политики перезапуска (`restart:`) нет, чтобы падение было видно сразу: если магазин упадёт из-за нехватки памяти (урок 5.4), он останется в `Exited (137)`, и ты это заметишь. В рабочей системе наоборот: там ставят `restart: unless-stopped`, а за перезапусками следят алертом, потому что тихий цикл «упал, поднялся, упал» хуже упавшего сервиса, если за ним никто не смотрит. Например, правило Prometheus на нехватку памяти: `increase(container_oom_events_total[10m]) > 0` (метрику отдаёт cAdvisor из профиля `monitoring`; проверь в Prometheus, что она есть в твоей версии). Что такое алерты, в [теме 7](../07-observability/06-alerts-incidents.md).
+Последняя строка заслуживает пояснения. У долгоживущих сервисов стенда в `compose.yaml` стоит `restart: unless-stopped`: если процесс упал или контейнер убит из-за нехватки памяти (урок 5.4), Docker сам запустит его снова, и в `docker compose ps` ты увидишь `Up 5 seconds`, а не `Exited`. «Unless-stopped» значит «всегда, кроме случая, когда ты остановил контейнер сам»: после `docker compose stop` контейнер остаётся остановленным, даже если перезапустить Docker. Падение при этом не исчезает, просто становится тихим, поэтому за перезапусками следят: счётчик `docker inspect --format '{% raw %}{{.RestartCount}}{% endraw %}' shop-shop-1` и правило Prometheus `increase(container_oom_events_total[10m]) > 0` (метрику отдаёт cAdvisor из профиля `monitoring`; проверь в Prometheus, что она есть в твоей версии). Тихий цикл «упал, поднялся, упал» хуже упавшего сервиса, если за ним никто не смотрит. Что такое алерты, в [теме 7](../07-observability/06-alerts-incidents.md).
 
 ## Сломай и почини
 

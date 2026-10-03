@@ -3,7 +3,7 @@ layout: lesson
 title: "Файлы, JSON и CSV: данные для тестов"
 topic: 4
 lesson: "4.4"
-time: "2 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно

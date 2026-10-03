@@ -3,7 +3,7 @@ layout: lesson
 title: "GitHub: удалённый репозиторий, ветки и pull request"
 topic: 3
 lesson: "3.2"
-time: "2 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно

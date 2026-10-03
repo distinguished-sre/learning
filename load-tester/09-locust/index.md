@@ -2,7 +2,7 @@
 layout: topic
 title: "Locust"
 topic: 9
-time: "11 ч"
+time: "12.5 ч"
 ---
 
 ## О чём тема

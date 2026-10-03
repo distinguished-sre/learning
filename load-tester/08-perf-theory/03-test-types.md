@@ -3,7 +3,7 @@ layout: lesson
 title: "Виды нагрузочных тестов: smoke, load, stress, soak, spike"
 topic: 8
 lesson: "8.3"
-time: "2 ч"
+time: "3.5 ч"
 ---
 
 ## Зачем это нужно

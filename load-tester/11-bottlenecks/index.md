@@ -2,7 +2,7 @@
 layout: topic
 title: "Поиск узких мест"
 topic: 11
-time: "12 ч"
+time: "14 ч"
 ---
 
 ## О чём тема

@@ -3,7 +3,7 @@ layout: lesson
 title: "Отчёт по нагрузочному тесту"
 topic: 12
 lesson: "12.1"
-time: "2 ч"
+time: "3 ч"
 ---
 
 ## Зачем это нужно
