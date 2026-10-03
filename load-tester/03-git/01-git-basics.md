@@ -270,7 +270,7 @@ git --version
 
 ```text
 /home/student/perf-lab
-machine.md  reports  results  scripts
+01-linux  02-web  machine.md  reports  results  scripts
 git version 2.43.0
 ```
 
@@ -311,12 +311,16 @@ No commits yet
 
 Untracked files:
   (use "git add <file>..." to include in what will be committed)
+        01-linux/
+        02-web/
         machine.md
+        results/
+        scripts/
 
 nothing added to commit but untracked files present (use "git add" to track)
 ```
 
-**Как читать вывод:** создана `.git`, выбрана `main`, коммитов пока нет. `machine.md` найден, но ещё не включён в историю. Пустые `reports`, `results`, `scripts` не перечислены. Если в них есть файлы из прошлых занятий, Git дополнительно покажет эти папки.
+**Как читать вывод:** создана `.git`, выбрана `main`, коммитов пока нет. `machine.md` найден, но ещё не включён в историю. Пустая `reports` не перечислена, а папки с твоей работой из тем 1 и 2 (`01-linux`, `02-web`, `scripts`, `results`) показаны: в них уже есть файлы. Если у тебя список короче или длиннее, это нормально.
 
 Если не хочешь менять общие настройки автора, теперь можно задать их только здесь: `git config user.name "Автор лаборатории"` и `git config user.email "student@example.com"`. Это та же команда без `--global`. Для проверки эффективных значений используй `git config --get user.name` и `git config --get user.email`.
 

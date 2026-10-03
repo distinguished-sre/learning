@@ -632,9 +632,9 @@ dd if=/dev/zero of=~/perf-lab/01-linux/big.bin bs=1M count=5120 conv=fdatasync s
 `dd` копирует данные «из» (`if`, input file) «в» (`of`, output file). `/dev/zero` специальный файл, из которого бесконечно читаются нули, `bs=1M` размер блока 1 МБ, `count=5120` число блоков (5 ГБ), `conv=fdatasync` дожидаться, пока данные реально лягут на диск, а не в кэш памяти. `status=progress` показывает ход работы.
 
 ```text
-5368709120 bytes (5.4 GB, 5.0 GiB) copied, 6.1 s, 880 MB/s
 5120+0 records in
 5120+0 records out
+5368709120 bytes (5.4 GB, 5.0 GiB) copied, 6.1 s, 880 MB/s
 ```
 
 А в `iostat` во время записи:

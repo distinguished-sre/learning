@@ -286,7 +286,7 @@ curl -i -X POST localhost:8000/api/register \
 HTTP/1.1 201 Created
 date: Sat, 03 Oct 2026 10:30:01 GMT
 server: uvicorn
-content-length: 43
+content-length: 38
 content-type: application/json
 x-request-id: 6d0a3f1e8c2b4a77a9e5f0d1c2b3a495
 
@@ -310,7 +310,8 @@ HTTP/1.1 409 Conflict
 - `422` с `"msg":"String should have at least 8 characters"` и `"loc":["body","password"]`: пароль короче 8 символов.
 - `422` с `"msg":"Value error, Нужен email"`: email без `@` или точки.
 - `422` с `"type":"json_invalid"`: сломан JSON, обычно кавычки. Проверь одинарные кавычки вокруг `-d`.
-- `422` с `"type":"missing"` и `"loc":["body","email"]`: забыл заголовок `Content-Type: application/json` или опечатка в имени поля.
+- `422` с `"type":"missing"` и `"loc":["body","email"]`: опечатка в имени поля (или поля нет в теле).
+- `422` с `"type":"model_attributes_type"` и `"loc":["body"]`: забыл заголовок `Content-Type: application/json`, и сервер не стал читать тело как JSON.
 
 ### 2. Вход и токен
 
@@ -667,7 +668,7 @@ curl -s -w '\n%{http_code}\n' -X POST localhost:8000/api/login -H 'Content-Type:
 <details markdown="1">
 <summary>Ответ</summary>
 
-Заголовок, который сообщает серверу формат тела. Без него сервер может не распознать тело как JSON и вернуть ошибку проверки (например, 422 «поле отсутствует»), хотя тело было правильным.
+Заголовок, который сообщает серверу формат тела. Без него сервер может не распознать тело как JSON и вернуть ошибку проверки (в «Магазине» это 422 `model_attributes_type`: «ожидался объект»), хотя тело было правильным.
 
 **Что хотят услышать:** формат тела и пример последствия.
 

@@ -536,7 +536,7 @@ Buyer(user0003@shop.lab, задач=20, ошибок=0)
 
 **Типичные ошибки:**
 
-- `requests.exceptions.HTTPError: 401 ... /api/login`: нет пользователя с таким номером (допустимы 1–1000) или пароль не `password`.
+- `requests.exceptions.HTTPError: 401 ... /api/login`: нет пользователя с таким номером (допустимы 1-1000) или пароль не `password`.
 - `AttributeError: 'ShopUser' object has no attribute 'orders'`: ты вызвал `checkout` у посетителя. Этот метод есть только у `Buyer`.
 - `requests.exceptions.ConnectionError`: стенд не запущен.
 

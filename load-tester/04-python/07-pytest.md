@@ -348,7 +348,7 @@ pytest --version
 ```
 
 ```text
-pytest 9.1.0
+pytest 9.1.1
 ```
 
 **Как читать вывод:** версия 9.x подойдёт; у тебя может быть новее. `pip freeze > requirements.txt` перезаписал список зависимостей: теперь в нём `pytest` и всё, что ему нужно (`iniconfig`, `packaging`, `pluggy`, `pygments`), плюс `requests` из прошлого урока. Строка в `.gitignore` исключает папку `.pytest_cache`, куда pytest складывает служебные файлы. Если окружение не включено, будет ошибка `externally-managed-environment`, как в [уроке 4.5](05-venv-requests.md).
@@ -430,7 +430,7 @@ pytest -v test_shoptools.py
 
 ```text
 ============================= test session starts ==============================
-platform linux -- Python 3.12.3, pytest-9.1.0, pluggy-1.6.0 -- /home/student/perf-lab/.venv/bin/python
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /home/student/perf-lab/.venv/bin/python
 cachedir: .pytest_cache
 rootdir: /home/student/perf-lab/04-python
 collecting ... collected 9 items
@@ -519,7 +519,7 @@ pytest -v
 
 ```text
 ============================= test session starts ==============================
-platform linux -- Python 3.12.3, pytest-9.1.0, pluggy-1.6.0 -- /home/student/perf-lab/.venv/bin/python
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /home/student/perf-lab/.venv/bin/python
 cachedir: .pytest_cache
 rootdir: /home/student/perf-lab/04-python
 collecting ... collected 18 items

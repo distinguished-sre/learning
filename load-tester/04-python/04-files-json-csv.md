@@ -222,7 +222,7 @@ print(json.dumps(data["items"][0], ensure_ascii=False))
 Логи «Магазина» пишутся в особом виде: **один JSON-объект на строку**, без общей обёртки. Это называется JSON Lines (построчный JSON). Такой файл удобно дописывать (новая запись это новая строка) и читать построчно, не загружая всё в память. Типичная запись лога стенда:
 
 ```json
-{"ts":"2026-10-05T12:00:02.900Z","level":"ERROR","msg":"request","method":"POST","route":"/api/orders","path":"/api/orders","status":500,"duration_ms":1204.5,"request_id":"d4e6","error":"payment timeout"}
+{"ts":"2026-10-05T12:00:02.900+00:00","level":"ERROR","msg":"Запрос завершён","method":"POST","route":"/api/orders","path":"/api/orders","status":500,"duration_ms":1204.5,"request_id":"d4e6","error":"payment timeout"}
 ```
 
 В записи есть метод и маршрут, код ответа, время в миллисекундах, идентификатор запроса `request_id`, а у ошибок сервера ещё поле `error` с причиной. Разбирается каждая строка отдельным `json.loads`, а весь файл целиком в `json.load` не подходит: это не один JSON, а много. Именно поэтому цикл `for line in f:` и `json.loads(line)` внутри.
@@ -410,11 +410,11 @@ python3 read_products.py
 
 ```bash
 cat > shop.log <<'EOF'
-{"ts":"2026-10-05T12:00:01.120Z","level":"INFO","msg":"request","method":"GET","route":"/api/products","path":"/api/products","status":200,"duration_ms":14.2,"request_id":"a1f3"}
-{"ts":"2026-10-05T12:00:01.480Z","level":"INFO","msg":"request","method":"POST","route":"/api/login","path":"/api/login","status":200,"duration_ms":212.7,"request_id":"b2c4"}
-{"ts":"2026-10-05T12:00:02.050Z","level":"INFO","msg":"request","method":"GET","route":"/api/products/{id}","path":"/api/products/99999","status":404,"duration_ms":6.9,"request_id":"c3d5"}
-{"ts":"2026-10-05T12:00:02.900Z","level":"ERROR","msg":"request","method":"POST","route":"/api/orders","path":"/api/orders","status":500,"duration_ms":1204.5,"request_id":"d4e6","error":"payment timeout"}
-{"ts":"2026-10-05T12:00:03.310Z","level":"INFO","msg":"request","method":"GET","route":"/api/products","path":"/api/products","status":200,"duration_ms":16.8,"request_id":"e5f7"}
+{"ts":"2026-10-05T12:00:01.120+00:00","level":"INFO","msg":"Запрос завершён","method":"GET","route":"/api/products","path":"/api/products","status":200,"duration_ms":14.2,"request_id":"a1f3"}
+{"ts":"2026-10-05T12:00:01.480+00:00","level":"INFO","msg":"Запрос завершён","method":"POST","route":"/api/login","path":"/api/login","status":200,"duration_ms":212.7,"request_id":"b2c4"}
+{"ts":"2026-10-05T12:00:02.050+00:00","level":"INFO","msg":"Запрос завершён","method":"GET","route":"/api/products/{id}","path":"/api/products/99999","status":404,"duration_ms":6.9,"request_id":"c3d5"}
+{"ts":"2026-10-05T12:00:02.900+00:00","level":"ERROR","msg":"Запрос завершён","method":"POST","route":"/api/orders","path":"/api/orders","status":500,"duration_ms":1204.5,"request_id":"d4e6","error":"payment timeout"}
+{"ts":"2026-10-05T12:00:03.310+00:00","level":"INFO","msg":"Запрос завершён","method":"GET","route":"/api/products","path":"/api/products","status":200,"duration_ms":16.8,"request_id":"e5f7"}
 EOF
 ```
 
@@ -664,10 +664,12 @@ endpoint,count,mean_ms,p95_ms,error_pct
 
 ```bash
 cd ~/perf-lab
-git add 04-python results reports
+git add 04-python reports
 git commit -m "4.4: файлы, JSON, CSV, report.py"
 git push
 ```
+
+`results/sample-run.csv` в коммит не идёт, и это правильно: правило `/results/*.csv` из [урока 3.1](../03-git/01-git-basics.md) оставляет сырые выгрузки только у тебя, а при необходимости файл воспроизводится одной командой `make_sample.py`. Итоговые сводки в `reports/` в git сохраняются.
 
 ## Сломай и почини
 

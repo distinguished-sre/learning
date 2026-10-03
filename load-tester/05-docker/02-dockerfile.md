@@ -326,13 +326,13 @@ ls -la
 total 24
 drwxr-xr-x 3 student student 4096 Oct  3 11:02 .
 drwxr-xr-x 3 student student 4096 Oct  3 11:02 ..
--rw-r--r-- 1 student student  252 Oct  3 11:02 Dockerfile
+-rw-r--r-- 1 student student  284 Oct  3 11:02 Dockerfile
 drwxr-xr-x 3 student student 4096 Oct  3 11:02 app
--rwxr-xr-x 1 student student  531 Oct  3 11:02 entrypoint.sh
--rw-r--r-- 1 student student  143 Oct  3 11:02 requirements.txt
+-rw-r--r-- 1 student student  424 Oct  3 11:02 entrypoint.sh
+-rw-r--r-- 1 student student  158 Oct  3 11:02 requirements.txt
 ```
 
-**Как читать вывод:** четыре элемента контекста сборки: рецепт `Dockerfile`, папка кода `app`, скрипт запуска и список библиотек. У `entrypoint.sh` стоит `x` в правах (`-rwxr-xr-x`): он исполняемый. Размеры могут слегка отличаться.
+**Как читать вывод:** четыре элемента контекста сборки: рецепт `Dockerfile`, папка кода `app`, скрипт запуска и список библиотек. У `entrypoint.sh` права `-rw-r--r--`: буквы `x` (исполнение) нет, в репозитории файл хранится без неё. Поэтому в Dockerfile есть строка `RUN chmod +x entrypoint.sh`: без неё запуск образа упал бы с `permission denied`. Размеры могут слегка отличаться.
 
 ### 2. Первая сборка
 
@@ -343,29 +343,30 @@ docker build -t shop-lab:exp .
 Разбор: `docker build` собирает образ; `-t shop-lab:exp` даёт ему имя `shop-lab` и тег `exp`; точка в конце это **контекст сборки**: текущая папка. Не забудь точку: без неё будет ошибка `requires exactly 1 argument`.
 
 ```text
-[+] Building 74.3s (11/11) FINISHED                              docker:default
+[+] Building 74.3s (12/12) FINISHED                              docker:default
  => [internal] load build definition from Dockerfile                       0.0s
- => => transferring dockerfile: 289B                                       0.0s
+ => => transferring dockerfile: 284B                                       0.0s
  => [internal] load metadata for docker.io/library/python:3.14.8-slim      1.2s
  => [internal] load .dockerignore                                          0.0s
  => => transferring context: 2B                                            0.0s
- => [1/6] FROM docker.io/library/python:3.14.8-slim@sha256:7d1c...        18.4s
+ => [1/7] FROM docker.io/library/python:3.14.8-slim@sha256:7d1c...        18.4s
  => => resolve docker.io/library/python:3.14.8-slim@sha256:7d1c...         0.0s
  => [internal] load build context                                          0.0s
- => => transferring context: 21.03kB                                       0.0s
- => [2/6] WORKDIR /app                                                     0.3s
- => [3/6] COPY requirements.txt .                                          0.0s
- => [4/6] RUN pip install --no-cache-dir -r requirements.txt              46.8s
- => [5/6] COPY app ./app                                                   0.0s
- => [6/6] COPY entrypoint.sh .                                             0.0s
+ => => transferring context: 22.37kB                                       0.0s
+ => [2/7] WORKDIR /app                                                     0.3s
+ => [3/7] COPY requirements.txt .                                          0.0s
+ => [4/7] RUN pip install --no-cache-dir -r requirements.txt              46.8s
+ => [5/7] COPY app ./app                                                   0.0s
+ => [6/7] COPY entrypoint.sh .                                             0.0s
+ => [7/7] RUN chmod +x entrypoint.sh                                       0.0s
  => exporting to image                                                     3.6s
  => => exporting layers                                                    3.5s
  => => naming to docker.io/library/shop-lab:exp                            0.0s
 ```
 
-(В сводке вместо `[6/6]` Docker может показать `[6/7]` и `[7/7]`: `chmod` это ещё одна строка. Точное число шагов важно меньше, чем смысл.)
+(Шагов семь: `FROM`, `WORKDIR`, два `COPY`, `RUN pip`, ещё `COPY` и `RUN chmod`. Строки `ENV`, `EXPOSE` и `ENTRYPOINT` в нумерацию не входят, они только дописывают настройки.)
 
-**Как читать вывод:** каждая строка `=> [N/M]` это шаг рецепта, число справа время в секундах. Самое долгое: `FROM` (первый раз скачивается основа, 18 с) и `RUN pip install` (47 с: скачивание библиотек). Строки `[internal] ...` служебные: Docker читает Dockerfile, метаданные базового образа и контекст. `transferring context: 21.03kB` размер контекста: маленький, значит, лишнего нет. В конце `naming to ... shop-lab:exp`: образ получил имя.
+**Как читать вывод:** каждая строка `=> [N/M]` это шаг рецепта, число справа время в секундах. Самое долгое: `FROM` (первый раз скачивается основа, 18 с) и `RUN pip install` (47 с: скачивание библиотек). Строки `[internal] ...` служебные: Docker читает Dockerfile, метаданные базового образа и контекст. `transferring context: 22.37kB` размер контекста: маленький, значит, лишнего нет. В конце `naming to ... shop-lab:exp`: образ получил имя.
 
 Проверь результат:
 
@@ -398,17 +399,17 @@ IMAGE          CREATED          CREATED BY                                      
 5e8c1a2d93b7   2 minutes ago    ENTRYPOINT ["./entrypoint.sh"]                  0B        buildkit.dockerfile.v0
 <missing>      2 minutes ago    EXPOSE map[8000/tcp:{}]                         0B        buildkit.dockerfile.v0
 <missing>      2 minutes ago    ENV PYTHONUNBUFFERED=1 PROMETHEUS_MULTIPROC…    0B        buildkit.dockerfile.v0
-<missing>      2 minutes ago    RUN /bin/sh -c chmod +x entrypoint.sh # buil…   531B      buildkit.dockerfile.v0
-<missing>      2 minutes ago    COPY entrypoint.sh . # buildkit                 531B      buildkit.dockerfile.v0
-<missing>      2 minutes ago    COPY app ./app # buildkit                       38.2kB    buildkit.dockerfile.v0
+<missing>      2 minutes ago    RUN /bin/sh -c chmod +x entrypoint.sh # buil…   424B      buildkit.dockerfile.v0
+<missing>      2 minutes ago    COPY entrypoint.sh . # buildkit                 424B      buildkit.dockerfile.v0
+<missing>      2 minutes ago    COPY app ./app # buildkit                       21.5kB    buildkit.dockerfile.v0
 <missing>      2 minutes ago    RUN /bin/sh -c pip install --no-cache-dir -…   128MB     buildkit.dockerfile.v0
-<missing>      2 minutes ago    COPY requirements.txt . # buildkit              143B      buildkit.dockerfile.v0
+<missing>      2 minutes ago    COPY requirements.txt . # buildkit              158B      buildkit.dockerfile.v0
 <missing>      2 minutes ago    WORKDIR /app                                    0B        buildkit.dockerfile.v0
 <missing>      3 weeks ago      CMD ["python3"]                                 0B        buildkit.dockerfile.v0
 ...
 ```
 
-**Как читать вывод:** читай **снизу вверх**, как шла сборка. Нижние строки (их скрыто многоточием) принадлежат базовому образу Python. Выше идут наши инструкции, по одной на строку Dockerfile. Колонка `SIZE`: тяжёлый слой только один, `pip install`, 128 МБ. Копирование кода `COPY app` весит 38 килобайт. Именно поэтому правка кода не стоит ничего, а правка библиотек стоит дорого. Размеры слоёв можно сопоставить с тем, что рассказывал виджет.
+**Как читать вывод:** читай **снизу вверх**, как шла сборка. Нижние строки (их скрыто многоточием) принадлежат базовому образу Python. Выше идут наши инструкции, по одной на строку Dockerfile. Колонка `SIZE`: тяжёлый слой только один, `pip install`, 128 МБ. Копирование кода `COPY app` весит 21 килобайт. Именно поэтому правка кода не стоит ничего, а правка библиотек стоит дорого. Размеры слоёв можно сопоставить с тем, что рассказывал виджет.
 
 ### 4. Кэш в действии
 
@@ -419,15 +420,16 @@ time docker build -t shop-lab:exp .
 ```
 
 ```text
-[+] Building 1.1s (11/11) FINISHED                               docker:default
+[+] Building 1.1s (12/12) FINISHED                               docker:default
  => [internal] load build definition from Dockerfile                       0.0s
  => [internal] load metadata for docker.io/library/python:3.14.8-slim      0.9s
- => [1/6] FROM docker.io/library/python:3.14.8-slim@sha256:7d1c...         0.0s
- => CACHED [2/6] WORKDIR /app                                              0.0s
- => CACHED [3/6] COPY requirements.txt .                                   0.0s
- => CACHED [4/6] RUN pip install --no-cache-dir -r requirements.txt        0.0s
- => CACHED [5/6] COPY app ./app                                            0.0s
- => CACHED [6/6] COPY entrypoint.sh .                                      0.0s
+ => [1/7] FROM docker.io/library/python:3.14.8-slim@sha256:7d1c...         0.0s
+ => CACHED [2/7] WORKDIR /app                                              0.0s
+ => CACHED [3/7] COPY requirements.txt .                                   0.0s
+ => CACHED [4/7] RUN pip install --no-cache-dir -r requirements.txt        0.0s
+ => CACHED [5/7] COPY app ./app                                            0.0s
+ => CACHED [6/7] COPY entrypoint.sh .                                      0.0s
+ => CACHED [7/7] RUN chmod +x entrypoint.sh                                0.0s
  => exporting to image                                                     0.0s
 
 real    0m1.3s
@@ -441,11 +443,12 @@ time docker build -t shop-lab:exp .
 ```
 
 ```text
- => CACHED [2/6] WORKDIR /app                                              0.0s
- => CACHED [3/6] COPY requirements.txt .                                   0.0s
- => CACHED [4/6] RUN pip install --no-cache-dir -r requirements.txt        0.0s
- => [5/6] COPY app ./app                                                   0.0s
- => [6/6] COPY entrypoint.sh .                                             0.0s
+ => CACHED [2/7] WORKDIR /app                                              0.0s
+ => CACHED [3/7] COPY requirements.txt .                                   0.0s
+ => CACHED [4/7] RUN pip install --no-cache-dir -r requirements.txt        0.0s
+ => [5/7] COPY app ./app                                                   0.0s
+ => [6/7] COPY entrypoint.sh .                                             0.0s
+ => [7/7] RUN chmod +x entrypoint.sh                                       0.0s
  => exporting to image                                                     0.4s
 
 real    0m2.1s
@@ -458,7 +461,7 @@ echo '# правка для эксперимента' >> requirements.txt
 time docker build -t shop-lab:exp .
 ```
 
-В выводе `[3/6] COPY requirements.txt .` перестанет быть `CACHED`, и `RUN pip install` пойдёт заново (около 40–50 секунд), хотя набор библиотек не изменился: Docker сравнивает **файл**, а не его смысл. Так и устроена цена: изменил файл, пересобрал всё ниже.
+В выводе `[3/7] COPY requirements.txt .` перестанет быть `CACHED`, и `RUN pip install` пойдёт заново (около 40-50 секунд), хотя набор библиотек не изменился: Docker сравнивает **файл**, а не его смысл. Так и устроена цена: изменил файл, пересобрал всё ниже.
 
 ### 5. Собери «плохой» вариант и сравни
 
