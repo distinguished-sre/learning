@@ -281,7 +281,7 @@
 
   /* ---------- клавиши ---------- */
   doc.addEventListener('keydown', function (e) {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
     var t = e.target, typing = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
     if (typing) return;
     if (e.key === '/') {
@@ -320,23 +320,35 @@
   var narrow = matchMedia('(max-width: 600px)');
   narrow.addEventListener('change', function () { render(); });
   function color(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
+  /* Натуральный размер, если влезает; иначе сжатие не больше чем до 0,8, дальше прокрутка. */
+  function fit(view, svg) {
+    var vb = svg.viewBox && svg.viewBox.baseVal;
+    var natural = vb && vb.width ? vb.width : parseFloat(svg.getAttribute('width')) || svg.getBoundingClientRect().width;
+    var avail = view.clientWidth || view.parentNode.clientWidth;
+    var w = natural <= avail ? natural : Math.max(avail, natural * 0.8);
+    view.style.overflowX = 'auto';
+    var set = function (k, v) { svg.style.setProperty(k, v, 'important'); };
+    set('width', Math.round(w) + 'px'); set('max-width', 'none'); set('height', 'auto');
+    set('margin-left', 'auto'); set('margin-right', 'auto');
+  }
   async function render() {
     pending = true;
     if (busy || !mermaid) return;
     busy = true;
+    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
     while (pending) {
       pending = false;
       mermaid.initialize({
         startOnLoad: false, securityLevel: 'strict', theme: 'base',
         themeVariables: {
-          darkMode: root.dataset.theme !== 'light',
+          darkMode: root.dataset.theme !== 'light', fontSize: '16px',
           fontFamily: getComputedStyle(document.body).fontFamily,
           primaryColor: color('--bg-2'), primaryTextColor: color('--text'),
-          primaryBorderColor: color('--accent-ink'), lineColor: color('--muted'),
+          primaryBorderColor: color('--text'), lineColor: color('--muted'),
           secondaryColor: color('--bg-code'), tertiaryColor: color('--bg'),
           background: color('--bg'), mainBkg: color('--bg-2'), textColor: color('--text'),
           nodeTextColor: color('--text'), edgeLabelBackground: color('--bg'),
-          actorBkg: color('--bg-2'), actorBorder: color('--accent-ink'), actorTextColor: color('--text'),
+          actorBkg: color('--bg-2'), actorBorder: color('--text'), actorTextColor: color('--text'),
           signalColor: color('--text'), signalTextColor: color('--text'),
           labelBoxBkgColor: color('--bg-2'), labelBoxBorderColor: color('--line'),
           labelTextColor: color('--text'), loopTextColor: color('--text'),
@@ -344,7 +356,12 @@
           activationBkgColor: color('--bg-code'), activationBorderColor: color('--accent-ink'),
           sequenceNumberColor: color('--on-accent')
         },
-        flowchart: { useMaxWidth: true }, sequence: { useMaxWidth: true }
+        themeCSS: '.node rect, .node polygon, .node circle, .node ellipse, .node path { stroke-width: 2px; } ' +
+          '.cluster rect { stroke-width: 1.5px; rx: 10px; ry: 10px; } .node rect { rx: 8px; ry: 8px; } ' +
+          '.flowchart-link, .messageLine0, .messageLine1 { stroke-width: 2px; } ' +
+          '.nodeLabel, .edgeLabel, .label { line-height: 1.35; } .nodeLabel p, .edgeLabel p { margin: 0; }',
+        flowchart: { useMaxWidth: false, htmlLabels: true, padding: 16, nodeSpacing: 40, rankSpacing: 50, wrappingWidth: 180, curve: 'basis' },
+        sequence: { useMaxWidth: false, actorMargin: 110, width: 160, height: 48, boxMargin: 10, messageMargin: 40, noteMargin: 12, mirrorActors: false, wrap: true }
       });
       for (var i = 0; i < diagrams.length; i++) {
         var d = diagrams[i];
@@ -358,6 +375,7 @@
           var svg = view.querySelector('svg');
           svg.setAttribute('role', 'img');
           svg.setAttribute('aria-label', 'Диаграмма: ' + d.source.trim());
+          fit(view, svg);
           d.original.hidden = true;
           var error = d.figure.querySelector('.viz-error');
           if (error) error.remove();
@@ -376,6 +394,11 @@
     }
     busy = false;
   }
+  var refit = 0;
+  addEventListener('resize', function () {
+    cancelAnimationFrame(refit);
+    refit = requestAnimationFrame(function () { document.querySelectorAll('.mermaid-view > svg').forEach(function (svg) { fit(svg.parentNode, svg); }); });
+  });
   new MutationObserver(function () { render(); }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   import('https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.esm.min.mjs')
     .then(function (module) { mermaid = module.default; render(); })

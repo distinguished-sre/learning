@@ -1,10 +1,14 @@
-/* Учебные SVG-виджеты: без библиотек, цвета задаёт style.scss.
-   Модели упрощены для объяснения, это не измерения учебного сервиса. */
+/* Учебные виджеты: без библиотек, цвета задаёт style.scss.
+   Модели упрощены для объяснения, это не измерения учебного сервиса.
+   Каждый виджет сразу показывает живой пример со значениями из data-атрибутов,
+   а под ним простыми словами объясняет, что происходит сейчас.
+   SVG рисуется в пикселях ширины блока: текст всегда того же размера, что и в уроке. */
 (function () {
   'use strict';
   var NS = 'http://www.w3.org/2000/svg';
   var motion = matchMedia('(prefers-reduced-motion: reduce)');
-  var palette = ['primary', 'response', 'violet', 'warning', 'danger'];
+  var palette = ['primary', 'response', 'violet', 'warning', 'danger', 'ok'];
+
   function node(tag, attrs, text) {
     var n = document.createElementNS(NS, tag);
     Object.keys(attrs || {}).forEach(function (key) { n.setAttribute(key, attrs[key]); });
@@ -16,361 +20,808 @@
     if (cls) n.className = cls; return n;
   }
   function num(value, fallback, min, max) {
-    var v = Number(value); return value == null || !Number.isFinite(v) ? fallback : Math.max(min, Math.min(max, v));
+    var v = Number(value); return value == null || value === '' || !Number.isFinite(v) ? fallback : Math.max(min, Math.min(max, v));
   }
   function list(value, fallback) { return (value || fallback).split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
   function json(value, fallback) { try { return JSON.parse(value); } catch (e) { return fallback; } }
-  function fmt(n) { return Number(n.toFixed(1)).toLocaleString('ru-RU'); }
-  function setup(host, title, description) {
+  function fmt(n, digits) { return Number(n.toFixed(digits == null ? 1 : digits)).toLocaleString('ru-RU'); }
+  function ms(n) { return fmt(n, n >= 100 ? 0 : 1) + ' мс'; }
+  function sec(n) { return n >= 60 ? Math.floor(n / 60) + ' мин ' + Math.round(n % 60) + ' с' : fmt(n, n >= 10 ? 0 : 1) + ' с'; }
+  function pct(n) { return Math.round(n * 100) + '%'; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function plural(n, one, few, many) {
+    var a = Math.abs(Math.round(n)) % 100, b = a % 10;
+    return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many;
+  }
+  function niceMax(n) {
+    if (!(n > 0)) return 1;
+    var p = Math.pow(10, Math.floor(Math.log10(n))), f = n / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  }
+  // Круглые деления оси: 0, 250, 500… или 0, 1, 2… для целых (пользователи).
+  function scale(max, whole) {
+    if (!(max > 0)) max = 1;
+    var raw = max / 4, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    var step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+    if (whole) step = Math.max(1, Math.round(step));
+    var ticks = []; for (var t = 0; t <= max + step * 0.999; t += step) ticks.push(+t.toFixed(6));
+    return { max: ticks[ticks.length - 1], ticks: ticks };
+  }
+  function lerp(a, b, k) { return a + (b - a) * k; }
+
+  /* Каркас: заголовок, сцена (SVG или HTML) с подсказкой, ползунки, кнопки,
+     блок «Что сейчас происходит» и строка «Попробуй». */
+  function setup(host, title) {
     host.replaceChildren();
-    var caption = html('p', title, 'viz-title'); host.appendChild(caption);
-    var svg = node('svg', { viewBox: '0 0 720 310', role: 'img', 'aria-label': description, class: 'viz-svg' });
-    svg.appendChild(node('title', {}, title)); host.appendChild(svg);
+    host.appendChild(html('p', title, 'viz-title'));
+    var stage = html('div', undefined, 'viz-stage'); host.appendChild(stage);
+    var tip = html('div', undefined, 'viz-tip'); tip.hidden = true; tip.setAttribute('aria-hidden', 'true'); stage.appendChild(tip);
     var status = html('p', '', 'viz-status'); host.appendChild(status);
-    var controls = html('div', undefined, 'viz-controls'); host.appendChild(controls);
-    var info = html('p', description, 'viz-caption'); host.appendChild(info);
-    function clear(height) {
-      svg.replaceChildren(node('title', {}, title)); svg.setAttribute('viewBox', '0 0 720 ' + (height || 310));
+    var sliders = html('div', undefined, 'viz-controls'); host.appendChild(sliders);
+    var buttons = html('div', undefined, 'viz-buttons'); host.appendChild(buttons);
+    var box = html('div', undefined, 'viz-explain'); box.hidden = true;
+    box.appendChild(html('p', 'Что сейчас происходит', 'viz-explain-head'));
+    var now = html('div', undefined, 'viz-now'); now.setAttribute('aria-live', 'polite'); box.appendChild(now);
+    var hint = html('p', '', 'viz-try'); hint.hidden = true; box.appendChild(hint);
+    host.appendChild(box);
+    var svg = null, width = 0;
+    function canvas(height) {
+      if (!svg) { svg = node('svg', { class: 'viz-svg', role: 'img', 'aria-label': title }); stage.insertBefore(svg, tip); }
+      width = Math.max(280, Math.round(stage.clientWidth || 640));
+      svg.replaceChildren(); svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+      svg.setAttribute('width', width); svg.setAttribute('height', height);
+      return width;
     }
     function add(tag, attrs, text) { var n = node(tag, attrs, text); svg.appendChild(n); return n; }
     function label(x, y, text, cls, anchor) { return add('text', { x: x, y: y, class: cls || '', 'text-anchor': anchor || 'middle' }, text); }
     function button(text, fn) {
-      var b = html('button', text); b.type = 'button'; b.addEventListener('click', fn); controls.appendChild(b); return b;
+      var b = html('button', text); b.type = 'button'; b.addEventListener('click', fn); buttons.appendChild(b); return b;
     }
-    function slider(text, min, max, step, value, fn) {
-      var l = html('label'), name = html('span', text + ': '), out = html('output', fmt(value));
-      name.appendChild(out); l.appendChild(name);
+    function slider(text, min, max, step, value, fn, unit) {
+      var l = html('label'), name = html('span', text + ': '), out = html('output');
+      function show(n) { out.textContent = fmt(n, step < 1 ? 2 : 0) + (unit ? ' ' + unit : ''); }
+      show(value); name.appendChild(out); l.appendChild(name);
       var input = html('input'); input.type = 'range'; input.min = min; input.max = max; input.step = step; input.value = value;
-      input.setAttribute('aria-label', text); l.appendChild(input); controls.appendChild(l);
-      input.addEventListener('input', function () { out.textContent = fmt(+input.value); fn(+input.value); });
+      input.setAttribute('aria-label', text); l.appendChild(input); sliders.appendChild(l);
+      input.addEventListener('input', function () { show(+input.value); fn(+input.value); });
       return input;
     }
-    function describe(text) { svg.setAttribute('aria-label', description + ' ' + text); status.textContent = text; }
-    return { host: host, svg: svg, status: status, controls: controls, clear: clear, add: add, label: label, button: button, slider: slider, describe: describe };
+    function explain(text) { now.innerHTML = text; box.hidden = !text && hint.hidden; }
+    function tryIt(text) { hint.innerHTML = text ? '<b>Попробуй:</b> ' + text : ''; hint.hidden = !text; box.hidden = !now.innerHTML && !text; }
+    function showTip(text, clientX, clientY) {
+      var r = stage.getBoundingClientRect(); tip.innerHTML = text; tip.hidden = false;
+      var x = clientX - r.left + 14, y = clientY - r.top + 16;
+      if (x + tip.offsetWidth > r.width) x = Math.max(0, clientX - r.left - tip.offsetWidth - 14);
+      if (y + tip.offsetHeight > r.height) y = Math.max(0, clientY - r.top - tip.offsetHeight - 12);
+      tip.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+    }
+    function hideTip() { tip.hidden = true; }
+    function local(e) {
+      var m = svg && svg.getScreenCTM(); if (!m) return null;
+      var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(m.inverse());
+    }
+    function onResize(fn) {
+      var last = 0;
+      new ResizeObserver(function () { var w = Math.round(stage.clientWidth); if (w && w !== last) { last = w; fn(); } }).observe(stage);
+    }
+    return {
+      host: host, stage: stage, status: status, canvas: canvas, add: add, label: label, button: button, slider: slider,
+      explain: explain, tryIt: tryIt, showTip: showTip, hideTip: hideTip, local: local, onResize: onResize,
+      get svg() { return svg; }, get width() { return width; }
+    };
   }
-  /* Один цикл на виджет. Рисование при паузе, за пределами экрана и в фоновой
-     вкладке прекращается. Reduced motion действует и при смене настройки. */
-  function animate(v, tick, reset, staticFrame) {
-    var playing = false, visible = true, raf = 0, last = 0;
-    var play = v.button('▶ Пуск', function () { if (!motion.matches) { playing = true; sync(); } });
-    var pause = v.button('❚❚ Пауза', function () { playing = false; sync(); });
-    v.button('↺ Заново', function () { reset(); if (motion.matches) staticFrame(); sync(); });
+
+  /* Анимация стартует сама, как только виджет виден на экране, со значений из
+     разметки. Вне экрана и в фоновой вкладке кадры не считаются. При настройке
+     «уменьшить движение» показывается статичный кадр. tick вернул false: показ
+     закончен, кнопка предлагает повторить. */
+  function animate(v, tick, still, reset) {
+    var playing = true, done = false, visible = !('IntersectionObserver' in window), raf = 0, last = 0;
+    var btn = v.button('❚❚ Пауза', function () {
+      if (done) { done = false; playing = true; if (reset) reset(); } else playing = !playing;
+      sync();
+    });
+    function running() { return playing && visible && !document.hidden && !motion.matches; }
     function frame(time) {
-      raf = 0;
-      if (!playing || !visible || document.hidden || motion.matches) return;
-      var ongoing = tick(last ? Math.min((time - last) / 1000, 0.1) : 0); last = time;
-      if (ongoing === false) { playing = false; sync(); return; }
+      raf = 0; if (!running()) return;
+      var dt = last ? Math.min((time - last) / 1000, 0.1) : 0; last = time;
+      if (tick(dt) === false) { done = true; playing = false; sync(); return; }
       raf = requestAnimationFrame(frame);
     }
     function sync() {
       cancelAnimationFrame(raf); raf = 0; last = 0;
-      play.disabled = motion.matches || playing;
-      pause.disabled = motion.matches || !playing;
-      if (playing && visible && !document.hidden && !motion.matches) raf = requestAnimationFrame(frame);
+      if (motion.matches) { btn.hidden = true; still(); return; }
+      btn.hidden = false;
+      btn.textContent = done ? '↺ Показать ещё раз' : playing ? '❚❚ Пауза' : '▶ Продолжить';
+      if (running()) raf = requestAnimationFrame(frame);
     }
-    function reduced() {
-      if (motion.matches) { playing = false; staticFrame(); }
-      sync();
-    }
-    if ('IntersectionObserver' in window) new IntersectionObserver(function (entries) {
-      visible = entries[0].isIntersecting; sync();
-    }).observe(v.host);
+    if (!visible) new IntersectionObserver(function (entries) { visible = entries[0].isIntersecting; sync(); }).observe(v.host);
     document.addEventListener('visibilitychange', sync);
-    motion.addEventListener('change', reduced);
-    reset(); reduced();
+    motion.addEventListener('change', sync);
+    sync();
+    return {
+      pause: function () { playing = false; sync(); },
+      play: function () { done = false; playing = true; sync(); },
+      finish: function () { done = true; playing = false; sync(); },
+      get reduced() { return motion.matches; }
+    };
   }
-  function axes(v, xLabel, yLabel, maxX, maxY, unit) {
-    var left = 76, right = 660, top = 40, bottom = 236;
-    for (var i = 0; i <= 4; i++) {
-      var y = bottom - i / 4 * (bottom - top);
-      v.add('line', { x1: left, x2: right, y1: y, y2: y, class: 'grid' });
-      v.label(left - 8, y + 5, fmt(maxY * i / 4), 'muted', 'end');
-      v.label(left + i / 4 * (right - left), bottom + 22, fmt(maxX * i / 4), 'muted');
-    }
-    v.add('path', { d: 'M' + left + ' ' + top + 'V' + bottom + 'H' + right, class: 'axis' });
-    v.label((left + right) / 2, 296, xLabel);
-    v.label(left, 22, yLabel + (unit ? ', ' + unit : ''), '', 'start');
-    return { x: function (n) { return left + n / maxX * (right - left); }, y: function (n) { return bottom - n / maxY * (bottom - top); }, bottom: bottom };
-  }
+
   var widgets = {};
+
+  /* ---------- Путь запроса: где тратится время ---------- */
   widgets['request-path'] = function (host) {
-    var names = list(host.dataset.nodes, 'Браузер,Сеть,Магазин,PostgreSQL').slice(0, 12);
-    if (names.length < 2) names = ['Браузер', 'Магазин'];
-    var times = list(host.dataset.ms, '').map(function (x) { return num(x, 1, 0, 100000); });
-    var v = setup(host, 'Путь запроса и ответа', 'Пакет проходит узлы: ' + names.join(', ') + '. Ответ возвращается другим цветом.');
-    var elapsed = 0;
-    function draw() {
-      var narrow = host.clientWidth < 520, count = names.length;
-      var h = narrow ? 64 + count * 78 : 260; v.clear(h);
-      var pts = names.map(function (_, i) { return narrow ? [200, 42 + i * 78] : [60 + i * 600 / (count - 1), 116]; });
-      pts.slice(0, -1).forEach(function (p, i) {
-        var q = pts[i + 1]; v.add('line', { x1: p[0], y1: p[1], x2: q[0], y2: q[1], class: 'axis' });
-        if (times[i] !== undefined) v.label(narrow ? 110 : (p[0] + q[0]) / 2, narrow ? (p[1] + q[1]) / 2 : 72, times[i] + ' мс', 'muted');
-      });
-      names.forEach(function (name, i) {
-        var p = pts[i]; v.add('circle', { cx: p[0], cy: p[1], r: 17, class: 'box' });
-        v.label(narrow ? 240 : p[0], narrow ? p[1] + 5 : 164, name, '', narrow ? 'start' : 'middle');
-      });
-      // Время участка определяет относительную скорость пакета.
-      var weights = pts.slice(1).map(function (_, i) { return Math.max(1, times[i] || 1); });
-      var sum = weights.reduce(function (a, b) { return a + b; }, 0);
-      var phase = (elapsed % 6) / 3, response = phase >= 1;
-      var pos = (response ? 2 - phase : phase) * sum, start = 0, seg = 0;
-      while (seg < weights.length - 1 && pos > start + weights[seg]) start += weights[seg++];
-      var f = Math.min(1, Math.max(0, (pos - start) / weights[seg]));
-      var a = pts[seg], b = pts[seg + 1];
-      v.add('circle', { cx: a[0] + (b[0] - a[0]) * f, cy: a[1] + (b[1] - a[1]) * f, r: 8, class: response ? 'response fill' : 'primary fill' });
-      v.status.textContent = response ? 'Ответ возвращается к клиенту' : 'Запрос идёт к сервису';
+    var t = { net: num(host.dataset.net, 20, 0, 300), app: num(host.dataset.app, 5, 0, 1000), db: num(host.dataset.db, 8, 0, 3000) };
+    var v = setup(host, host.dataset.title || 'Куда уходит время одного запроса');
+    var track = html('div', undefined, 'rp-track'); v.stage.appendChild(track);
+    function station(icon, name, sub, cls) {
+      var el = html('div', undefined, 'rp-station ' + cls);
+      el.appendChild(html('span', icon, 'rp-icon')); el.appendChild(html('b', name)); el.appendChild(html('span', sub, 'rp-sub'));
+      el.badge = html('span', '', 'rp-badge'); el.appendChild(el.badge); track.appendChild(el); return el;
     }
-    animate(v, function (dt) { elapsed += dt; draw(); }, function () { elapsed = 0; draw(); }, function () { elapsed = 1.5; draw(); });
-    new ResizeObserver(draw).observe(host);
-  };
-
-  widgets.queue = function (host) {
-    var channels = Math.round(num(host.dataset.servers, 2, 1, 12));
-    var lambda = 8, mu = 10, queue = [], active = [], arrivals = 0, clock = 0, served = 0, started = 0, totalWait = 0;
-    var v = setup(host, 'Очередь и насыщение', 'λ: входящие запросы в секунду. μ: суммарная ёмкость всех каналов. Закон Литтла L = λW применим к устойчивой очереди.');
-    function draw() {
-      v.clear();
-      v.label(180, 35, 'λ = ' + lambda + ' запросов/с'); v.label(540, 35, 'μ = ' + mu + ' запросов/с');
-      v.label(240, 80, 'Очередь'); v.label(545, 80, 'Сервер: ' + channels + ' каналов');
-      for (var i = 0; i < Math.min(queue.length, 48); i++) v.add('circle', { cx: 72 + i % 12 * 29, cy: 110 + Math.floor(i / 12) * 29, r: 9, class: 'primary fill' });
-      for (var j = 0; j < channels; j++) {
-        var x = 472 + j % 4 * 48, y = 102 + Math.floor(j / 4) * 47;
-        v.add('rect', { x: x, y: y, width: 36, height: 34, rx: 6, class: active[j] ? 'response fill' : 'box' });
-      }
-      var wait = started ? totalWait / started : 0, busy = active.filter(Boolean).length;
-      v.describe('В очереди: ' + queue.length + ' · Среднее ожидание: ' + fmt(wait) + ' с · Загрузка: ' + Math.round(busy / channels * 100) + '%');
-      v.label(360, 255, lambda >= mu ? 'λ ≥ μ: очередь растёт' : 'ρ = λ/μ = ' + fmt(lambda / mu) + ' · Lq ≈ λWq', lambda >= mu ? 'danger' : 'muted');
-      if (queue.length > 48) v.label(240, 225, '+ ещё ' + (queue.length - 48), 'warning');
+    function road(cls) { var el = html('div', undefined, 'rp-road ' + cls); el.label = html('span', '', 'rp-road-label'); el.appendChild(el.label); track.appendChild(el); return el; }
+    var you = station('💻', 'Ты', 'скрипт или браузер', 'you');
+    var net = road('response');
+    var shop = station('🏪', 'Магазин', 'код сервиса', 'primary');
+    var inner = road('inner');
+    var db = station('🗄️', 'База данных', 'хранит товары', 'violet');
+    inner.label.textContent = '≈ 0 мс';
+    var env = html('span', '✉️', 'rp-env'); env.setAttribute('aria-hidden', 'true'); track.appendChild(env);
+    var clock = html('p', '', 'rp-clock'); v.stage.appendChild(clock);
+    var bar = html('div', undefined, 'rp-bar'); v.stage.appendChild(bar);
+    var cursor = html('span', undefined, 'rp-cursor'); bar.appendChild(cursor);
+    var legend = html('div', undefined, 'rp-legend'); v.stage.appendChild(legend);
+    var idx = 0, phaseT = 0, hold = 0, steps = [], segs = [];
+    var kinds = { net: { name: 'Сеть', cls: 'response' }, app: { name: 'Магазин', cls: 'primary' }, db: { name: 'База', cls: 'violet' }, inner: { name: '', cls: '' } };
+    function plan() {
+      steps = [
+        { a: you, b: shop, ms: t.net, kind: 'net', what: 'Запрос едет по сети к магазину', env: '✉️', seg: 'Сеть туда' },
+        { a: shop, ms: t.app / 2, kind: 'app', what: 'Магазин читает запрос и решает, что спросить у базы', seg: 'Магазин' },
+        { a: shop, b: db, ms: 0, kind: 'inner', what: 'Магазин передаёт вопрос базе', env: '✉️' },
+        { a: db, ms: t.db, kind: 'db', what: 'База ищет товар', seg: 'База' },
+        { a: db, b: shop, ms: 0, kind: 'inner', what: 'База отдаёт найденное', env: '📦' },
+        { a: shop, ms: t.app / 2, kind: 'app', what: 'Магазин собирает ответ', seg: 'Магазин' },
+        { a: shop, b: you, ms: t.net, kind: 'net', what: 'Ответ едет по сети обратно', env: '📦', seg: 'Сеть обратно' }
+      ];
     }
-    function tick(dt) {
-      clock += dt;
-      active.forEach(function (job, i) { if (job && clock >= job.end) { served++; active[i] = null; } });
-      arrivals += dt * lambda;
-      while (arrivals >= 1) { queue.push(clock); arrivals--; }
-      for (var i = 0; i < channels; i++) if (!active[i] && queue.length) {
-        var entered = queue.shift(); totalWait += clock - entered; started++;
-        // Независимые экспоненциальные времена обслуживания: модель M/D arrivals/M/c.
-        active[i] = { end: clock - Math.log(Math.max(0.001, Math.random())) * channels / mu };
-      }
-      draw();
-    }
-    v.slider('Запросов в секунду (λ)', 1, 40, 1, lambda, function (n) { lambda = n; draw(); });
-    v.slider('Сервер успевает в секунду (μ, всего)', 1, 40, 1, mu, function (n) { mu = n; draw(); });
-    function reset() { queue = []; active = []; arrivals = 0; clock = 0; served = 0; started = 0; totalWait = 0; draw(); }
-    animate(v, tick, reset, function () { queue = [0, 0, 0, 0]; active = Array.from({ length: channels }, function () { return { end: 1 }; }); draw(); });
-  };
-
-  widgets['latency-hist'] = function (host) {
-    var slow = 2, sample = [];
-    var v = setup(host, 'Задержки: среднее и длинный хвост', 'Синтетическая выборка из 1200 запросов: логнормальное распределение и редкие выбросы. Линии: среднее, p50, p95, p99.');
-    function generate() {
-      sample = Array.from({ length: 1200 }, function () {
-        var normal = Math.sqrt(-2 * Math.log(Math.max(1e-9, Math.random()))) * Math.cos(2 * Math.PI * Math.random());
-        return { base: Math.exp(3.9 + normal * 0.5), chance: Math.random(), tail: 700 + Math.random() * 2300 };
+    function total() { return 2 * t.net + t.app + t.db; }
+    function dur(s) { return 0.35 + 4 * s.ms / Math.max(total(), 0.001); }
+    function simAt() { var sum = 0; for (var i = 0; i < idx && i < steps.length; i++) sum += steps[i].ms; return idx >= steps.length ? total() : sum + steps[idx].ms * Math.min(1, phaseT / dur(steps[idx])); }
+    function buildBar() {
+      bar.querySelectorAll('.rp-seg').forEach(function (s) { s.remove(); });
+      var all = total() || 1;
+      segs = steps.filter(function (s) { return s.seg; }).map(function (s) {
+        var el = html('span', undefined, 'rp-seg ' + kinds[s.kind].cls), share = s.ms / all;
+        el.style.flexGrow = Math.max(share, 0.0001); el.textContent = share > 0.12 ? s.seg : '';
+        el.addEventListener('pointerenter', show); el.addEventListener('pointermove', show); el.addEventListener('pointerleave', v.hideTip);
+        function show(e) { v.showTip('<b>' + s.seg + ': ' + ms(s.ms) + '</b><br>' + pct(share) + ' всего времени запроса', e.clientX, e.clientY); }
+        bar.insertBefore(el, cursor); return el;
       });
-    }
-    function draw() {
-      var values = sample.map(function (s) { return s.base + (s.chance < slow / 100 ? s.tail : 0); }).sort(function (a, b) { return a - b; });
-      var xmax = Math.ceil(Math.max(3200, values[values.length - 1]) / 500) * 500, bins = Array(32).fill(0);
-      values.forEach(function (x) { bins[Math.min(31, Math.floor(x / xmax * 32))]++; });
-      v.clear(); var a = axes(v, 'Задержка, мс', 'Запросов', xmax, Math.max.apply(null, bins), '');
-      bins.forEach(function (n, i) { v.add('rect', { x: a.x(i * xmax / 32) + 1, y: a.y(n), width: 584 / 32 - 2, height: a.bottom - a.y(n), class: 'primary fill', opacity: 0.65 }); });
-      var stats = [values.reduce(function (s, n) { return s + n; }, 0) / values.length, values[Math.ceil(values.length * 0.5) - 1], values[Math.ceil(values.length * 0.95) - 1], values[Math.ceil(values.length * 0.99) - 1]];
-      var names = ['Среднее', 'p50', 'p95', 'p99'];
-      stats.forEach(function (n, i) {
-        v.add('line', { x1: a.x(n), x2: a.x(n), y1: 40, y2: a.bottom, class: palette[i] + ' marker' });
-        var tx = Math.min(595, a.x(n) + 6), ty = 56 + i * 32;
-        v.add('rect', { x: tx - 3, y: ty - 26, width: names[i].length * 17 + 8, height: 32, class: 'label-bg' });
-        v.label(tx, ty, names[i], palette[i], 'start');
-      });
-      // Разнесённые подписи остаются читаемыми, даже когда перцентили совпадают.
-      var legend = v.host.querySelector('.viz-legend');
-      if (!legend) { legend = html('div', undefined, 'viz-legend'); v.host.insertBefore(legend, v.controls); }
       legend.replaceChildren();
-      stats.forEach(function (n, i) { legend.appendChild(html('span', names[i] + ': ' + fmt(n) + ' мс', palette[i])); });
-      v.describe(names.map(function (n, i) { return n + ': ' + fmt(stats[i]) + ' мс'; }).join(' · '));
-    }
-    v.slider('Доля медленных запросов, %', 0, 15, 0.5, slow, function (n) { slow = n; draw(); });
-    v.button('Новая выборка', function () { generate(); draw(); }); generate(); draw();
-  };
-
-  widgets['hockey-stick'] = function (host) {
-    var capacity = num(host.dataset.capacity, 100, 5, 100000), load = capacity * 0.5;
-    var v = setup(host, 'Предел ёмкости: рост p95', 'Модель M/M/1: p95 времени в системе = −ln(0,05)/(μ−λ). У предела ёмкости задержка резко растёт.');
-    function latency(rps) { return -Math.log(0.05) / (capacity - rps) * 1000; }
-    function draw() {
-      v.clear(); var a = axes(v, 'Нагрузка, RPS', 'p95', capacity, latency(capacity * 0.98), 'мс');
-      var points = Array.from({ length: 99 }, function (_, i) { var n = capacity * i / 100; return a.x(n) + ',' + a.y(latency(n)); });
-      v.add('polyline', { points: points.join(' '), class: 'primary stroke' });
-      v.add('circle', { cx: a.x(load), cy: a.y(latency(load)), r: 7, class: 'response fill' });
-      v.describe('Нагрузка: ' + fmt(load) + ' RPS · p95: ' + fmt(latency(load)) + ' мс · Запас до предела: ' + fmt(100 * (1 - load / capacity)) + '%');
-    }
-    v.slider('Текущая нагрузка, RPS', 0, capacity * 0.98, capacity / 100, load, function (n) { load = n; draw(); }); draw();
-  };
-
-  widgets['load-profiles'] = function (host) {
-    var shapes = { smoke: [0, 1, 1, 1, 0], load: [0, 3, 6, 6, 6, 0], stress: [0, 2, 4, 6, 8, 10, 0], soak: [0, 5, 5, 5, 5, 5, 5, 5, 0], spike: [1, 1, 1, 10, 1, 1, 1] };
-    var names = list(host.dataset.only, 'smoke,load,stress,soak,spike').filter(function (n) { return shapes[n]; });
-    if (!names.length) names = Object.keys(shapes);
-    var captions = { smoke: 'Короткая проверка', load: 'Ожидаемая нагрузка', stress: 'Поиск предела', soak: 'Долгая нагрузка', spike: 'Резкий всплеск' };
-    var v = setup(host, 'Профили нагрузки', 'Пользователи во времени: ' + names.map(function (n) { return n + ': ' + captions[n]; }).join('; ') + '. Оси относительные.');
-    var progress = 1;
-    function draw() {
-      var narrow = host.clientWidth < 520, cols = narrow ? 1 : 2, rows = Math.ceil(names.length / cols), w = 720 / cols;
-      v.clear(rows * 210);
-      names.forEach(function (name, i) {
-        var x = (i % cols) * w + 58, y = Math.floor(i / cols) * 210 + 54, width = w - 92;
-        v.label(x + width / 2, y - 24, name + ': ' + captions[name]);
-        v.add('path', { d: 'M' + x + ' ' + y + 'v112h' + width, class: 'axis' });
-        v.label(x, y - 5, 'пользователи', 'muted', 'start'); v.label(x + width / 2, y + 140, 'время →', 'muted');
-        var values = shapes[name]; var pts = values.map(function (n, j) { return [x + j * width / (values.length - 1), y + 112 - n * 10]; });
-        var count = progress * (pts.length - 1), index = Math.floor(count), partial = pts.slice(0, index + 1);
-        if (index < pts.length - 1) partial.push([pts[index][0] + (pts[index + 1][0] - pts[index][0]) * (count - index), pts[index][1] + (pts[index + 1][1] - pts[index][1]) * (count - index)]);
-        v.add('polyline', { points: partial.map(function (p) { return p.join(','); }).join(' '), class: palette[i % palette.length] + ' stroke' });
+      [['net', 2 * t.net, 'туда и обратно'], ['app', t.app, 'думает'], ['db', t.db, 'ищет']].forEach(function (r) {
+        var chip = html('span', undefined, 'viz-chip ' + kinds[r[0]].cls); chip.appendChild(html('i'));
+        chip.appendChild(document.createTextNode(kinds[r[0]].name + ' (' + r[2] + '): ' + ms(r[1]))); legend.appendChild(chip);
       });
+      net.label.textContent = '🛣️ Сеть: ' + ms(t.net) + ' в одну сторону';
+      describe();
     }
-    // Первый кадр после «Пуск» (dt = 0) начинает рисовать заново, если формы уже показаны целиком.
-    animate(v, function (dt) { if (dt === 0 && progress >= 1) progress = 0; progress = Math.min(1, progress + dt / 4); draw(); return progress < 1; }, function () { progress = 0; draw(); }, function () { progress = 1; draw(); });
-    progress = 1; draw(); // до «Пуск» формы видны целиком, а не пустые оси
-    new ResizeObserver(draw).observe(host);
-  };
-
-  widgets.pool = function (host) {
-    var size = Math.round(num(host.dataset.size, 4, 1, 16)), duration = 600;
-    var timeout = num(host.dataset.timeout, 1500, 100, 10000), rate = num(host.dataset.rate, 10, 1, 100);
-    var clock = 0, arrivals = 0, slots = [], waiting = [], errors = 0, completed = 0;
-    var v = setup(host, 'Пул соединений', 'Запрос занимает одно соединение на заданное время. Поступает ' + rate + ' запросов/с. Ожидание дольше ' + timeout + ' мс заканчивается ошибкой.');
+    function describe() {
+      var all = total(), parts = [['net', 2 * t.net], ['app', t.app], ['db', t.db]].sort(function (a, b) { return b[1] - a[1]; });
+      var top = parts[0], text = 'Весь запрос, от отправки до ответа: <b>' + ms(all) + '</b>. Это сеть дважды (туда ' + ms(t.net) + ' и обратно ' + ms(t.net) + '), плюс магазин ' + ms(t.app) + ', плюс база ' + ms(t.db) + '.<br>';
+      text += 'Больше всего забирает <b>' + { net: 'сеть', app: 'магазин', db: 'база' }[top[0]] + '</b>: ' + ms(top[1]) + ', это ' + pct(top[1] / (all || 1)) + ' полосы. ';
+      if (top[0] === 'net') text += 'Письмо с запросом едет по сети два раза, поэтому сеть считается дважды. Ускорять код здесь почти бесполезно: даже мгновенный магазин сэкономит только ' + ms(t.app) + '.';
+      else if (top[0] === 'db') text += 'Сеть и код тут ни при чём: искать причину нужно в базе, например в медленном запросе без индекса.';
+      else text += 'Сервис долго думает сам: занят процессор или тяжёлый код. Сеть и база тут ни при чём.';
+      v.explain(text);
+    }
+    function centre(el) { return { x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop + el.offsetHeight / 2, w: el.offsetWidth, h: el.offsetHeight }; }
+    function edge(a, b) {
+      var p = centre(a), q = centre(b), dx = q.x - p.x, dy = q.y - p.y;
+      return Math.abs(dx) > Math.abs(dy) ? { x: p.x + Math.sign(dx) * p.w / 2, y: p.y } : { x: p.x, y: p.y + Math.sign(dy) * p.h / 2 };
+    }
     function draw() {
-      v.clear();
-      v.label(350, 30, 'Соединения');
-      for (var i = 0; i < size; i++) {
-        var x = 84 + i % 8 * 72, y = 58 + Math.floor(i / 8) * 62;
-        v.add('rect', { x: x, y: y, width: 55, height: 45, rx: 7, class: slots[i] ? 'response fill' : 'box' });
-        v.label(x + 27, y + 29, i + 1, slots[i] ? 'on-fill' : 'muted');
+      var s = steps[Math.min(idx, steps.length - 1)], doneAll = idx >= steps.length;
+      [you, shop, db].forEach(function (el) { el.classList.remove('active'); el.badge.textContent = ''; });
+      [net, inner].forEach(function (el) { el.classList.remove('active'); });
+      if (doneAll) {
+        env.style.opacity = 0; you.classList.add('active'); you.badge.textContent = '✅ ответ за ' + ms(total());
+        v.status.textContent = 'Готово: ответ получен за ' + ms(total()) + '. Сейчас начнём заново.';
+      } else if (s.b) {
+        var a = edge(s.a, s.b), b = edge(s.b, s.a), k = Math.min(1, phaseT / dur(s));
+        k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        env.textContent = s.env; env.style.opacity = 1;
+        env.style.transform = 'translate(' + (lerp(a.x, b.x, k) - 14) + 'px,' + (lerp(a.y, b.y, k) - 14) + 'px)';
+        (s.kind === 'net' ? net : inner).classList.add('active');
+        v.status.textContent = 'Сейчас: ' + s.what + (s.ms ? ' (' + ms(s.ms) + ')' : '');
+      } else {
+        env.style.opacity = 0; s.a.classList.add('active');
+        s.a.badge.textContent = '⏳ ' + ms(s.ms * Math.min(1, phaseT / dur(s)));
+        v.status.textContent = 'Сейчас: ' + s.what + ' (' + ms(s.ms) + ')';
       }
-      v.label(100, 222, 'Ожидают:', 'muted');
-      for (var j = 0; j < Math.min(waiting.length, 18); j++) v.add('circle', { cx: 165 + j * 25, cy: 217, r: 8, class: 'primary fill' });
-      v.label(360, 273, errors ? 'Истёк таймаут: ошибка' : 'Первый в очереди получает слот', errors ? 'danger' : 'muted');
-      var busy = slots.filter(Boolean).length;
-      v.describe('Занято: ' + busy + '/' + size + ' · Ждут: ' + waiting.length + ' · Ошибок: ' + errors + ' · Выполнено: ' + completed);
+      var all = total() || 1, at = simAt();
+      clock.textContent = '⏱ ' + ms(at);
+      cursor.style.left = (at / all * 100) + '%';
     }
     function tick(dt) {
-      clock += dt * 1000;
-      slots.forEach(function (job, i) { if (job && job <= clock) { completed++; slots[i] = null; } });
-      waiting = waiting.filter(function (time) { if (clock - time > timeout) { errors++; return false; } return true; });
-      arrivals += rate * dt;
-      while (arrivals >= 1) { waiting.push(clock); arrivals--; }
-      for (var i = 0; i < size; i++) if (!slots[i] && waiting.length) { waiting.shift(); slots[i] = clock + duration; }
+      if (idx >= steps.length) { hold += dt; if (hold > 1.8) { idx = 0; phaseT = 0; hold = 0; } }
+      else { phaseT += dt; while (idx < steps.length && phaseT >= dur(steps[idx])) { phaseT -= dur(steps[idx]); idx++; } }
       draw();
     }
-    v.slider('Размер пула', 1, 16, 1, size, function (n) {
-      // Занятые соединения при уменьшении пула возвращают заявки в ожидание.
-      slots.slice(n).forEach(function (job) { if (job) waiting.unshift(clock); });
-      slots.length = Math.min(slots.length, n); size = n; draw();
-    });
-    v.slider('Время запроса, мс', 50, 2000, 50, duration, function (n) { duration = n; draw(); });
-    animate(v, tick, function () { clock = 0; arrivals = 0; slots = []; waiting = []; errors = 0; completed = 0; draw(); }, function () { slots = Array(size).fill(1000); waiting = [0, 0, 0]; errors = 1; draw(); });
+    function still() { idx = steps.length; phaseT = 0; draw(); }
+    function change(key) { return function (n) { t[key] = n; plan(); buildBar(); draw(); }; }
+    plan(); buildBar();
+    v.slider('Сеть, в одну сторону', 0, 150, 1, t.net, change('net'), 'мс');
+    v.slider('Магазин думает', 0, 200, 1, t.app, change('app'), 'мс');
+    v.slider('База ищет товар', 0, 500, 1, t.db, change('db'), 'мс');
+    v.tryIt('поставь сеть 100 мс (так бывает, когда сервер в другой стране) и посмотри, какую часть полосы займёт синий цвет. Потом верни 1 мс, как на стенде у тебя на компьютере, и разгони базу до 300 мс.');
+    animate(v, tick, still);
+    v.onResize(draw);
   };
 
-  widgets.chart = function (host) {
-    var series = json(host.dataset.series, []), xs = list(host.dataset.x, ''), type = host.dataset.type || 'line';
-    if (!Array.isArray(series) || !series.length || !xs.length || xs.length > 200 || series.length > 12 || !series.every(function (s) {
-      return s && typeof s.name === 'string' && Array.isArray(s.values) && s.values.length === xs.length && s.values.every(function (n) { return typeof n === 'number' && Number.isFinite(n); });
-    }) || !['line', 'bar'].includes(type)) throw new Error('Проверь data-series, data-x и data-type: нужны равные длины и конечные числа.');
-    var unit = host.dataset.unit || '', selected = null;
-    var v = setup(host, host.dataset.title || 'Результаты теста', 'График ' + type + '. ' + (host.dataset.xLabel || 'X') + ', ' + (host.dataset.yLabel || 'Y') + '. Серии: ' + series.map(function (s) { return s.name; }).join(', ') + '.');
-    var legend = html('div', undefined, 'viz-legend'); host.insertBefore(legend, v.controls);
-    series.forEach(function (s, i) { legend.appendChild(html('span', s.name, palette[i % palette.length])); });
-    var tooltip = html('p', 'Наведи указатель, коснись графика или выбери точку стрелками.', 'viz-tooltip'); host.appendChild(tooltip);
-    v.svg.setAttribute('tabindex', '0');
-    var values = series.flatMap(function (s) { return s.values; }), low = Math.min(0, Math.min.apply(null, values)), high = Math.max(0, Math.max.apply(null, values));
-    if (high === low) high = low + 1;
-    var left = 76, right = 660, top = 40, bottom = 236;
-    var numericX = type === 'line' && xs.length > 1 && xs.every(function (n) { return n.trim() !== '' && Number.isFinite(Number(n)); });
-    var xValues = xs.map(Number), xMin = Math.min.apply(null, xValues), xMax = Math.max.apply(null, xValues);
-    if (xMin === xMax) numericX = false;
-    function x(i) { return numericX ? left + (xValues[i] - xMin) / (xMax - xMin) * (right - left) : left + (i + 0.5) * (right - left) / xs.length; }
-    function y(n) { return bottom - (n - low) / (high - low) * (bottom - top); }
+  /* ---------- Очередь в кассу ---------- */
+  widgets.queue = function (host) {
+    var K = Math.round(num(host.dataset.servers, 2, 1, 6)), A = num(host.dataset.rate, 7, 1, 30), M = num(host.dataset.service, 12, 2, 40);
+    var SPEED = 10; // секунда на экране = 10 секунд в магазине
+    var v = setup(host, host.dataset.title || 'Очередь в кассу');
+    var people, queue, desks, clock, nextIn, waits, history, histT, served, id, lastText = -1, pointer = null;
+    function expo(mean) { return -Math.log(1 - Math.random()) * mean; }
+    function reset() { people = []; queue = []; desks = []; clock = 0; nextIn = 0; waits = []; history = []; histT = 0; served = 0; id = 0; }
+    function step(dt) {
+      clock += dt; nextIn -= dt;
+      while (nextIn <= 0) {
+        if (queue.length < 999) { var p = { id: id++, born: clock, state: 'queue' }; queue.push(p); people.push(p); }
+        nextIn += expo(60 / A);
+      }
+      for (var i = 0; i < Math.max(K, desks.length); i++) {
+        var d = desks[i];
+        if (d && clock >= d.end) { d.state = 'gone'; d.left = clock; served++; desks[i] = d = null; }
+        if (!d && i < K && queue.length) {
+          var c = queue.shift(); c.state = 'desk'; c.desk = i; c.start = clock; c.end = clock + M * (0.5 + Math.random());
+          desks[i] = c; waits.push({ t: clock, w: clock - c.born });
+        }
+      }
+      waits = waits.filter(function (w) { return clock - w.t <= 120; });
+      histT += dt; while (histT >= 1) { histT -= 1; history.push(queue.length); if (history.length > 180) history.shift(); }
+      people = people.filter(function (p) { return p.state !== 'gone' || clock - p.left < 6; });
+    }
+    function run(simSeconds) { while (simSeconds > 0) { var d = Math.min(0.5, simSeconds); step(d); simSeconds -= d; } }
+    function waitOf(p) { return (p.state === 'queue' ? clock : p.start) - p.born; }
+    function colour(w) { return w < M ? 'ok' : w < 3 * M ? 'warning' : 'danger'; }
+    var geo = {};
+    function draw(dt) {
+      var rowH = 60, deskTop = 40, deskH = Math.max(K * rowH, 110), sparkTop = deskTop + deskH + 34, H = sparkTop + 66;
+      var W = v.canvas(H), deskW = Math.min(170, Math.max(110, W * 0.3)), deskX = W - deskW - 6, midY = deskTop + deskH / 2;
+      var qRight = deskX - 26, qLeft = 62, gap = 22, slots = Math.max(1, Math.floor((qRight - qLeft) / gap) + 1);
+      geo = { deskTop: deskTop, deskH: deskH, deskX: deskX, deskW: deskW, rowH: rowH, sparkTop: sparkTop, W: W };
+      v.add('rect', { x: 6, y: midY - 28, width: 40, height: 56, rx: 6, class: 'box' });
+      v.label(26, midY + 7, '🚪');
+      v.label(26, midY + 46, 'вход', 'muted');
+      v.label(qLeft - 8, 22, 'В очереди: ' + queue.length, queue.length > slots ? 'warning' : '', 'start');
+      v.label(deskX, 22, 'Кассы', '', 'start');
+      var y0 = deskTop + (deskH - K * rowH) / 2;
+      for (var i = 0; i < K; i++) {
+        var y = y0 + i * rowH, d = desks[i];
+        v.add('rect', { x: deskX, y: y + 3, width: deskW, height: rowH - 8, rx: 8, class: d ? 'box busy' : 'box' });
+        v.label(deskX + 12, y + 26, 'Касса ' + (i + 1), d ? '' : 'muted', 'start');
+        if (!d) v.label(deskX + 12, y + 44, 'свободна', 'muted small', 'start');
+        if (d) v.add('rect', { x: deskX + 10, y: y + rowH - 9, width: (deskW - 52) * Math.min(1, (clock - d.start) / (d.end - d.start)), height: 3, class: 'ok fill' });
+      }
+      var k = Math.min(1, (dt || 1) * 8);
+      people.forEach(function (p) {
+        var tx, ty, j;
+        if (p.state === 'queue') { j = queue.indexOf(p); if (j >= slots) { p.x = null; return; } tx = qRight - j * gap; ty = midY; }
+        else if (p.state === 'desk') { tx = deskX + deskW - 22; ty = y0 + p.desk * rowH + rowH / 2 - 1; }
+        else { tx = W + 20; ty = p.y == null ? midY : p.y; }
+        if (p.x == null) { p.x = p.state === 'queue' ? 26 : tx; p.y = ty; }
+        p.x = lerp(p.x, tx, k); p.y = lerp(p.y, ty, k);
+        var w = waitOf(p);
+        v.add('circle', { cx: p.x, cy: p.y, r: 8, class: colour(w) + ' fill', opacity: p.state === 'gone' ? Math.max(0, 1 - (clock - p.left) / 6) : 1 });
+      });
+      if (queue.length > slots) v.label(qLeft - 8, midY - 16, '+ ещё ' + (queue.length - slots), 'warning', 'start');
+      var sx = 8, sw = W - 16, sh = 44;
+      v.label(sx, sparkTop - 8, 'Очередь за последние 3 минуты', 'muted small', 'start');
+      v.add('line', { x1: sx, x2: sx + sw, y1: sparkTop + sh, y2: sparkTop + sh, class: 'axis' });
+      var hmax = Math.max(5, Math.max.apply(null, history.concat([0])));
+      if (history.length > 1) {
+        var pts = history.map(function (q, n) { return (sx + sw - (history.length - 1 - n) / 179 * sw) + ',' + (sparkTop + sh - q / hmax * sh); });
+        v.add('polyline', { points: pts.join(' '), class: (A >= K * 60 / M ? 'danger' : 'response') + ' stroke' });
+      }
+      if (W >= 480) v.label(sx + sw, sparkTop - 8, 'верх шкалы: ' + hmax, 'muted small', 'end');
+      v.status.textContent = 'В магазине прошло ' + sec(clock) + ' (показ ускорен в ' + SPEED + ' раз) · обслужено ' + served;
+      if (Math.floor(clock / 5) !== lastText) { lastText = Math.floor(clock / 5); describe(); }
+    }
+    function describe() {
+      var cap = K * 60 / M, load = A / cap, avg = waits.length ? waits.reduce(function (s, w) { return s + w.w; }, 0) / waits.length : 0, level, cls;
+      if (load < 0.5) { cls = 'ok'; level = 'Свободно. Кассы часто простаивают, почти никто не ждёт.'; }
+      else if (load < 0.8) { cls = 'ok'; level = 'Нормально. Иногда покупатели приходят пачкой, и пара человек ждёт, но очередь быстро рассасывается.'; }
+      else if (load < 1) { cls = 'warning'; level = 'На пределе. Кассы заняты почти всё время, поэтому любая пачка покупателей создаёт очередь, которая долго не уходит. Ждут уже дольше, чем стоят на кассе.'; }
+      else { cls = 'danger'; level = 'Перегрузка. Приходит больше, чем кассы успевают обслужить: очередь растёт без конца, и каждый новый ждёт дольше предыдущего. Поможет только ещё одна касса или более быстрая касса.'; }
+      v.explain('<p class="viz-level ' + cls + '"><i></i>' + level + '</p>' +
+        'Кассы успевают обслужить <b>' + fmt(cap) + ' ' + plural(cap, 'покупателя', 'покупателей', 'покупателей') + ' в минуту</b> (' + K + ' ' + plural(K, 'касса', 'кассы', 'касс') + ', одна обслуживает человека за ' + fmt(M, 0) + ' с), а приходит <b>' + fmt(A, 0) + '</b>. Кассы заняты на <b>' + pct(Math.min(load, 9.99)) + '</b>.<br>' +
+        'Сейчас в очереди <b>' + queue.length + '</b>, за последние 2 минуты ждали в среднем <b>' + sec(avg) + '</b>. Цвет кружка: зелёный ждёт меньше, чем длится обслуживание, жёлтый до трёх раз дольше, красный ещё дольше.' +
+        '<br><span class="viz-note">В сервере всё так же: покупатели это запросы, кассы это обработчики (потоки или процессы сервиса), время на кассе это время обработки одного запроса.</span>');
+    }
+    function still() { reset(); run(150); people.forEach(function (p) { p.x = null; }); draw(1); describe(); }
+    function pointerTip(e) {
+      var p = v.local(e); if (!p) return;
+      if (p.y > geo.sparkTop - 4 && history.length) {
+        var n = Math.round((geo.W - 8 - p.x) / (geo.W - 16) * 179), q = history[history.length - 1 - n];
+        if (q !== undefined) return v.showTip(n ? n + ' с назад: в очереди ' + q : 'Сейчас в очереди ' + q, e.clientX, e.clientY);
+      }
+      var best = null; people.forEach(function (c) { if (c.x != null && Math.hypot(c.x - p.x, c.y - p.y) < 14) best = c; });
+      if (best) return v.showTip(best.state === 'queue' ? 'Ждёт в очереди уже ' + sec(waitOf(best)) : best.state === 'desk' ? 'На кассе. Перед этим ждал ' + sec(waitOf(best)) : 'Ушёл с покупкой', e.clientX, e.clientY);
+      v.hideTip();
+    }
+    reset(); run(90); people.forEach(function (p) { p.x = null; });
+    v.slider('Покупателей в минуту', 1, 30, 1, A, function (n) { A = n; nextIn = Math.min(nextIn, expo(60 / A)); describe(); if (ctl.reduced) still(); }, '');
+    v.slider('Касса на одного', 2, 40, 1, M, function (n) { M = n; describe(); if (ctl.reduced) still(); }, 'с');
+    v.slider('Открыто касс', 1, 6, 1, K, function (n) {
+      for (var i = n; i < desks.length; i++) if (desks[i]) { desks[i].state = 'queue'; queue.unshift(desks[i]); desks[i] = null; }
+      K = n; describe(); if (ctl.reduced) still(); else draw(0);
+    }, '');
+    v.tryIt('добавь покупателей до 12 в минуту и посмотри, как очередь растёт без остановки, а линия внизу ползёт вверх. Потом открой третью кассу и смотри, как очередь тает.');
+    var ctl = animate(v, function (dt) { run(dt * SPEED); draw(dt); }, still);
+    host.addEventListener('pointermove', function (e) { if (v.svg && v.svg.contains(e.target)) pointerTip(e); else v.hideTip(); });
+    host.addEventListener('pointerleave', v.hideTip);
+    describe(); draw(1);
+    v.onResize(function () { draw(0); });
+  };
+
+  /* ---------- 100 запросов по порядку: среднее и перцентили ---------- */
+  widgets.percentiles = function (host) {
+    var slow = Math.round(num(host.dataset.slow, 5, 0, 30)), slowMs = num(host.dataset.slowMs, 800, 200, 3000);
+    var v = setup(host, host.dataset.title || '100 запросов, выстроенных по времени ответа');
+    var fast, slowK, order, values, byRank, rank, avg, t = 0, hover = -1, geo = {};
+    var APPEAR = 1.6, HOLD = 0.7, SORT = 1.3, END = APPEAR + HOLD + SORT;
+    function gauss() { return Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random()); }
+    function sample() {
+      fast = []; slowK = []; order = [];
+      for (var i = 0; i < 100; i++) { fast.push(Math.max(18, Math.min(140, 45 * Math.exp(0.3 * gauss())))); slowK.push(0.75 + Math.random() * 0.5); order.push(i); }
+      for (var j = 99; j > 0; j--) { var r = Math.floor(Math.random() * (j + 1)), x = order[j]; order[j] = order[r]; order[r] = x; }
+      compute();
+    }
+    function compute() {
+      var isSlow = {}; for (var i = 0; i < slow; i++) isSlow[order[i]] = true;
+      values = fast.map(function (f, i) { return isSlow[i] ? slowMs * slowK[i] : f; });
+      byRank = values.map(function (_, i) { return i; }).sort(function (a, b) { return values[a] - values[b]; });
+      rank = []; byRank.forEach(function (i, r) { rank[i] = r; });
+      avg = values.reduce(function (s, x) { return s + x; }, 0) / 100;
+    }
+    function p(n) { return values[byRank[n - 1]]; }
+    function isSlowValue(x) { return x >= slowMs * 0.5; }
     function draw() {
-      v.clear();
-      for (var i = 0; i <= 4; i++) {
-        var value = low + i / 4 * (high - low);
-        v.add('line', { x1: left, x2: right, y1: y(value), y2: y(value), class: 'grid' });
-        v.label(left - 8, y(value) + 5, fmt(value), 'muted', 'end');
+      var H = 310, W = v.canvas(H), narrow = W < 480, left = 50, right = W - 10, top = 52, bottom = H - 46, bw = (right - left) / 100;
+      var sc = scale(Math.max.apply(null, values) * 1.05), yMax = sc.max;
+      function Y(x) { return bottom - x / yMax * (bottom - top); }
+      geo = { left: left, bw: bw, top: top, bottom: bottom, Y: Y };
+      sc.ticks.forEach(function (val) {
+        v.add('line', { x1: left, x2: right, y1: Y(val), y2: Y(val), class: 'grid' });
+        v.label(left - 6, Y(val) + 5, fmt(val, 0), 'muted small', 'end');
+      });
+      v.label(left - 6, top - 14, 'мс', 'muted small', 'end');
+      var sorted = t >= END, k = t <= APPEAR + HOLD ? 0 : Math.min(1, (t - APPEAR - HOLD) / SORT);
+      k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      values.forEach(function (x, i) {
+        if (t < APPEAR && i / 100 > t / APPEAR) return;
+        var pos = lerp(i, rank[i], k), r = rank[i];
+        var cls = sorted && (r === 49 || r === 94 || r === 98) ? 'primary' : isSlowValue(x) ? 'danger' : 'response';
+        v.add('rect', { x: left + pos * bw + 0.5, y: Y(x), width: Math.max(1, bw - 1), height: Math.max(1, bottom - Y(x)), class: cls + ' fill' + (i === hover ? ' hl' : '') });
+      });
+      v.add('path', { d: 'M' + left + ' ' + top + 'V' + bottom + 'H' + right, class: 'axis' });
+      v.add('line', { x1: left, x2: right, y1: Y(avg), y2: Y(avg), class: 'warning marker' });
+      v.label(left + 6, Y(avg) - 7, 'среднее ' + ms(avg), 'warning halo', 'start');
+      if (sorted) {
+        [[50, 'p50', 40, 'middle'], [95, 'p95', 40, 'end'], [99, 'p99', 20, 'end']].forEach(function (m) {
+          var x = left + (m[0] - 0.5) * bw, val = p(m[0]);
+          v.add('line', { x1: x, x2: x, y1: m[2] + 4, y2: Y(val) - 2, class: 'primary marker' });
+          v.label(m[3] === 'end' ? x + 4 : x, m[2], m[1] + (narrow ? '' : ' = ' + ms(val)), 'primary halo', m[3]);
+        });
+        [1, 50, 100].forEach(function (n) { v.label(n === 100 ? right : left + (n - 0.5) * bw, bottom + 18, '№' + n, 'muted small', n === 100 ? 'end' : n === 1 ? 'start' : 'middle'); });
+      }
+      v.label((left + right) / 2, H - 6, sorted ? (v.width < 520 ? '← быстрые · медленные →' : 'запросы от самого быстрого (слева) к самому медленному (справа)') : (v.width < 520 ? 'в порядке прихода' : 'запросы в том порядке, как они приходили'), 'muted small');
+      v.status.textContent = t < APPEAR ? 'Запросы приходят один за другим. Высота столбика это время ответа.' : !sorted ? 'Выстраиваем их по росту: от быстрых к медленным.' : 'Готово: слева самые быстрые, справа самые медленные. Наведи на любой столбик.';
+    }
+    function describe() {
+      var below = values.filter(function (x) { return x < avg; }).length, p95slow = isSlowValue(p(95)), p99slow = isSlowValue(p(99));
+      var text = '<ul><li><b>p50 = ' + ms(p(50)) + '</b>: половина запросов быстрее. Это медиана, 50-й столбик слева.</li>' +
+        '<li><b>p95 = ' + ms(p(95)) + '</b>: 95 запросов из 100 уложились в это время, 5 оказались дольше.</li>' +
+        '<li><b>p99 = ' + ms(p(99)) + '</b>: дольше только 1 запрос из 100.</li>' +
+        '<li><b>Среднее = ' + ms(avg) + '</b>' + (slow ? ': оно больше, чем у ' + below + ' ' + plural(below, 'запроса', 'запросов', 'запросов') + ' из 100. Несколько медленных тянут его вверх, и среднее не похоже ни на обычный запрос, ни на медленный.' : ': без медленных запросов оно почти совпадает с медианой.') + '</li></ul>';
+      if (slow && !p95slow && p99slow) text += '<p>Посмотри: p95 не заметил ' + slow + ' ' + plural(slow, 'медленного', 'медленных', 'медленных') + ', а p99 заметил. Чем реже проблема, тем выше перцентиль, который её видит.</p>';
+      if (slow && p95slow) text += '<p>Медленных уже ' + slow + ' из 100, и их видит даже p95.</p>';
+      if (slow) text += '<p>Если страница магазина делает 10 запросов, хотя бы на один медленный наткнётся <b>' + pct(1 - Math.pow(1 - slow / 100, 10)) + ' посетителей</b>.</p>';
+      v.explain(text);
+    }
+    function onMove(e) {
+      var q = v.local(e); if (!q) return;
+      var pos = Math.floor((q.x - geo.left) / geo.bw);
+      if (Math.abs(q.y - geo.Y(avg)) < 6 && t >= END) {
+        hover = -1; draw();
+        var below = values.filter(function (x) { return x < avg; }).length;
+        return v.showTip('<b>Среднее: ' + ms(avg) + '</b><br>Сумма всех 100 времён, делённая на 100. Быстрее среднего ' + below + ' ' + plural(below, 'запрос', 'запроса', 'запросов') + ' из 100.', e.clientX, e.clientY);
+      }
+      if (pos < 0 || pos > 99) { hover = -1; draw(); return v.hideTip(); }
+      var i = t >= END ? byRank[pos] : pos, x = values[i], r = rank[i], note = { 49: 'Это p50 (медиана): половина запросов быстрее.', 94: 'Это p95: 95 запросов из 100 уложились в это время.', 98: 'Это p99: медленнее только один запрос.' }[r];
+      hover = i; draw();
+      v.showTip('<b>Запрос: ' + ms(x) + '</b><br>' + (t >= END ? '№' + (r + 1) + ' по скорости. Быстрее него ' + r + ', медленнее ' + (99 - r) + '.' : 'Пришёл ' + (i + 1) + '-м.') + (note && t >= END ? '<br>' + note : ''), e.clientX, e.clientY);
+    }
+    sample(); describe();
+    v.slider('Сколько запросов из 100 тормозят', 0, 30, 1, slow, function (n) { slow = n; compute(); describe(); t = END; draw(); ctl.finish(); }, '');
+    v.slider('Сколько длится тормозящий запрос', 200, 3000, 100, slowMs, function (n) { slowMs = n; compute(); describe(); t = END; draw(); ctl.finish(); }, 'мс');
+    v.tryIt('поставь 1 тормозящий запрос: p50 и p95 не шелохнутся, а среднее уже подрастёт. Потом поставь 10 и посмотри, когда тормоза заметит p95. Наведи на столбики и на линию среднего.');
+    var ctl = animate(v, function (dt) { t += dt; draw(); return t < END; }, function () { t = END; draw(); }, function () { t = 0; draw(); });
+    v.button('Новые 100 запросов', function () { sample(); describe(); t = 0; ctl.play(); if (ctl.reduced) { t = END; draw(); } });
+    host.addEventListener('pointermove', function (e) { if (v.svg && v.svg.contains(e.target)) onMove(e); });
+    host.addEventListener('pointerleave', function () { hover = -1; v.hideTip(); draw(); });
+    draw(); v.onResize(draw);
+  };
+  widgets['latency-hist'] = widgets.percentiles; // старое имя из первых черновиков
+
+  /* ---------- «Хоккейная клюшка»: нагрузка против задержки ---------- */
+  widgets['hockey-stick'] = function (host) {
+    var cap = num(host.dataset.capacity, 100, 0.1, 1e6), base = num(host.dataset.base, 50, 1, 10000);
+    var load = num(host.dataset.load, cap * 0.6, 0, cap * 1.1), unit = host.dataset.unit || 'RPS';
+    var v = setup(host, host.dataset.title || 'Нагрузка и задержка: «хоккейная клюшка»');
+    var xMax = cap * 1.15, yMax = base * 12, hoverX = null, geo = {};
+    function lat(x) { return x >= cap ? Infinity : base / (1 - x / cap); }
+    function zone(x) { return x < 0.7 * cap ? 'ok' : x < 0.9 * cap ? 'warning' : 'danger'; }
+    var legend = html('div', undefined, 'viz-legend'); v.stage.appendChild(legend);
+    [['ok', 'до 70% предела: спокойно'], ['warning', '70–90%: осторожно'], ['danger', 'больше 90%: у предела']].forEach(function (z) {
+      var c = html('span', undefined, 'viz-chip ' + z[0]); c.appendChild(html('i')); c.appendChild(document.createTextNode(z[1])); legend.appendChild(c);
+    });
+    function draw() {
+      var H = 300, W = v.canvas(H), left = 58, right = W - 14, top = 22, bottom = H - 48;
+      function X(x) { return left + x / xMax * (right - left); }
+      function Y(y) { return bottom - Math.min(y, yMax) / yMax * (bottom - top); }
+      geo = { X: X, left: left, right: right };
+      [[0, 0.7, 'ok'], [0.7, 0.9, 'warning'], [0.9, xMax / cap, 'danger']].forEach(function (z) {
+        v.add('rect', { x: X(z[0] * cap), y: top, width: X(z[1] * cap) - X(z[0] * cap), height: bottom - top, class: z[2] + ' zone' });
+      });
+      for (var g = 0; g <= 4; g++) {
+        v.add('line', { x1: left, x2: right, y1: Y(yMax * g / 4), y2: Y(yMax * g / 4), class: 'grid' });
+        v.label(left - 6, Y(yMax * g / 4) + 5, fmt(yMax * g / 4, 0), 'muted small', 'end');
+        v.label(X(cap * g / 4), bottom + 18, fmt(cap * g / 4, cap < 20 ? 1 : 0), 'muted small');
       }
       v.add('path', { d: 'M' + left + ' ' + top + 'V' + bottom + 'H' + right, class: 'axis' });
-      v.add('line', { x1: left, x2: right, y1: y(0), y2: y(0), class: 'axis' });
-      v.label(left, 22, (host.dataset.yLabel || 'Y') + (unit ? ', ' + unit : ''), '', 'start');
-      v.label(368, 296, host.dataset.xLabel || 'X');
-      xs.forEach(function (n, i) { if (i % Math.max(1, Math.ceil(xs.length / 8)) === 0 || i === xs.length - 1) v.label(x(i), bottom + 22, n, 'muted'); });
-      series.forEach(function (s, j) {
-        var cls = palette[j % palette.length];
-        if (type === 'line') {
-          v.add('polyline', { points: s.values.map(function (n, i) { return x(i) + ',' + y(n); }).join(' '), class: cls + ' stroke' });
-          s.values.forEach(function (n, i) { v.add('circle', { cx: x(i), cy: y(n), r: 3, class: cls + ' fill' }); });
-        } else {
-          var w = (right - left) / xs.length * 0.8 / series.length;
-          s.values.forEach(function (n, i) { v.add('rect', { x: x(i) - w * series.length / 2 + j * w, y: Math.min(y(n), y(0)), width: Math.max(0.5, w - 1), height: Math.abs(y(n) - y(0)), class: cls + ' fill' }); });
-        }
-      });
-      if (selected !== null) {
-        v.add('line', { x1: x(selected), x2: x(selected), y1: top, y2: bottom, class: 'marker' });
-        tooltip.textContent = xs[selected] + ': ' + series.map(function (s) { return s.name + ' ' + fmt(s.values[selected]) + (unit ? ' ' + unit : ''); }).join(' · ');
+      v.add('line', { x1: X(cap), x2: X(cap), y1: top, y2: bottom, class: 'danger marker' });
+      v.label(X(cap) - 4, top + 16, 'предел', 'danger halo', 'end');
+      v.label(left + 4, top + 16, 'задержка, мс', 'muted small halo', 'start');
+      v.label((left + right) / 2, H - 8, 'нагрузка, ' + unit, 'muted small');
+      var pts = []; for (var x = 0; x <= cap * 0.995; x += cap / 200) { pts.push(X(x) + ',' + Y(lat(x))); if (lat(x) > yMax) break; }
+      v.add('polyline', { points: pts.join(' '), class: 'primary stroke' });
+      var over = load >= cap, ly = over ? top : Y(lat(load)), cls = zone(load);
+      v.add('line', { x1: X(load), x2: X(load), y1: ly, y2: bottom, class: cls + ' marker' });
+      v.add('circle', { cx: X(load), cy: ly, r: 8, class: cls + ' fill pulse' });
+      v.label(X(load) + (X(load) > right - 120 ? -12 : 12), Math.max(top + 34, ly - 10), over ? 'очередь растёт без конца' : lat(load) > yMax ? 'уходит вверх' : ms(lat(load)), cls + ' halo', X(load) > right - 120 ? 'end' : 'start');
+      if (hoverX !== null && hoverX < cap) {
+        v.add('circle', { cx: X(hoverX), cy: Y(lat(hoverX)), r: 5, class: 'primary fill' });
       }
     }
-    function pick(e) {
-      var point = v.svg.createSVGPoint(); point.x = e.clientX; point.y = e.clientY;
-      var matrix = v.svg.getScreenCTM(); if (!matrix) return;
-      var local = point.matrixTransform(matrix.inverse());
-      selected = xs.reduce(function (best, _, i) { return Math.abs(x(i) - local.x) < Math.abs(x(best) - local.x) ? i : best; }, 0); draw();
+    function describe() {
+      var share = load / cap, w = lat(load), z = zone(load), text = 'Нагрузка <b>' + fmt(load, cap < 20 ? 2 : 0) + ' ' + esc(unit) + '</b>, это <b>' + pct(share) + '</b> от предела в ' + fmt(cap, cap < 20 ? 1 : 0) + ' ' + esc(unit) + '.<br>';
+      if (load >= cap) text += '<span class="danger"><b>Предел пройден.</b></span> Приходит больше, чем сервис успевает обработать: очередь растёт без конца, задержка увеличивается с каждой секундой теста.';
+      else {
+        text += 'Запрос идёт <b>' + ms(w) + '</b>: ' + ms(base) + ' работы и <b>' + ms(w - base) + ' ожидания в очереди</b>.<br>';
+        text += z === 'ok' ? 'Спокойная зона: задержка растёт медленно, запас до предела ' + fmt(cap - load, cap < 20 ? 2 : 0) + ' ' + esc(unit) + '.' : z === 'warning' ? 'Зона осторожности: ещё немного нагрузки, и ожидание заметно вырастет.' : '<span class="danger">У предела:</span> каждый лишний запрос в секунду добавляет много задержки. Держать сервис здесь нельзя: любой всплеск загонит всех в очередь.';
+        var next = Math.min(load + cap * 0.1, cap * 0.999);
+        if (load + cap * 0.1 < cap) text += '<br>Добавь ещё 10% нагрузки, и задержка станет <b>' + ms(lat(next)) + '</b> (+' + ms(lat(next) - w) + ').';
+        else text += '<br>Ещё 10% нагрузки, и сервис упрётся в предел.';
+      }
+      v.explain(text);
     }
-    v.svg.addEventListener('pointermove', pick); v.svg.addEventListener('pointerdown', pick);
-    v.svg.addEventListener('keydown', function (e) {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      e.preventDefault(); selected = Math.max(0, Math.min(xs.length - 1, (selected === null ? 0 : selected) + (e.key === 'ArrowRight' ? 1 : -1))); draw();
+    v.slider('Нагрузка', 0, +(cap * 1.1).toFixed(2), +(cap / 100).toPrecision(2), load, function (n) { load = n; draw(); describe(); }, unit);
+    v.tryIt('веди ползунок медленно от 50% до 95% предела и следи, на сколько растёт задержка за каждый шаг. Наведи на кривую: увидишь задержку в любой точке.');
+    host.addEventListener('pointermove', function (e) {
+      if (!v.svg || !v.svg.contains(e.target)) return;
+      var q = v.local(e); if (!q) return;
+      var x = (q.x - geo.left) / (geo.right - geo.left) * xMax;
+      if (x < 0 || x > xMax) { hoverX = null; v.hideTip(); draw(); return; }
+      hoverX = x; draw();
+      v.showTip(x >= cap ? '<b>' + fmt(x, cap < 20 ? 2 : 0) + ' ' + esc(unit) + '</b><br>Больше предела: очередь растёт без конца' : '<b>' + fmt(x, cap < 20 ? 2 : 0) + ' ' + esc(unit) + ' (' + pct(x / cap) + ' предела)</b><br>Задержка ' + ms(lat(x)) + ', из них ожидание ' + ms(lat(x) - base), e.clientX, e.clientY);
     });
-    // Таблица даёт доступ к каждой точке без мыши и без чтения геометрии SVG.
-    var details = html('details'), summary = html('summary', 'Данные графика'); details.appendChild(summary);
-    var table = html('table'), head = html('tr'); head.appendChild(html('th', host.dataset.xLabel || 'X'));
-    series.forEach(function (s) { head.appendChild(html('th', s.name + (unit ? ', ' + unit : ''))); });
-    var thead = html('thead'); thead.appendChild(head); table.appendChild(thead); var tbody = html('tbody');
-    xs.forEach(function (n, i) { var row = html('tr'); row.appendChild(html('th', n)); series.forEach(function (s) { row.appendChild(html('td', fmt(s.values[i]))); }); tbody.appendChild(row); });
-    table.appendChild(tbody); details.appendChild(table); host.appendChild(details); draw();
+    host.addEventListener('pointerleave', function () { hoverX = null; v.hideTip(); draw(); });
+    draw(); describe(); v.onResize(draw);
   };
 
-  widgets.flow = function (host) {
-    var steps = json(host.dataset.steps, ['Симптом', 'Гипотеза', 'Проверка', 'Вывод']);
-    if (!Array.isArray(steps) || !steps.length || steps.length > 20 || !steps.every(function (s) { return typeof s === 'string'; })) throw new Error('data-steps должен содержать массив из 1–20 строк.');
-    var current = 0, v = setup(host, 'Алгоритм по шагам', 'Шаги: ' + steps.join('; ') + '.');
-    function wrap(text, max) {
-      var lines = [''];
-      text.split(/\s+/).forEach(function (word) {
-        if (lines[lines.length - 1].length + word.length > max && lines[lines.length - 1]) lines.push('');
-        lines[lines.length - 1] += (lines[lines.length - 1] ? ' ' : '') + word;
-      }); return lines;
+  /* ---------- Профили нагрузки ---------- */
+  var PROFILES = {
+    smoke: { name: 'Дымовой тест (smoke)', short: 'smoke', unit: 'мин', pts: [[0, 0], [0.3, 2], [4.7, 2], [5, 0]],
+      notes: [[2.5, 'пара пользователей']],
+      what: 'Пара пользователей несколько минут.', why: 'Убедиться, что тест вообще работает: скрипт не падает, сервис отвечает, метрики пишутся. Его запускают перед любым большим тестом.', look: 'Ошибки в самом скрипте и ответы с кодом не 200.' },
+    load: { name: 'Нагрузочный тест (load)', short: 'load', unit: 'мин', pts: [[0, 0], [5, 100], [25, 100], [30, 0]],
+      notes: [[2.5, 'разгон'], [15, 'ровная обычная нагрузка'], [27.5, 'спад']],
+      what: 'Обычная ожидаемая нагрузка, например как в час пик.', why: 'Проверить, что в нормальный день сервис укладывается в цели по задержке и ошибкам.', look: 'p95 и долю ошибок на ровном участке. Они должны быть ровными, без роста.' },
+    stress: { name: 'Стресс-тест (stress)', short: 'stress', unit: 'мин', pts: [[0, 0], [1, 50], [5, 50], [6, 100], [10, 100], [11, 150], [15, 150], [16, 200], [20, 200], [21, 250], [25, 250], [26, 0]],
+      notes: [[3, 'норма'], [13, 'выше нормы'], [23, 'до отказа']],
+      what: 'Нагрузку поднимают ступеньками выше обычной, пока сервис не начнёт сдаваться.', why: 'Найти предел и узнать, что ломается первым.', look: 'Ступеньку, на которой задержка резко выросла или пошли ошибки.' },
+    soak: { name: 'Длительный тест (soak)', short: 'soak', unit: 'ч', pts: [[0, 0], [0.2, 80], [7.8, 80], [8, 0]],
+      notes: [[4, 'обычная нагрузка много часов']],
+      what: 'Обычная нагрузка много часов подряд.', why: 'Поймать то, что копится медленно: утечки памяти, заполнение диска, растущие таблицы.', look: 'Медленный рост памяти и задержки к концу теста.' },
+    spike: { name: 'Всплеск (spike)', short: 'spike', unit: 'мин', pts: [[0, 20], [10, 20], [10.3, 200], [12, 200], [12.3, 20], [20, 20]],
+      notes: [[5, 'фон'], [11.2, 'удар'], [16, 'восстановление']],
+      what: 'Резкий скачок пользователей, как после рассылки или старта распродажи.', why: 'Проверить, переживёт ли сервис удар и как быстро придёт в себя.', look: 'Ошибки во время скачка и сколько времени нужно, чтобы задержка вернулась к норме.' }
+  };
+  widgets['load-profiles'] = function (host) {
+    var keys = list(host.dataset.only, 'smoke,load,stress,soak,spike').filter(function (k) { return PROFILES[k]; });
+    if (!keys.length) keys = Object.keys(PROFILES);
+    var v = setup(host, host.dataset.title || (keys.length > 1 ? 'Профили нагрузки: как меняется число пользователей' : PROFILES[keys[0]].name));
+    var cur = 0, prog = 0, hold = 0, auto = keys.length > 1, geo = {}, hoverT = null;
+    var tabs = html('div', undefined, 'viz-tabs'); tabs.setAttribute('role', 'group'); v.stage.insertBefore(tabs, v.stage.firstChild);
+    var tabButtons = keys.map(function (k, i) {
+      var b = html('button', PROFILES[k].short); b.type = 'button';
+      b.addEventListener('click', function () { cur = i; prog = 0; hold = 0; auto = false; describe(); draw(); if (ctl.reduced) { prog = 1; draw(); } });
+      tabs.appendChild(b); return b;
+    });
+    if (keys.length < 2) tabs.hidden = true;
+    function value(pts, t) {
+      for (var i = 1; i < pts.length; i++) if (t <= pts[i][0]) { var a = pts[i - 1], b = pts[i]; return b[0] === a[0] ? b[1] : lerp(a[1], b[1], (t - a[0]) / (b[0] - a[0])); }
+      return pts[pts.length - 1][1];
     }
     function draw() {
-      var vertical = host.clientWidth < 600 || steps.length > 5;
-      var lineSets = steps.map(function (s) { return wrap(s, vertical ? 42 : 16); });
-      var heights = lineSets.map(function (ls) { return Math.max(64, ls.length * 22 + 24); });
-      var height = vertical ? heights.reduce(function (a, b) { return a + b + 30; }, 24) : Math.max.apply(null, heights) + 75;
-      v.clear(height);
-      var offset = 20;
-      steps.forEach(function (_, i) {
-        var w = vertical ? 610 : 670 / steps.length - 14, x = vertical ? 55 : 25 + i * 670 / steps.length;
-        var y = vertical ? offset : 30, h = heights[i]; offset += h + 30;
-        if (i) v.add('path', { d: vertical ? 'M360 ' + (y - 26) + 'v18l-5-5m5 5 5-5' : 'M' + (x - 13) + ' ' + (y + 32) + 'h10l-5-5m5 5-5 5', class: 'axis' });
-        v.add('rect', { x: x, y: y, width: w, height: h, rx: 8, class: i === current ? 'primary selected' : 'box' });
-        lineSets[i].forEach(function (line, j) { v.label(x + w / 2, y + 26 + j * 22, line, i === current ? 'primary' : ''); });
+      var pr = PROFILES[keys[cur]], pts = pr.pts, T = pts[pts.length - 1][0];
+      var ys = scale(Math.max.apply(null, pts.map(function (p) { return p[1]; })) * 1.1, true), uMax = ys.max, xsc = scale(T);
+      var H = 250, W = v.canvas(H), left = 50, right = W - 14, top = 26, bottom = H - 46;
+      function X(t) { return left + t / T * (right - left); }
+      function Y(u) { return bottom - u / uMax * (bottom - top); }
+      geo = { X: X, T: T, left: left, right: right, pr: pr };
+      ys.ticks.forEach(function (u) {
+        v.add('line', { x1: left, x2: right, y1: Y(u), y2: Y(u), class: 'grid' });
+        v.label(left - 6, Y(u) + 5, fmt(u, 0), 'muted small', 'end');
       });
-      back.disabled = current === 0; next.disabled = current === steps.length - 1;
-      v.describe('Шаг ' + (current + 1) + '/' + steps.length + ': ' + steps[current]);
+      var shownT = xsc.ticks.filter(function (t) { return t <= T; });
+      if ((T - shownT[shownT.length - 1]) / T > 0.12) shownT.push(T);
+      shownT.forEach(function (t) { v.label(X(t), bottom + 18, fmt(t, 2), 'muted small', t === T ? 'end' : 'middle'); });
+      v.add('path', { d: 'M' + left + ' ' + top + 'V' + bottom + 'H' + right, class: 'axis' });
+      v.label(left + 4, top - 8, 'пользователей одновременно', 'muted small', 'start');
+      v.label((left + right) / 2, H - 8, 'время теста, ' + pr.unit, 'muted small');
+      v.add('polyline', { points: pts.map(function (p) { return X(p[0]) + ',' + Y(p[1]); }).join(' '), class: 'muted ghost' });
+      var cut = prog * T, drawn = pts.filter(function (p) { return p[0] <= cut; }).map(function (p) { return [p[0], p[1]]; });
+      drawn.push([cut, value(pts, cut)]);
+      var line = drawn.map(function (p) { return X(p[0]) + ',' + Y(p[1]); }).join(' ');
+      v.add('polygon', { points: X(0) + ',' + bottom + ' ' + line + ' ' + X(cut) + ',' + bottom, class: 'primary area' });
+      v.add('polyline', { points: line, class: 'primary stroke' });
+      if (W >= 480) pr.notes.forEach(function (n) { if (n[0] <= cut) v.label(X(n[0]), Math.min(bottom - 8, Y(value(pts, n[0])) + 22), n[1], 'small halo'); });
+      if (prog < 1) {
+        v.add('circle', { cx: X(cut), cy: Y(value(pts, cut)), r: 6, class: 'primary fill' });
+        v.label(X(cut) + (X(cut) > right - 90 ? -10 : 10), Y(value(pts, cut)) - 10, Math.round(value(pts, cut)) + ' польз.', 'primary halo', X(cut) > right - 90 ? 'end' : 'start');
+      }
+      if (hoverT !== null) v.add('line', { x1: X(hoverT), x2: X(hoverT), y1: top, y2: bottom, class: 'muted marker' });
+      tabButtons.forEach(function (b, i) { b.setAttribute('aria-pressed', i === cur ? 'true' : 'false'); });
+      v.status.textContent = auto ? 'Профили сменяют друг друга сами. Нажми на название, чтобы остановиться на одном.' : 'Показан профиль ' + pr.short + '.';
     }
-    var back = v.button('← Назад', function () { current = Math.max(0, current - 1); draw(); });
-    var next = v.button('Дальше →', function () { current = Math.min(steps.length - 1, current + 1); draw(); });
-    v.status.setAttribute('aria-live', 'polite'); draw(); new ResizeObserver(draw).observe(host);
+    function describe() {
+      var pr = PROFILES[keys[cur]];
+      v.explain('<b>' + pr.name + '.</b> ' + pr.what + '<br><b>Зачем:</b> ' + pr.why + '<br><b>Что ищем на графиках:</b> ' + pr.look);
+    }
+    function tick(dt) {
+      if (prog < 1) prog = Math.min(1, prog + dt / 4.5);
+      else { hold += dt; if (hold > 2.5) { hold = 0; prog = 0; if (auto) { cur = (cur + 1) % keys.length; describe(); } } }
+      draw();
+    }
+    v.tryIt(keys.length > 1 ? 'нажми на профиль, чтобы рассмотреть его. Наведи на линию: увидишь, сколько пользователей в каждый момент теста.' : 'наведи на линию: увидишь, сколько пользователей в каждый момент теста.');
+    var ctl = animate(v, tick, function () { prog = 1; draw(); });
+    host.addEventListener('pointermove', function (e) {
+      if (!v.svg || !v.svg.contains(e.target)) return;
+      var q = v.local(e); if (!q) return;
+      var t = (q.x - geo.left) / (geo.right - geo.left) * geo.T;
+      if (t < 0 || t > geo.T) { hoverT = null; v.hideTip(); return; }
+      hoverT = t; draw();
+      v.showTip(fmt(t, geo.T < 10 ? 1 : 0) + ' ' + geo.pr.unit + ' от начала: <b>' + Math.round(value(geo.pr.pts, t)) + ' пользователей</b>', e.clientX, e.clientY);
+    });
+    host.addEventListener('pointerleave', function () { hoverT = null; v.hideTip(); draw(); });
+    describe(); draw(); v.onResize(draw);
+  };
+
+  /* ---------- Пул соединений ---------- */
+  widgets.pool = function (host) {
+    var size = Math.round(num(host.dataset.size, 4, 1, 16)), dur = num(host.dataset.duration, 600, 50, 2000);
+    var rate = num(host.dataset.rate, 10, 1, 40), timeout = num(host.dataset.timeout, 1500, 100, 10000);
+    var SPEED = 0.5; // показ замедлен вдвое, чтобы успеть рассмотреть
+    var v = setup(host, host.dataset.title || 'Пул соединений с базой');
+    var clock, acc, waiting, slots, items, oks, errs, lastText = -1, geo = {};
+    function reset() { clock = 0; acc = 0; waiting = []; slots = []; items = []; oks = []; errs = []; }
+    function step(dtMs) {
+      clock += dtMs; acc += rate * dtMs / 1000;
+      while (acc >= 1) { acc--; var it = { born: clock, state: 'wait' }; waiting.push(it); items.push(it); }
+      for (var i = 0; i < slots.length; i++) { var s = slots[i]; if (s && s.end <= clock) { s.state = 'ok'; s.left = clock; oks.push(clock); slots[i] = null; } }
+      waiting = waiting.filter(function (w) { if (clock - w.born > timeout) { w.state = 'err'; w.left = clock; errs.push(clock); return false; } return true; });
+      for (var j = 0; j < size; j++) if (!slots[j] && waiting.length) { var c = waiting.shift(); c.state = 'slot'; c.slot = j; c.start = clock; c.end = clock + dur * (0.7 + 0.6 * Math.random()); slots[j] = c; }
+      oks = oks.filter(function (x) { return clock - x <= 10000; }); errs = errs.filter(function (x) { return clock - x <= 10000; });
+      items = items.filter(function (x) { return x.state === 'wait' || x.state === 'slot' || clock - x.left < 700; });
+    }
+    function run(msTotal) { while (msTotal > 0) { var d = Math.min(20, msTotal); step(d); msTotal -= d; } }
+    function draw(dt) {
+      var W0 = Math.max(280, Math.round(v.stage.clientWidth || v.width || 640)), narrow = W0 < 560;
+      var cell = 46, gapC = 8, binW = narrow ? 0 : 150;
+      var poolX = narrow ? 10 : Math.round(W0 * 0.42), poolW = (narrow ? W0 - 20 : W0 - poolX - binW - 20);
+      var cols = Math.max(1, Math.min(size, Math.floor((poolW + gapC) / (cell + gapC)))), rows = Math.ceil(size / cols);
+      var poolTop = 40, poolH = rows * (cell + gapC) - gapC;
+      var qY = narrow ? poolTop + poolH + 60 : poolTop + poolH / 2, binTop = narrow ? qY + 46 : poolTop;
+      var H = narrow ? binTop + 110 : Math.max(poolTop + poolH + 40, 190);
+      var W = v.canvas(H);
+      geo = { items: items };
+      v.label(poolX, 24, 'Пул: занято ' + slots.filter(Boolean).length + ' из ' + size, '', 'start');
+      for (var i = 0; i < size; i++) {
+        var x = poolX + (i % cols) * (cell + gapC), y = poolTop + Math.floor(i / cols) * (cell + gapC), s = slots[i];
+        v.add('rect', { x: x, y: y, width: cell, height: cell, rx: 8, class: s ? 'box busy' : 'box' });
+        if (s) v.add('rect', { x: x + 5, y: y + cell - 8, width: (cell - 10) * Math.min(1, (clock - s.start) / (s.end - s.start)), height: 3, class: 'ok fill' });
+        s && (s.tx = x + cell / 2, s.ty = y + cell / 2 - 3);
+      }
+      var qRight = narrow ? W - 20 : poolX - 24, qLeft = 14, gap = 20, cap = Math.max(1, Math.floor((qRight - qLeft) / gap) + 1);
+      v.label(narrow ? 10 : qLeft, narrow ? qY - 22 : 24, 'Ждут свободное соединение: ' + waiting.length, waiting.length ? 'warning' : 'muted', 'start');
+      var okX = narrow ? 34 : W - binW + 10, errX = okX, okY = narrow ? binTop + 22 : poolTop + 24, errY = narrow ? binTop + 70 : poolTop + 90;
+      v.label(okX, okY, '✓ ответили: ' + oks.length, 'ok', 'start');
+      v.label(errX, errY, '✗ ошибки: ' + errs.length, errs.length ? 'danger' : 'muted', 'start');
+      v.label(okX, okY + 18, 'за 10 секунд', 'muted small', 'start');
+      v.label(errX, errY + 18, 'ждали дольше ' + ms(timeout), 'muted small', 'start');
+      var k = Math.min(1, (dt || 1) * 10);
+      items.forEach(function (it) {
+        var tx, ty, j;
+        if (it.state === 'wait') { j = waiting.indexOf(it); if (j >= cap) { it.x = null; return; } tx = narrow ? qRight - j * gap : qRight - j * gap; ty = qY; }
+        else if (it.state === 'slot') { tx = it.tx; ty = it.ty; }
+        else if (it.state === 'ok') { tx = okX - 14; ty = okY - 5; }
+        else { tx = errX - 14; ty = errY - 5; }
+        if (it.x == null) { it.x = it.state === 'wait' ? 0 : tx; it.y = ty; }
+        it.x = lerp(it.x, tx, k); it.y = lerp(it.y, ty, k);
+        var waited = (it.state === 'wait' ? clock : it.start || it.left) - it.born;
+        var cls = it.state === 'err' ? 'danger' : it.state === 'slot' || it.state === 'ok' ? 'response' : waited < timeout / 2 ? 'ok' : 'warning';
+        v.add('circle', { cx: it.x, cy: it.y, r: 7, class: cls + ' fill', opacity: it.state === 'ok' || it.state === 'err' ? Math.max(0, 1 - (clock - it.left) / 700) : 1 });
+      });
+      if (waiting.length > cap) v.label(qLeft, qY - 14, '+ ещё ' + (waiting.length - cap), 'warning', 'start');
+      v.status.textContent = 'Показ замедлен в ' + (1 / SPEED) + ' раза. Синий кружок: запрос работает с базой через соединение.';
+      if (Math.floor(clock / 1000) !== lastText) { lastText = Math.floor(clock / 1000); describe(); }
+    }
+    function describe() {
+      var need = rate * dur / 1000, level, cls;
+      if (need < size * 0.7) { cls = 'ok'; level = 'Хватает с запасом: запросы почти не ждут.'; }
+      else if (need < size) { cls = 'warning'; level = 'Впритык: когда запросы приходят пачкой, кому-то приходится ждать свободного соединения.'; }
+      else { cls = 'danger'; level = 'Не хватает: очередь растёт, и кто ждёт дольше ' + ms(timeout) + ', получает ошибку (таймаут). Сама база при этом может быть почти свободна, просто к ней нет «дверей».'; }
+      v.explain('<p class="viz-level ' + cls + '"><i></i>' + level + '</p>' +
+        'Пул это несколько заранее открытых соединений с базой, которые запросы берут по очереди и возвращают. Приходит <b>' + fmt(rate, 0) + ' запросов в секунду</b>, каждый держит соединение около <b>' + ms(dur) + '</b>. Значит, одновременно нужно в среднем <b>' + fmt(need) + ' ' + plural(need, 'соединение', 'соединения', 'соединений') + '</b>, а в пуле <b>' + size + '</b>.<br>' +
+        'Сейчас занято ' + slots.filter(Boolean).length + ' из ' + size + ', ждут ' + waiting.length + ', ошибок за 10 секунд: ' + errs.length + '.');
+    }
+    function still() { reset(); run(10000); items.forEach(function (it) { it.x = null; }); draw(1); describe(); }
+    reset(); run(4000); items.forEach(function (it) { it.x = null; });
+    v.slider('Размер пула', 1, 16, 1, size, function (n) {
+      slots.slice(n).forEach(function (s) { if (s) { s.state = 'wait'; waiting.unshift(s); } });
+      slots.length = Math.min(slots.length, n); size = n; describe(); if (ctl.reduced) still(); else draw(0);
+    }, '');
+    v.slider('Запрос держит соединение', 50, 2000, 50, dur, function (n) { dur = n; describe(); if (ctl.reduced) still(); }, 'мс');
+    v.slider('Запросов в секунду', 1, 40, 1, rate, function (n) { rate = n; describe(); if (ctl.reduced) still(); }, '');
+    v.tryIt('уменьши пул до 3 и смотри, как ожидающие желтеют и уходят в ошибки. Потом верни пул и вместо этого ускорь запрос до 300 мс: это тоже лечит.');
+    var ctl = animate(v, function (dt) { run(dt * 1000 * SPEED); draw(dt); }, still);
+    describe(); draw(1); v.onResize(function () { draw(0); });
+  };
+
+  /* ---------- График по данным ---------- */
+  widgets.chart = function (host) {
+    var series = json(host.dataset.series, []), xs = list(host.dataset.x, ''), type = host.dataset.type || 'line';
+    if (!Array.isArray(series) || !series.length || !xs.length || xs.length > 200 || series.length > 6 || !series.every(function (s) {
+      return s && typeof s.name === 'string' && Array.isArray(s.values) && s.values.length === xs.length && s.values.every(function (n) { return typeof n === 'number' && Number.isFinite(n); });
+    }) || ['line', 'bar'].indexOf(type) < 0) throw new Error('Проверь data-series, data-x и data-type: нужны равные длины и конечные числа.');
+    var unit = host.dataset.unit || '', xLabel = host.dataset.xLabel || '', yLabel = host.dataset.yLabel || '';
+    var v = setup(host, host.dataset.title || 'Результаты теста');
+    var hidden = series.map(function () { return false; }), focus = -1, sel = null, geo = {};
+    var legend = html('div', undefined, 'viz-legend'); v.stage.insertBefore(legend, v.stage.firstChild);
+    series.forEach(function (s, i) {
+      var b = html('button', undefined, 'viz-chip ' + palette[i % palette.length]); b.type = 'button';
+      b.appendChild(html('i')); b.appendChild(document.createTextNode(s.name)); b.setAttribute('aria-pressed', 'true');
+      b.title = 'Нажми, чтобы скрыть или показать';
+      b.addEventListener('click', function () {
+        if (!hidden[i] && hidden.filter(function (h) { return !h; }).length === 1) return;
+        hidden[i] = !hidden[i]; b.setAttribute('aria-pressed', hidden[i] ? 'false' : 'true'); draw();
+      });
+      b.addEventListener('pointerenter', function () { focus = i; draw(); });
+      b.addEventListener('pointerleave', function () { focus = -1; draw(); });
+      legend.appendChild(b);
+    });
+    function u(s) { return s.unit != null ? s.unit : unit; }
+    function draw() {
+      var H = 300, W = v.canvas(H), left = 56, right = W - 16, top = 28, bottom = H - 52;
+      var shown = series.filter(function (_, i) { return !hidden[i]; }), vals = shown.reduce(function (a, s) { return a.concat(s.values); }, []);
+      var sc = scale(Math.max(0, Math.max.apply(null, vals))), high = sc.max, low = Math.min(0, Math.min.apply(null, vals));
+      if (low < 0) low = -niceMax(-low);
+      var ticks = low < 0 ? [0, 1, 2, 3, 4].map(function (g) { return low + g / 4 * (high - low); }) : sc.ticks;
+      var numericX = type === 'line' && xs.length > 1 && xs.every(function (n) { return n.trim() !== '' && Number.isFinite(Number(n)); });
+      var xv = xs.map(Number), xMin = Math.min.apply(null, xv), xMax = Math.max.apply(null, xv);
+      if (xMin === xMax) numericX = false;
+      function X(i) { return numericX ? left + (xv[i] - xMin) / (xMax - xMin) * (right - left) : left + (i + 0.5) * (right - left) / xs.length; }
+      function Y(n) { return bottom - (n - low) / (high - low) * (bottom - top); }
+      geo = { X: X, Y: Y };
+      if (sel !== null && type === 'bar') { var band = (right - left) / xs.length; v.add('rect', { x: X(sel) - band / 2, y: top, width: band, height: bottom - top, class: 'band' }); }
+      ticks.forEach(function (val) {
+        v.add('line', { x1: left, x2: right, y1: Y(val), y2: Y(val), class: 'grid' });
+        v.label(left - 6, Y(val) + 5, fmt(val, 2), 'muted small', 'end');
+      });
+      v.add('path', { d: 'M' + left + ' ' + top + 'V' + bottom + 'H' + right, class: 'axis' });
+      v.add('line', { x1: left, x2: right, y1: Y(0), y2: Y(0), class: 'axis' });
+      v.label(left + 4, top - 10, yLabel + (unit ? ', ' + unit : ''), 'muted small', 'start');
+      v.label((left + right) / 2, H - 8, xLabel, 'muted small');
+      var every = Math.max(1, Math.ceil(xs.length / Math.max(2, Math.floor((right - left) / 60))));
+      xs.forEach(function (n, i) { if (i % every === 0 || i === xs.length - 1) v.label(X(i), bottom + 20, n, 'muted small'); });
+      if (sel !== null && type === 'line') v.add('line', { x1: X(sel), x2: X(sel), y1: top, y2: bottom, class: 'muted marker' });
+      var visible = series.map(function (s, j) { return j; }).filter(function (j) { return !hidden[j]; });
+      visible.forEach(function (j, vi) {
+        var s = series[j], cls = palette[j % palette.length] + (focus >= 0 && focus !== j ? ' dim' : '');
+        if (type === 'line') {
+          v.add('polyline', { points: s.values.map(function (n, i) { return X(i) + ',' + Y(n); }).join(' '), class: cls + ' stroke' });
+          s.values.forEach(function (n, i) { v.add('circle', { cx: X(i), cy: Y(n), r: i === sel ? 7 : 4, class: cls + ' fill' }); });
+        } else {
+          var w = (right - left) / xs.length * 0.75 / visible.length;
+          s.values.forEach(function (n, i) { v.add('rect', { x: X(i) - w * visible.length / 2 + vi * w, y: Math.min(Y(n), Y(0)), width: Math.max(1, w - 2), height: Math.max(1, Math.abs(Y(n) - Y(0))), rx: 3, class: cls + ' fill' }); });
+        }
+      });
+    }
+    function tipFor(i) {
+      return '<b>' + esc(xLabel ? xLabel + ': ' : '') + esc(xs[i]) + '</b>' + series.map(function (s, j) {
+        return hidden[j] ? '' : '<br><span class="viz-sw ' + palette[j % palette.length] + '"></span>' + esc(s.name) + ': <b>' + fmt(s.values[i], Math.abs(s.values[i]) < 10 ? 2 : 1) + (u(s) ? ' ' + esc(u(s)) : '') + '</b>';
+      }).join('');
+    }
+    function pick(e) {
+      var q = v.local(e); if (!q) return;
+      sel = xs.reduce(function (best, _, i) { return Math.abs(geo.X(i) - q.x) < Math.abs(geo.X(best) - q.x) ? i : best; }, 0);
+      draw(); v.showTip(tipFor(sel), e.clientX, e.clientY);
+    }
+    var svgReady = function () {
+      v.svg.setAttribute('tabindex', '0');
+      v.svg.addEventListener('pointermove', pick); v.svg.addEventListener('pointerdown', pick);
+      v.svg.addEventListener('pointerleave', function () { sel = null; v.hideTip(); draw(); });
+      v.svg.addEventListener('blur', function () { sel = null; v.hideTip(); draw(); });
+      v.svg.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault(); e.stopPropagation(); sel = Math.max(0, Math.min(xs.length - 1, (sel === null ? 0 : sel) + (e.key === 'ArrowRight' ? 1 : -1))); draw();
+        var r = v.svg.getBoundingClientRect(), k = r.width / v.width; v.showTip(tipFor(sel), r.left + geo.X(sel) * k, r.top + 40);
+      });
+    };
+    draw(); svgReady();
+    if (host.dataset.explain) v.explain(esc(host.dataset.explain));
+    v.tryIt('наведи на график или коснись его: появятся точные значения. Нажми на название в легенде, чтобы скрыть или вернуть линию.');
+    // Таблица даёт доступ к каждой точке без мыши и без чтения геометрии SVG.
+    var details = html('details'), summary = html('summary', 'Данные графика таблицей'); details.appendChild(summary);
+    var table = html('table'), head = html('tr'); head.appendChild(html('th', xLabel || 'X'));
+    series.forEach(function (s) { head.appendChild(html('th', s.name + (u(s) ? ', ' + u(s) : ''))); });
+    var thead = html('thead'); thead.appendChild(head); table.appendChild(thead); var tbody = html('tbody');
+    xs.forEach(function (n, i) { var row = html('tr'); row.appendChild(html('th', n)); series.forEach(function (s) { row.appendChild(html('td', fmt(s.values[i], 2))); }); tbody.appendChild(row); });
+    table.appendChild(tbody); details.appendChild(table); host.appendChild(details);
+    v.onResize(draw);
+  };
+
+  /* ---------- Алгоритм по шагам ---------- */
+  widgets.flow = function (host) {
+    var raw = json(host.dataset.steps, null);
+    if (!Array.isArray(raw) || !raw.length || raw.length > 20 || !raw.every(function (s) { return typeof s === 'string' || (s && typeof s.title === 'string'); }))
+      throw new Error('data-steps: массив из 1–20 строк или объектов {"title": "...", "text": "..."}.');
+    var steps = raw.map(function (s) { return typeof s === 'string' ? { title: s, text: '' } : s; });
+    var v = setup(host, host.dataset.title || 'Алгоритм по шагам');
+    var cur = 0, t = 0, PER = 5;
+    function rich(s) { return esc(s).replace(/`([^`]+)`/g, '<code>$1</code>'); }
+    var ol = html('ol', undefined, 'flow-list'); v.stage.appendChild(ol);
+    var cards = steps.map(function (s, i) {
+      var li = html('li', undefined, 'flow-step'), b = html('button'); b.type = 'button';
+      b.appendChild(html('span', String(i + 1), 'flow-num'));
+      var title = html('span', undefined, 'flow-title'); title.innerHTML = rich(s.title); b.appendChild(title);
+      var timer = html('span', undefined, 'flow-timer'); b.appendChild(timer);
+      b.addEventListener('click', function () { cur = i; t = 0; ctl.pause(); render(); });
+      li.appendChild(b); ol.appendChild(li); return { li: li, timer: timer, button: b };
+    });
+    function render() {
+      cards.forEach(function (c, i) {
+        c.li.classList.toggle('current', i === cur); c.li.classList.toggle('passed', i < cur);
+        c.button.setAttribute('aria-current', i === cur ? 'step' : 'false'); if (i !== cur) c.timer.style.width = '0';
+      });
+      back.disabled = cur === 0; next.disabled = cur === steps.length - 1;
+      v.explain('<b>Шаг ' + (cur + 1) + ' из ' + steps.length + ': ' + rich(steps[cur].title) + '</b>' + (steps[cur].text ? '<br>' + rich(steps[cur].text) : ''));
+    }
+    function layout() { ol.classList.toggle('flow-row', steps.length <= 4 && v.stage.clientWidth >= 640); }
+    var ctl = animate(v, function (dt) {
+      t += dt; var limit = cur === steps.length - 1 ? PER + 2 : PER;
+      cards[cur].timer.style.width = Math.min(100, t / limit * 100) + '%';
+      if (t >= limit) { t = 0; cur = (cur + 1) % steps.length; render(); }
+    }, function () { cards.forEach(function (c) { c.timer.style.width = '0'; }); });
+    var back = v.button('← Назад', function () { ctl.pause(); cur = Math.max(0, cur - 1); t = 0; render(); });
+    var next = v.button('Дальше →', function () { ctl.pause(); cur = Math.min(steps.length - 1, cur + 1); t = 0; render(); });
+    v.status.textContent = ctl.reduced ? 'Нажми на шаг или «Дальше», чтобы прочитать его.' : 'Шаги переключаются сами. Нажми на любой шаг, чтобы остановиться и прочитать его.';
+    render(); layout(); v.onResize(layout);
   };
 
   document.querySelectorAll('.viz[data-viz]').forEach(function (host) {
