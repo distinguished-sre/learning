@@ -26,7 +26,7 @@ cd project/shop && cp .env.example .env && docker compose --profile monitoring u
 
 ## Структура курса
 
-- `_data/course.yml`: **единственный источник порядка курса** (13 тем, 52 урока): `topics[].{n, dir, title, subtitle, time, layer, project, lessons[].{id, slug, title, time}}`. Время темы равно сумме уроков. Новый урок без записи здесь недостижим.
+- `_data/course.yml`: **единственный источник порядка курса** (13 тем, 56 уроков): `topics[].{n, dir, title, subtitle, time, layer, project, lessons[].{id, slug, title, time}}`. Время темы равно сумме уроков. Новый урок без записи здесь недостижим.
 - `<NN-тема>/index.md`: страница темы (`layout: topic`). `<NN-тема>/<NN-slug>.md`: урок, front matter `layout: lesson`, `title`, `topic` (число), `lesson` ("5.3"), `time`.
 - `course/index.md`: главная курса (`layout: home`, тексты в `_layouts/home.html`). `schedule.md`: расписание по неделям.
 - Ссылки только относительные на `.md`: в своей теме `03-dns.md`, в чужой `../05-docker/03-compose-shop.md`.
