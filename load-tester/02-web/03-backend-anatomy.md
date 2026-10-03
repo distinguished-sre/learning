@@ -229,10 +229,10 @@ cd ~/load-tester/project/shop
 
 ```text
 SERVICE    STATUS                    PORTS
-payment    Up 20 minutes (healthy)   0.0.0.0:8001->8001/tcp
-postgres   Up 20 minutes (healthy)   0.0.0.0:5432->5432/tcp
-redis      Up 20 minutes (healthy)   0.0.0.0:6379->6379/tcp
-shop       Up 20 minutes (healthy)   0.0.0.0:8000->8000/tcp
+payment    Up 20 minutes (healthy)   127.0.0.1:8001->8001/tcp
+postgres   Up 20 minutes (healthy)   5432/tcp
+redis      Up 20 minutes (healthy)   6379/tcp
+shop       Up 20 minutes (healthy)   127.0.0.1:8000->8000/tcp
 ```
 
 Разбор: `--format` задаёт, какие колонки показать, {% raw %}`{{.Service}}`{% endraw %} подставляет имя сервиса (это синтаксис Docker, а не твоей оболочки). Четыре программы, каждая в своём контейнере и каждая со своим портом.

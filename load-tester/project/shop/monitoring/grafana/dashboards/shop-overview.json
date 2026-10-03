@@ -121,8 +121,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.5, sum by (le, route) (rate(http_request_duration_seconds_bucket[$__rate_interval])))",
-          "legendFormat": "{{route}}"
+          "expr": "histogram_quantile(0.5, sum by (le, method, route) (rate(http_request_duration_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{method}} {{route}}"
         }
       ]
     },
@@ -158,8 +158,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket[$__rate_interval])))",
-          "legendFormat": "{{route}}"
+          "expr": "histogram_quantile(0.95, sum by (le, method, route) (rate(http_request_duration_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{method}} {{route}}"
         }
       ]
     },
@@ -195,8 +195,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le, route) (rate(http_request_duration_seconds_bucket[$__rate_interval])))",
-          "legendFormat": "{{route}}"
+          "expr": "histogram_quantile(0.99, sum by (le, method, route) (rate(http_request_duration_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{method}} {{route}}"
         }
       ]
     },

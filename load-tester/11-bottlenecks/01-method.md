@@ -349,10 +349,14 @@ PAYMENT_RETRIES=3
 ```javascript
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import exec from 'k6/execution';
 
 const BASE = (__ENV.BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
 const SCENARIO = __ENV.SCENARIO || 'mix';
-const USERS = Number(__ENV.USERS || 50);
+const MAX_VUS = 400;
+// Каждому одновременно работающему VU нужен свой аккаунт (у аккаунта одна корзина), поэтому берём не меньше MAX_VUS.
+const USERS = Number(__ENV.USERS || MAX_VUS);
+const LOGIN_USERS = 50; // сценарий login входит этими 50 аккаунтами: их хеши прогревает урок 11.2
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 export const options = {
@@ -363,12 +367,15 @@ export const options = {
       timeUnit: '1s',
       duration: __ENV.DURATION || '60s',
       preAllocatedVUs: 50,
-      maxVUs: 400,
+      maxVUs: MAX_VUS,
     },
   },
+  setupTimeout: '600s', // вход через bcrypt медленный, 400 входов подряд не уложатся в стандартные 60 с
   summaryTrendStats: ['avg', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
   thresholds: {
     http_req_failed: ['rate<0.01'],
+    // Хоть одна пропущенная итерация значит, что k6 не смог дать заказанный темп и нагрузка ниже заявленной.
+    dropped_iterations: ['count==0'],
     // Условия p(50)>=0 и p(95)>=0 всегда верны: пороги нужны, чтобы k6 напечатал p50 и p95 по каждому маршруту.
     'http_req_duration{name:/api/login}': ['p(50)>=0', 'p(95)>=0'],
     'http_req_duration{name:/api/products}': ['p(50)>=0', 'p(95)>=0'],
@@ -383,21 +390,23 @@ function userEmail(n) {
   return `user${String(n).padStart(4, '0')}@shop.lab`;
 }
 
-// Токены 50 пользователей берём один раз до начала теста: вход дорогой (bcrypt), его не надо мерить в каждом сценарии.
+// Токены берём один раз до начала теста: вход дорогой (bcrypt), его не надо мерить в каждом сценарии.
+// Если хоть один вход не удался, останавливаемся: иначе у части VU не будет своего аккаунта.
 export function setup() {
   if (SCENARIO === 'login' || SCENARIO === 'product') return { tokens: [] };
   const tokens = [];
   for (let n = 1; n <= USERS; n++) {
     const res = http.post(`${BASE}/api/login`,
       JSON.stringify({ email: userEmail(n), password: 'password' }), { headers: JSON_HEADERS, timeout: '60s' });
-    if (res.status === 200) tokens.push(res.json('token'));
+    if (res.status !== 200) throw new Error(`вход user${n} не удался (код ${res.status}): стенд поднят, пользователи созданы?`);
+    tokens.push(res.json('token'));
   }
-  if (tokens.length === 0) throw new Error('не удалось войти ни одним пользователем: стенд поднят?');
+  if (tokens.length < MAX_VUS) throw new Error(`аккаунтов ${tokens.length}, а VU до ${MAX_VUS}: два VU делили бы одну корзину; задай USERS не меньше ${MAX_VUS}`);
   return { tokens };
 }
 
 function login() {
-  const n = 1 + Math.floor(Math.random() * USERS);
+  const n = 1 + Math.floor(Math.random() * LOGIN_USERS);
   const res = http.post(`${BASE}/api/login`,
     JSON.stringify({ email: userEmail(n), password: 'password' }),
     { headers: JSON_HEADERS, tags: { name: '/api/login' } });
@@ -430,7 +439,10 @@ function checkout(headers) {
 export default function (data) {
   if (SCENARIO === 'login') return login();
   if (SCENARIO === 'product') return product();
-  const token = data.tokens[Math.floor(Math.random() * data.tokens.length)];
+  // idInTest у каждого VU свой и начинается с 1: VU №k всегда работает под аккаунтом №k, корзины не пересекаются.
+  const idx = exec.vu.idInTest - 1;
+  if (idx >= data.tokens.length) exec.test.abort(`для VU ${exec.vu.idInTest} нет аккаунта`);
+  const token = data.tokens[idx];
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   if (SCENARIO === 'orders') return orders(headers);
   if (SCENARIO === 'checkout') return checkout(headers);
@@ -446,7 +458,8 @@ export default function (data) {
 Что здесь нового по сравнению с `shop.js` из урока 10.1:
 
 - **`SCENARIO`** выбирает, что делает итерация. `login` только логинится, `product` читает карточку, `orders` только список заказов, `checkout` корзина и заказ, `mix` весь визит.
-- **`setup()`** выполняется один раз до теста и входит 50 пользователями. Токены хранятся в `data.tokens`, и каждая итерация берёт случайный. Так вход (дорогая операция) не попадает в замеры других сценариев.
+- **`setup()`** выполняется один раз до теста и входит 400 пользователями (это занимает минуты: вход дорогой). Токены хранятся в `data.tokens`, и VU с номером `exec.vu.idInTest` берёт токен с тем же номером. Так вход не попадает в замеры других сценариев, а два одновременно работающих VU никогда не делят корзину. Если вход хоть одного пользователя не удался или аккаунтов меньше, чем VU, тест останавливается (`throw` в `setup()` или `exec.test.abort`) вместо тихо неверных цифр.
+- **`dropped_iterations: ['count==0']`** делает пропуск итераций нарушением порога (код выхода 99): в блоке `THRESHOLDS` увидишь красный крестик, если k6 не дал заказанный темп.
 - **`tags: { name: ... }`** дают каждому маршруту своё имя (иначе k6 считал бы `/api/products/1` и `/api/products/2` разными метками, как объясняли в уроке 10.1).
 - **Пороги на `p(50)>=0` и `p(95)>=0`** это приём: условие всегда выполняется, но заставляет k6 напечатать p50 и p95 для каждого маршрута отдельно в блоке `THRESHOLDS`.
 - **`productID()`** берёт 80% обращений из 200 горячих товаров, как ведут себя настоящие покупатели. Это пригодится в уроке 11.5, когда будем включать кэш.
@@ -486,17 +499,25 @@ chmod +x ~/perf-lab/11-bottlenecks/set-env.sh
 cat > ~/perf-lab/11-bottlenecks/run.sh <<'EOF'
 #!/usr/bin/env bash
 # run.sh <метка> [KEY=VALUE ...]: прогон bn.js, весь вывод в ~/perf-lab/results/11-<метка>.txt, на экран главное
-set -euo pipefail
+# Код выхода: 0 (всё в порядке) или 99 (пороги нарушены: ожидаемый результат при перегрузке) дают 0, всё остальное это авария.
+set -uo pipefail
 label=$1; shift
 args=(); for kv in "$@"; do args+=(-e "$kv"); done
 mkdir -p ~/perf-lab/results
-k6 run "${args[@]}" ~/perf-lab/11-bottlenecks/bn.js 2>&1 | tee ~/perf-lab/results/11-"$label".txt \
-  | grep -E 'name:|p\(50\)|p\(95\)|http_req_failed|dropped_iterations|^ +iterations' || true
+out=~/perf-lab/results/11-"$label".txt
+k6 run "${args[@]}" ~/perf-lab/11-bottlenecks/bn.js 2>&1 | tee "$out" \
+  | grep -E 'name:|p\(50\)|p\(95\)|http_req_failed|dropped_iterations|^ +iterations'
+code=${PIPESTATUS[0]}
+if [ "$code" -eq 99 ]; then
+  echo "run.sh: пороги нарушены (код 99), см. $out"; exit 0
+elif [ "$code" -ne 0 ]; then
+  echo "run.sh: АВАРИЯ k6, код $code. Последние строки вывода:" >&2; tail -n 15 "$out" >&2; exit "$code"
+fi
 EOF
 chmod +x ~/perf-lab/11-bottlenecks/run.sh
 ```
 
-Разбор: `shift` убирает первый аргумент (метку), остальные пары `KEY=VALUE` превращаются в флаги `-e KEY=VALUE` для k6. `tee` сохраняет **весь** вывод в файл, а `grep -E` печатает на экран только нужные строки; `|| true` нужен, чтобы пустой `grep` не обрывал скрипт. Если порог `http_req_failed` нарушен (при перегрузке), k6 завершится с кодом 99, но `tee`, `grep` и `|| true` это переживут.
+Разбор: `shift` убирает первый аргумент (метку), остальные пары `KEY=VALUE` превращаются в флаги `-e KEY=VALUE` для k6. `tee` сохраняет **весь** вывод в файл, а `grep -E` печатает на экран только нужные строки. Код выхода k6 в конвейере из трёх команд теряется, поэтому его берёт `${PIPESTATUS[0]}` (статус первой команды конвейера). Код 99 значит «тест дошёл до конца, но порог нарушен»: при перегрузке это ожидаемый результат, скрипт завершается с 0. Любой другой ненулевой код (скрипт не открылся, `setup()` упал, k6 не найден) это авария: скрипт печатает последние строки вывода и возвращает тот же код. Фильтр `grep` иначе спрятал бы текст ошибки.
 
 ### 4. Базовая линия: четыре нагрузки
 
@@ -534,12 +555,15 @@ for r in 10 20 30 40; do ./run.sh base-$r SCENARIO=mix RATE=$r DURATION=60s; sle
 
     http_req_failed
     ✓ 'rate<0.01' rate=0.37%
+
+    dropped_iterations
+    ✗ 'count==0' count=128
   ...
      dropped_iterations.......: 128    2.1/s
      iterations...............: 1672   27.8/s
 ```
 
-**Как читать вывод:** блок `THRESHOLDS` печатает по строке p50 и p95 каждого маршрута (это наш трюк с условиями «всегда верно»). Сначала смотри самый длинный: здесь `GET /api/orders` с p95 в 3,1 с. `http_req_failed` 0,37% значит, что около одного запроса из 270 закончился ошибкой (это те, что ждали соединение БД дольше пяти секунд). `iterations 27.8/s` показывает, что сервер выполнил 27,8 визита в секунду, хотя мы просили 30, и `dropped_iterations 128` это визиты, которые k6 не смог начать, потому что все виртуальные пользователи были заняты ожиданием. Эта разница между просимой и фактической нагрузкой и есть признак предела.
+**Как читать вывод:** блок `THRESHOLDS` печатает по строке p50 и p95 каждого маршрута (это наш трюк с условиями «всегда верно»). Сначала смотри самый длинный: здесь `GET /api/orders` с p95 в 3,1 с. `http_req_failed` 0,37% значит, что около одного запроса из 270 закончился ошибкой (это те, что ждали соединение БД дольше пяти секунд). `iterations 27.8/s` показывает, что сервер выполнил 27,8 визита в секунду, хотя мы просили 30, и `dropped_iterations 128` это визиты, которые k6 не смог начать, потому что все виртуальные пользователи были заняты ожиданием. Поэтому порог `count==0` красный (✗) и k6 завершится с кодом 99, а `run.sh` напишет «пороги нарушены»: на пределе это ожидаемо, это не авария. Эта разница между просимой и фактической нагрузкой и есть признак предела.
 
 Сведи четыре прогона в таблицу. У тебя числа будут другими (процессор ноутбука иной), но **форма** должна совпасть: почти плоско до 20 и обрыв после 30. Ориентир:
 

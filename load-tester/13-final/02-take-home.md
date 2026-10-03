@@ -359,32 +359,49 @@ locust -f scripts/locustfile.py --host http://localhost:8000 --headless -u 2 -r 
 cat > scripts/run_steps.sh <<'EOF'
 #!/usr/bin/env bash
 # Ступени по числу пользователей: 3, 6, 12, 18, 24 (примерно 5, 9, 19, 28, 37 RPS)
-set -euo pipefail
+# Без set -e: Locust завершается кодом 1, если на ступени были ошибки, и это не повод бросать тест.
+set -u
 cd "$(dirname "$0")/.."
+mkdir -p results
 for users in 3 6 12 18 24; do
   echo "=== ступень: $users пользователей, $(date +%T)"
   locust -f scripts/locustfile.py --host http://localhost:8000 --headless \
-         -u "$users" -r 3 -t 3m --only-summary --csv "results/step_$users" > /dev/null
+         -u "$users" -r 3 -t 3m --only-summary --csv "results/step_$users" > "results/step_$users.log" 2>&1
+  code=$?
+  echo "$code" > "results/step_$users.exit"
+  echo "    код выхода Locust: $code"
 done
 EOF
 chmod +x scripts/run_steps.sh
 cat > scripts/summary.py <<'EOF'
 import csv
 import glob
+import os
 import re
 
-print(f"{'польз.':>6} {'RPS':>6} {'p95, мс':>8} {'ошибки, %':>9}")
+# Критерии из задания: p95, мс, по каждому целевому запросу
+LIMITS = {"/api/products": 300, "/api/orders": 1000}
+MAX_ERRORS = 1.0  # процентов, по всей смеси
+
+print(f"{'польз.':>6} {'RPS':>6} {'ошибки, %':>9} {'p95 каталога':>13} {'p95 заказа':>11}  вердикт")
 for path in sorted(glob.glob("results/step_*_stats.csv"), key=lambda p: int(re.search(r"step_(\d+)_", p).group(1))):
     users = int(re.search(r"step_(\d+)_", path).group(1))
-    for row in csv.DictReader(open(path)):
-        if row["Name"] == "Aggregated":
-            total = int(row["Request Count"])
-            fails = int(row["Failure Count"])
-            print(f"{users:6d} {float(row['Requests/s']):6.1f} {float(row['95%']):8.0f} {100 * fails / max(total, 1):9.1f}")
+    rows = {row["Name"]: row for row in csv.DictReader(open(path))}
+    total = rows["Aggregated"]
+    errors = 100 * int(total["Failure Count"]) / max(int(total["Request Count"]), 1)
+    p95 = {name: float(rows[name]["95%"]) for name in LIMITS if name in rows}
+    bad = [name for name, limit in LIMITS.items() if p95.get(name, 0) >= limit]
+    if errors >= MAX_ERRORS:
+        bad.append("ошибки")
+    exit_file = f"results/step_{users}.exit"
+    code = open(exit_file).read().strip() if os.path.exists(exit_file) else "?"
+    verdict = "ок" if not bad else "НАРУШЕНО: " + ", ".join(bad)
+    print(f"{users:6d} {float(total['Requests/s']):6.1f} {errors:9.1f} {p95.get('/api/products', 0):13.0f} "
+          f"{p95.get('/api/orders', 0):11.0f}  {verdict} (код {code})")
 EOF
 ```
 
-Скрипт `run_steps.sh` запускает Locust пять раз подряд по 3 минуты и сохраняет `results/step_<N>_stats.csv`. `summary.py` собирает из этих файлов строку «Aggregated» каждой ступени. Запусти ступени в фоне и **наблюдай дашборд** (это и есть главная часть):
+Скрипт `run_steps.sh` запускает Locust пять раз подряд по 3 минуты и сохраняет `results/step_<N>_stats.csv`. `summary.py` берёт из этих файлов строку «Aggregated» (RPS и долю ошибок) и p95 двух целевых запросов, каталога и заказа, и сверяет их с критериями из задания. Ступень с ошибками не обрывает прогон: `run_steps.sh` не использует `set -e` (иначе первый код выхода 1 остановил бы остальные ступени) и записывает код каждой ступени в `results/step_<N>.exit`, а вывод Locust в `step_<N>.log`. Запусти ступени в фоне и **наблюдай дашборд** (это и есть главная часть):
 
 ```bash
 ./scripts/run_steps.sh
@@ -397,15 +414,15 @@ python3 scripts/summary.py | tee results/summary.txt
 ```
 
 ```text
-польз.    RPS  p95, мс ошибки, %
-     3    5.1      110       0.0
-     6    9.7      120       0.0
-    12   19.0      240       0.0
-    18   24.2     1300       0.1
-    24   25.1     3900       4.8
+польз.    RPS ошибки, %  p95 каталога  p95 заказа  вердикт
+     3    5.1       0.0           110         400  ок (код 0)
+     6    9.7       0.0           120         450  ок (код 0)
+    12   19.0       0.0           240         700  ок (код 0)
+    18   24.2       0.1           290        1300  НАРУШЕНО: /api/orders (код 1)
+    24   25.1       4.8          3900        7000  НАРУШЕНО: /api/products, /api/orders, ошибки (код 1)
 ```
 
-**Как читать вывод:** RPS растёт вместе с пользователями до 12, потом упирается в потолок около 25 (насыщение), а p95 уходит вверх: классическое «колено». Пример иллюстративный. Твоя цель: найти ступень, где нарушен критерий, и сделать вывод о пределе. Не забудь, что «пользователи» в Locust это закрытая модель: рост пользователей не равен росту нагрузки в RPS, поэтому в отчёте ты указываешь именно достигнутый RPS.
+**Как читать вывод:** RPS растёт вместе с пользователями до 12, потом упирается в потолок около 25 (насыщение), а p95 уходит вверх: классическое «колено». В колонках p95 смотри на каждый запрос отдельно: на 18 пользователях каталог ещё укладывается в 300 мс, а заказ уже нет (1300 мс при пороге 1000), и в строке «Aggregated» эту поломку было бы не видно, потому что быстрые запросы разбавляют медленные. «Код» в конце строки это код выхода Locust: 0 значит ошибок не было, 1 значит были (на ступенях с кодом 1 тест не прерывается, это нормально). Пример иллюстративный. Твоя цель: найти ступень, где нарушен критерий, и сделать вывод о пределе. Не забудь, что «пользователи» в Locust это закрытая модель: рост пользователей не равен росту нагрузки в RPS, поэтому в отчёте ты указываешь именно достигнутый RPS.
 
 ### 7. Заметки по ходу и отчёт
 

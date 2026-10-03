@@ -49,15 +49,15 @@ flowchart TD
 
 ```yaml
 services:
-  redis:
-    image: redis:8.10.2
-    ports: ["6379:6379"]
+  shop:
+    image: shop-shop
+    ports: ["127.0.0.1:8000:8000"]
 ```
 
-> **Прикинь сам:** что значит `"6379:6379"` в этом списке?
+> **Прикинь сам:** что значит `"127.0.0.1:8000:8000"` в этом списке?
 {: .predict}
 
-Это «порт хоста : порт контейнера», как `-p` в [уроке 5.1](01-containers.md).
+Это «адрес на твоей машине : порт хоста : порт контейнера», как `-p 127.0.0.1:8080:80` в [уроке 5.1](01-containers.md). Адрес `127.0.0.1` значит «слушай только свою машину»: с чужого компьютера в этот порт не зайти.
 
 Осторожно: лишний пробел меняет смысл файла или ломает его (`mapping values are not allowed here`). Копируй блоки целиком.
 
@@ -83,7 +83,7 @@ shop-shop-1               --> TCP на 172.18.0.2:5432            --> shop-postg
 
 А `localhost` это слово «у меня»: у тебя дома твоя квартира, у соседа его. Так и внутри контейнера: `localhost` это сам контейнер, а не твоя машина. Если в `DATABASE_URL` написать `localhost`, магазин будет стучаться сам в себя, и тогда `Connection refused`. Это самая частая ошибка новичка.
 
-Между контейнерами порты публиковать не нужно, `ports:` открывает их только для твоей машины (`psql`, `curl`).
+Между контейнерами порты публиковать не нужно: `ports:` нужен только для того, чтобы зайти с твоей машины (`curl`, браузер). Поэтому у PostgreSQL и Redis в стенде `ports:` нет: к ним ходит магазин по сети Compose, а ты сам заходишь через `docker compose exec` (`psql`, `redis-cli`).
 
 > **Главное:** сервисы в сети Compose находят друг друга по имени сервиса, а `localhost` внутри контейнера означает сам контейнер.
 {: .key}
@@ -97,7 +97,6 @@ shop-shop-1               --> TCP на 172.18.0.2:5432            --> shop-postg
 ```yaml
   redis:
     image: redis:8.10.2
-    ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -105,7 +104,7 @@ shop-shop-1               --> TCP на 172.18.0.2:5432            --> shop-postg
       retries: 12
 ```
 
-Образ готовый, из реестра. Новый ключ `healthcheck:` (проверка здоровья): Docker сам, раз в 5 секунд (`interval`), запускает внутри контейнера `redis-cli ping`, и ответ должен прийти за 3 секунды (`timeout`). Ответил `PONG` (код 0): контейнер здоров, статус healthy. После 12 неудач подряд (`retries`) статус unhealthy.
+Образ готовый, из реестра, порт на хост не опубликован (Redis без пароля, наружу ему выходить незачем). Новый ключ `healthcheck:` (проверка здоровья): Docker сам, раз в 5 секунд (`interval`), запускает внутри контейнера `redis-cli ping`, и ответ должен прийти за 3 секунды (`timeout`). Ответил `PONG` (код 0): контейнер здоров, статус healthy. После 12 неудач подряд (`retries`) статус unhealthy.
 
 С базой интереснее. Через `environment:` образ `postgres:18.6` получает имя базы, пользователя и пароль, все три `shop` (учебные реквизиты). Ключ `command:` добавляет серверу флаги: `shared_preload_libraries=pg_stat_statements` (считает тяжёлые запросы, пригодится в теме 11), `log_min_duration_statement=200` (в лог попадают запросы дольше 200 мс), `max_connections=100`. Лимиты `cpus` и `mem_limit` разберём в [уроке 5.4](04-limits-stats.md).
 
@@ -291,15 +290,15 @@ docker compose ps
 
 ```text
 NAME                IMAGE           COMMAND                  SERVICE    CREATED         STATUS                   PORTS
-shop-payment-1      shop-payment    "uvicorn main:app --h…"   payment    2 hours ago     Up 2 hours (healthy)     0.0.0.0:8001->8001/tcp
-shop-postgres-1     postgres:18.6   "docker-entrypoint.s…"   postgres   2 hours ago     Up 2 hours (healthy)     0.0.0.0:5432->5432/tcp
-shop-redis-1        redis:8.10.2    "docker-entrypoint.s…"   redis      2 hours ago     Up 2 hours (healthy)     0.0.0.0:6379->6379/tcp
-shop-shop-1         shop-shop       "./entrypoint.sh"        shop       2 hours ago     Up 2 hours (healthy)     0.0.0.0:8000->8000/tcp
+shop-payment-1      shop-payment    "uvicorn main:app --h…"   payment    2 hours ago     Up 2 hours (healthy)     127.0.0.1:8001->8001/tcp
+shop-postgres-1     postgres:18.6   "docker-entrypoint.s…"   postgres   2 hours ago     Up 2 hours (healthy)     5432/tcp
+shop-redis-1        redis:8.10.2    "docker-entrypoint.s…"   redis      2 hours ago     Up 2 hours (healthy)     6379/tcp
+shop-shop-1         shop-shop       "./entrypoint.sh"        shop       2 hours ago     Up 2 hours (healthy)     127.0.0.1:8000->8000/tcp
 ```
 
 **Как читать вывод:** колонка `STATUS` главная: `Up ... (healthy)` значит и работает, и проверка здоровья проходит. Другие варианты: `(health: starting)` проверка ещё не успела пройти, `(unhealthy)` проверка не проходит, `Exited (N)` процесс завершился с кодом N. Колонка `SERVICE` это имя для команд Compose, `NAME` имя контейнера, `PORTS` опубликованные порты.
 
-**Безопасность стенда.** Строка `0.0.0.0:8000->8000` значит, что порт открыт на **всех** сетевых интерфейсах машины, а не только для тебя. Стенд учебный: у Redis нет пароля, база `shop/shop`, Grafana пускает анонимно с правами администратора, а `/admin/config` у оплаты не требует авторизации. Поэтому не запускай его на машине с публичным IP-адресом и в чужой сети (кафе, офисный Wi-Fi): любой сосед сможет зайти. Чтобы закрыть, публикуй порты только на локальный адрес: в `compose.yaml` вместо `"8000:8000"` пиши `"127.0.0.1:8000:8000"` (браузер и `curl` внутри Ubuntu работают как раньше). Если Ubuntu у тебя в Multipass и стенд ты открываешь из браузера macOS по IP машины, так закрывать нельзя: порт станет недоступен снаружи виртуалки. Виртуалка Multipass и так видна только с твоего Mac. Сам файл стенда мы не меняем, это тема для рабочих проектов.
+**Безопасность стенда.** Строка `127.0.0.1:8000->8000` значит, что порт открыт только для твоей машины: так в `compose.yaml` записано `${BIND_ADDR:-127.0.0.1}:8000:8000`. У PostgreSQL и Redis в колонке `PORTS` только `5432/tcp` и `6379/tcp` без стрелки: на хост они не опубликованы. Стенд учебный: у Redis нет пароля, база `shop/shop`, Grafana пускает анонимно с правами администратора, а `/admin/config` у оплаты не требует авторизации. Всё это безопасно, пока порты привязаны к `127.0.0.1`. Если Ubuntu у тебя в Multipass и стенд нужно открыть из браузера macOS по IP виртуалки, впиши в `.env` строку `BIND_ADDR=0.0.0.0` и перезапусти (`docker compose up -d`): порты откроются всем, кто видит виртуалку, а виртуалка Multipass видна только с твоего Mac. Не делай так на машине с публичным IP-адресом и в чужой сети (кафе, офисный Wi-Fi). Безопаснее вариант без `BIND_ADDR`: SSH-туннель с Mac (`ssh -L 3000:127.0.0.1:3000 ubuntu@<IP виртуалки>`, адрес покажет `multipass info lab`; нужен твой публичный ключ в `~/.ssh/authorized_keys` виртуалки), тогда Grafana открывается на `localhost:3000` самого Mac.
 
 Теперь убедись, что магазин реально готов, а не только жив:
 
@@ -503,7 +502,7 @@ git push
 |---|---|---|
 | `no configuration file provided: not found` | ты не в папке с `compose.yaml` | `cd ~/load-tester/project/shop` или `docker compose -f ~/load-tester/project/shop/compose.yaml ...` |
 | `dependency failed to start: container shop-postgres-1 is unhealthy` | база не стала healthy за отведённое время или упала при старте | `docker compose logs postgres`: ищи `FATAL`/`ERROR` в сиде; часто мало места на диске или битый том: `docker compose down -v` и заново |
-| `Bind for 0.0.0.0:5432 failed: port is already allocated` (или `address already in use`) | порт 5432 уже занят: на твоей машине стоит свой PostgreSQL или висит другой контейнер | `sudo ss -ltnp \| grep 5432`; останови чужой (`sudo systemctl stop postgresql`) или поменяй левое число в `ports:` на `"5433:5432"` |
+| `Bind for 127.0.0.1:8000 failed: port is already allocated` (или `address already in use`) | порт 8000 уже занят: на твоей машине висит другая программа или контейнер | `sudo ss -ltnp \| grep 8000`; останови чужое или поменяй порт хоста в `ports:` на `"127.0.0.1:8080:8000"` (тогда стенд будет на `localhost:8080`) |
 | `services.shop Additional property cpuz is not allowed` | опечатка в имени ключа в `compose.yaml` | исправь написание и проверь `docker compose config -q` |
 | `yaml: line 12: mapping values are not allowed in this context` | неправильные отступы или лишнее двоеточие | проверь отступы в указанной строке (только пробелы) |
 | магазин: `psycopg_pool.PoolTimeout` / `Connection refused` | в `DATABASE_URL` указан `localhost` или `127.0.0.1` вместо `postgres` | верни `postgres` в `.env` (или удали строку, чтобы вернулось значение по умолчанию) |

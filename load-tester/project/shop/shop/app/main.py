@@ -247,31 +247,45 @@ def remove_from_cart(product_id: int, user_id: int = Depends(current_user)):
 
 @app.post("/api/orders", status_code=201)
 def create_order(user_id: int = Depends(current_user)):
-    quantities = redis.hgetall(f"cart:{user_id}")
+    # Корзину забираем атомарно: HGETALL и DEL выполняются одной Redis-транзакцией (MULTI/EXEC).
+    # Второй параллельный запрос увидит пустую корзину и получит 400, а товар,
+    # добавленный во время оплаты, попадёт в новую корзину и не потеряется.
+    cart_key = f"cart:{user_id}"
+    pipe = redis.pipeline(transaction=True)
+    pipe.hgetall(cart_key)
+    pipe.delete(cart_key)
+    quantities = pipe.execute()[0]
     if not quantities:
         raise HTTPException(400, "cart is empty")
-    with connection() as conn:
-        # Одинаковый порядок блокировок снижает риск взаимной блокировки двух заказов.
-        rows = conn.execute("SELECT id, name, price, stock FROM products WHERE id = ANY(%s) ORDER BY id FOR UPDATE",
-                            ([int(key) for key in quantities],)).fetchall()
-        if len(rows) != len(quantities):
-            raise HTTPException(409, "product unavailable")
-        items = []
-        for row in rows:
-            qty = int(quantities[str(row["id"])])
-            if qty > row["stock"]:
-                raise HTTPException(409, "not enough stock")
-            items.append({"product_id": row["id"], "name": row["name"], "price": row["price"], "qty": qty})
-        total = sum((item["price"] * item["qty"] for item in items), Decimal(0))
-        order = conn.execute("INSERT INTO orders (user_id, status, total) VALUES (%s, 'paid', %s) RETURNING id, status",
-                             (user_id, total)).fetchone()
-        for item in items:
-            conn.execute("INSERT INTO order_items (order_id, product_id, qty, price) VALUES (%s, %s, %s, %s)",
-                         (order["id"], item["product_id"], item["qty"], item["price"]))
-            conn.execute("UPDATE products SET stock = stock - %s WHERE id = %s", (item["qty"], item["product_id"]))
-        # НАМЕРЕННЫЙ антипаттерн: сеть держит транзакцию, блокировки и соединение пула.
-        pay(order["id"], total)
-    redis.delete(f"cart:{user_id}")
+    try:
+        with connection() as conn:
+            # Одинаковый порядок блокировок снижает риск взаимной блокировки двух заказов.
+            rows = conn.execute("SELECT id, name, price, stock FROM products WHERE id = ANY(%s) ORDER BY id FOR UPDATE",
+                                ([int(key) for key in quantities],)).fetchall()
+            if len(rows) != len(quantities):
+                raise HTTPException(409, "product unavailable")
+            items = []
+            for row in rows:
+                qty = int(quantities[str(row["id"])])
+                if qty > row["stock"]:
+                    raise HTTPException(409, "not enough stock")
+                items.append({"product_id": row["id"], "name": row["name"], "price": row["price"], "qty": qty})
+            total = sum((item["price"] * item["qty"] for item in items), Decimal(0))
+            order = conn.execute("INSERT INTO orders (user_id, status, total) VALUES (%s, 'paid', %s) RETURNING id, status",
+                                 (user_id, total)).fetchone()
+            for item in items:
+                conn.execute("INSERT INTO order_items (order_id, product_id, qty, price) VALUES (%s, %s, %s, %s)",
+                             (order["id"], item["product_id"], item["qty"], item["price"]))
+                conn.execute("UPDATE products SET stock = stock - %s WHERE id = %s", (item["qty"], item["product_id"]))
+            # НАМЕРЕННЫЙ антипаттерн: сеть держит транзакцию, блокировки и соединение пула.
+            pay(order["id"], total)
+    except BaseException:
+        # Заказ не создан: возвращаем забранные позиции к тому, что покупатель успел добавить за это время.
+        restore = redis.pipeline(transaction=True)
+        for key, qty in quantities.items():
+            restore.hincrby(cart_key, key, int(qty))
+        restore.execute()
+        raise
     if settings.CACHE_ENABLED:
         redis.delete(*(f"product:{item['product_id']}" for item in items))
     metrics.ORDERS.inc()

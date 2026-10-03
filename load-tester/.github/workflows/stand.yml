@@ -35,6 +35,9 @@ jobs:
         run: |
           python -m pip install -r examples/api-tests/requirements.txt locust==2.46.6
           python -m py_compile shop/app/*.py payment/main.py payment/telemetry.py examples/api-tests/*.py examples/locust/locustfile.py
+          cp examples/k6/shop.js "$RUNNER_TEMP/shop.mjs" && node --check "$RUNNER_TEMP/shop.mjs"
+          # Порты стенда привязаны к 127.0.0.1, PostgreSQL и Redis на хост не опубликованы.
+          if docker ps --format '{{.Ports}}' | grep -E '0\.0\.0\.0|\[::\]|:(5432|6379)->'; then echo 'Порт стенда открыт не только на 127.0.0.1'; exit 1; fi
       - name: Эталонные API-тесты
         run: python -m pytest examples/api-tests -v
       - name: Locust — 20 пользователей на минуту

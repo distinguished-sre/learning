@@ -294,6 +294,7 @@ class Purchase(SequentialTaskSet):
         self.ids = []
         self.product_id = None
         self.order_id = None
+        self.cart_has_item = False
 
     @task
     def catalog(self):
@@ -321,19 +322,28 @@ class Purchase(SequentialTaskSet):
             body = check(r, 201, "items", "total")
             if body is not None and not any(i["product_id"] == self.product_id for i in body["items"]):
                 r.failure("товара нет в корзине")
+            elif body is not None:
+                self.cart_has_item = True
 
     @task
     def checkout(self):
         self.order_id = None
         with self.client.post("/api/orders", catch_response=True, timeout=60) as r:
             if r.status_code == 400 and "cart is empty" in r.text:
-                r.success()  # штатный отказ: корзина пуста
+                if self.cart_has_item:
+                    r.failure("корзина пуста сразу после добавления товара")  # сценарий или данные сломаны
+                else:
+                    r.success()  # штатный отказ: товар не добавлялся, корзина и правда пуста
+                self.cart_has_item = False
                 return
             body = check(r, 201, "id", "items")
+            self.cart_has_item = False
             if body is not None:
                 self.order_id = body["id"]
                 if not body["items"]:
                     r.failure("заказ без товаров")
+                elif not any(i["product_id"] == self.product_id for i in body["items"]):
+                    r.failure("в заказе нет добавленного товара")
 
     @task
     def check_order(self):
@@ -362,7 +372,7 @@ class Buyer(HttpUser):
             self.client.headers["Authorization"] = "Bearer " + body["token"]
 ```
 
-Здесь учётная запись приходит из CSV (`next(USERS)` берёт следующую по кругу) (`json=account` отправляет словарь `{"email": ..., "password": ...}` как JSON), а все проверки идут через `check`. Заметь `r.text` в `checkout`: это тело ответа как текст, его удобно искать подстрокой.
+Здесь учётная запись приходит из CSV (`next(USERS)` берёт следующую по кругу) (`json=account` отправляет словарь `{"email": ..., "password": ...}` как JSON), а все проверки идут через `check`. Заметь `r.text` в `checkout`: это тело ответа как текст, его удобно искать подстрокой. Флаг `cart_has_item` решает, чем считать 400 «cart is empty»: если товар только что добавлен (201), пустой корзины быть не должно, и это ошибка сценария или данных, а не штатный отказ.
 
 Есть одна дыра. `Buyer` входит один раз в `on_start`, а потом работает с токеном, поэтому тест на 44 пользователей даёт около нуля логинов в секунду. Самая дорогая операция стенда (bcrypt, [урок 9.2](02-user-journey.md)) остаётся без нагрузки, а профиль из [урока 8.4](../08-perf-theory/04-load-profile-slo.md) требует 2,0 входа в секунду. Добавь пользователя, который только входит, снова и снова:
 
@@ -422,7 +432,7 @@ cd ~/perf-lab && git add 09-locust && git commit -m "9.3: данные из CSV 
 
 **Поломка A. Файл данных короче, чем нужно.** Оставь в `users.csv` первые 10 пользователей (`head -11 users.csv > u.csv && mv u.csv users.csv`) и запусти 100 пользователей (проверь, что `Buyer` составляет 20% от них: 20 покупателей на 10 учётных записей).
 
-**Что ожидать.** Каждая запись достаётся двоим: одна корзина на двоих. Покупатели мешают друг другу: появляются 400 «cart is empty» (чужой заказ уже забрал корзину) и редкие 409, а проверка «товара нет в корзине» срабатывает, потому что чужие операции вклиниваются между шагами. На вкладке Failures появятся строки «товара нет в корзине» и «код 400».
+**Что ожидать.** Каждая запись достаётся двоим: одна корзина на двоих. Покупатели мешают друг другу: появляются 400 «cart is empty» (чужой заказ уже забрал корзину; сценарий считает их ошибкой, потому что товар только что добавлен) и редкие 409, а проверка «товара нет в корзине» срабатывает, потому что чужие операции вклиниваются между шагами. На вкладке Failures появятся строки «товара нет в корзине» и «корзина пуста сразу после добавления товара».
 
 <div class="viz" data-viz="flow" data-steps='[{"title":"Откуда ошибки","text":"На вкладке `Failures` смотри текст и маршрут: `/api/orders` и `/api/cart/items`."},{"title":"Это 4xx","text":"Сервис не падает, а возвращает отказы: значит, дело в данных или сценарии."},{"title":"Сравни числа","text":"Сколько в CSV учётных записей и сколько запущено пользователей `Buyer`."},{"title":"Найди пересечение","text":"Если пользователей больше записей, они делят корзину."},{"title":"Дай данные каждому","text":"Увеличь файл или уменьши число пользователей."},{"title":"Проверь","text":"Прогон без `Failures` на `/api/orders`."}]'></div>
 

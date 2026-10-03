@@ -1,0 +1,26 @@
+name: Синтаксис кода в уроках
+
+on:
+  push:
+    paths:
+      - '[0-9][0-9]-*/*.md'
+      - 'tools/check_snippets.py'
+      - '.github/workflows/snippets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snippets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: bash -n, py_compile и node --check для блоков кода
+        run: python tools/check_snippets.py

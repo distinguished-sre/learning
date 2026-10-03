@@ -29,7 +29,7 @@ services:
       OTEL_BSP_SCHEDULE_DELAY: "1000"
       OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
-    ports: ["8000:8000"]
+    ports: ["${BIND_ADDR:-127.0.0.1}:8000:8000"]
     cpus: "1.0"
     mem_limit: 512m
     depends_on:
@@ -56,7 +56,7 @@ services:
       OTEL_BSP_SCHEDULE_DELAY: "1000"
       OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
-    ports: ["8001:8001"]
+    ports: ["${BIND_ADDR:-127.0.0.1}:8001:8001"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/healthz', timeout=3)"]
       interval: 5s
@@ -82,7 +82,6 @@ services:
       - max_connections=100
     cpus: "1.0"
     mem_limit: 1g
-    ports: ["5432:5432"]
     volumes:
       # PostgreSQL 18 хранит данные в /var/lib/postgresql/18/docker.
       - pgdata:/var/lib/postgresql
@@ -98,7 +97,6 @@ services:
   redis:
     restart: unless-stopped
     image: redis:8.10.2
-    ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -110,7 +108,7 @@ services:
     image: prom/prometheus:v3.15.0
     profiles: [monitoring]
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--web.enable-remote-write-receiver"]
-    ports: ["9090:9090"]
+    ports: ["${BIND_ADDR:-127.0.0.1}:9090:9090"]
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
@@ -123,7 +121,7 @@ services:
     restart: unless-stopped
     image: prom/alertmanager:v0.34.1
     profiles: [monitoring]
-    ports: ["9093:9093"]
+    ports: ["${BIND_ADDR:-127.0.0.1}:9093:9093"]
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
 
@@ -132,11 +130,11 @@ services:
     image: grafana/grafana:13.2.3
     profiles: [monitoring]
     environment:
-      # Admin без пароля — только для локального учебного стенда.
+      # Admin без пароля: безопасно только пока порт привязан к 127.0.0.1 (BIND_ADDR).
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
-    ports: ["3000:3000"]
+    ports: ["${BIND_ADDR:-127.0.0.1}:3000:3000"]
     volumes:
       - grafana:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -178,7 +176,7 @@ services:
     image: grafana/loki:3.7.8
     profiles: [monitoring]
     command: ["-config.file=/etc/loki/local-config.yaml"]
-    ports: ["3100:3100"]
+    ports: ["${BIND_ADDR:-127.0.0.1}:3100:3100"]
     volumes: ["loki:/loki"]
 
   tempo:
@@ -186,7 +184,7 @@ services:
     image: grafana/tempo:2.10.8
     profiles: [monitoring]
     command: ["-config.file=/etc/tempo/tempo.yaml"]
-    ports: ["3200:3200"]
+    ports: ["${BIND_ADDR:-127.0.0.1}:3200:3200"]
     volumes:
       - ./monitoring/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo:/var/tempo
@@ -197,7 +195,7 @@ services:
     profiles: [monitoring]
     command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
     # OTLP/HTTP от shop и payment (порт 4318) доступен внутри сети Compose.
-    ports: ["12345:12345"]
+    ports: ["${BIND_ADDR:-127.0.0.1}:12345:12345"]
     volumes:
       - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

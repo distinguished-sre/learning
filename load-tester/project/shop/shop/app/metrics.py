@@ -3,7 +3,7 @@ import os
 
 from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, generate_latest, multiprocess
 
-BUCKETS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+BUCKETS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.3, 0.5, 1, 2.5, 5, 10)
 REQUESTS = Counter("http_requests_total", "Запросы HTTP", ("method", "route", "status"))
 DURATION = Histogram("http_request_duration_seconds", "Длительность HTTP", ("method", "route"), buckets=BUCKETS)
 IN_PROGRESS = Gauge("http_requests_in_progress", "Запросы в работе", multiprocess_mode="livesum")

@@ -433,18 +433,18 @@ docker compose ps
 
 ```text
 NAME               IMAGE            COMMAND                  SERVICE    STATUS                   PORTS
-shop-payment-1     shop-payment     "uvicorn main:app ..."   payment    Up 3 minutes (healthy)   0.0.0.0:8001->8001/tcp
-shop-postgres-1    postgres:18.6    "docker-entrypoint.s…"   postgres   Up 3 minutes (healthy)   0.0.0.0:5432->5432/tcp
-shop-redis-1       redis:8.10.2     "docker-entrypoint.s…"   redis      Up 3 minutes (healthy)   0.0.0.0:6379->6379/tcp
-shop-shop-1        shop-shop        "./entrypoint.sh"        shop       Up 3 minutes (healthy)   0.0.0.0:8000->8000/tcp
+shop-payment-1     shop-payment     "uvicorn main:app ..."   payment    Up 3 minutes (healthy)   127.0.0.1:8001->8001/tcp
+shop-postgres-1    postgres:18.6    "docker-entrypoint.s…"   postgres   Up 3 minutes (healthy)   5432/tcp
+shop-redis-1       redis:8.10.2     "docker-entrypoint.s…"   redis      Up 3 minutes (healthy)   6379/tcp
+shop-shop-1        shop-shop        "./entrypoint.sh"        shop       Up 3 minutes (healthy)   127.0.0.1:8000->8000/tcp
 ```
 
-**Как читать вывод:** четыре сервиса, у каждого `(healthy)`. В колонке `PORTS` видно, какой порт машины ведёт к какому сервису: `0.0.0.0:8000->8000` значит «порт 8000 твоей машины это порт 8000 внутри сервиса». Ты стучишься на `localhost:8000`, а попадаешь в «Магазин».
+**Как читать вывод:** четыре сервиса, у каждого `(healthy)`. В колонке `PORTS` видно, какой порт машины ведёт к какому сервису: `127.0.0.1:8000->8000` значит «порт 8000 твоей машины это порт 8000 внутри сервиса». Ты стучишься на `localhost:8000`, а попадаешь в «Магазин».
 
 **Типичные ошибки:**
 
 - `permission denied ... docker.sock`: см. выше, нужен новый сеанс.
-- `Bind for 0.0.0.0:8000 failed: port is already allocated` (или `address already in use`): порт занят другой программой. Найди её: `sudo ss -ltnp 'sport = :8000'`, в последней колонке будет имя процесса. Останови его или освободи порт. Чаще всего это старый запуск стенда: `docker ps` покажет, и тогда `docker compose down` в его каталоге.
+- `Bind for 127.0.0.1:8000 failed: port is already allocated` (или `address already in use`): порт занят другой программой. Найди её: `sudo ss -ltnp 'sport = :8000'`, в последней колонке будет имя процесса. Останови его или освободи порт. Чаще всего это старый запуск стенда: `docker ps` покажет, и тогда `docker compose down` в его каталоге.
 - `no space left on device`: закончилось место. Проверь `df -h /` (команда из [урока 1.1](../01-linux/01-workstation-terminal.md)). Освободи минимум 10 ГБ, старые образы можно удалить `docker system prune`, это безопасно для стенда.
 - `docker compose up` ждёт и падает по времени, а `shop-postgres-1` остаётся `starting`: база ещё заполняется данными, на медленном диске это до нескольких минут. Подожди, повтори `docker compose up -d --wait`. Прогресс видно в логах: `docker compose logs -f postgres` (выйти: `Ctrl+C`).
 - `curl: (7) Failed to connect ... Connection refused` сразу после запуска: сервис ещё стартует. Подожди 10 секунд и повтори.

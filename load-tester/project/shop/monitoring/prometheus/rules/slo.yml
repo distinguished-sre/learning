@@ -1,7 +1,7 @@
 # SLO из урока 8.4:
 #   доступность: не менее 99% запросов без 5xx (бюджет ошибок 1%);
-#   задержка каталога: не менее 95% запросов быстрее 250 мс (бюджет 5%).
-# Порог 250 мс, а не 300 мс из таблицы урока: в гистограмме есть корзина le="0.25", а границы 0.3 нет.
+#   задержка каталога: не менее 95% запросов быстрее 300 мс (бюджет 5%).
+# Порог 300 мс из таблицы цели урока 8.4: в гистограмме магазина есть корзина le="0.3", по ней считается доля быстрых.
 groups:
   - name: shop-sli
     rules:
@@ -14,15 +14,15 @@ groups:
         expr: (sum(rate(http_requests_total{status=~"5.."}[1h])) or vector(0)) / sum(rate(http_requests_total[1h]))
       - record: sli:http_error_ratio:rate6h
         expr: (sum(rate(http_requests_total{status=~"5.."}[6h])) or vector(0)) / sum(rate(http_requests_total[6h]))
-      # Доля медленных запросов каталога (дольше 250 мс) за окно.
+      # Доля медленных запросов каталога (дольше 300 мс) за окно.
       - record: sli:catalog_slow_ratio:rate5m
-        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.25"}[5m])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[5m]))
+        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.3"}[5m])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[5m]))
       - record: sli:catalog_slow_ratio:rate30m
-        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.25"}[30m])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[30m]))
+        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.3"}[30m])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[30m]))
       - record: sli:catalog_slow_ratio:rate1h
-        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.25"}[1h])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[1h]))
+        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.3"}[1h])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[1h]))
       - record: sli:catalog_slow_ratio:rate6h
-        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.25"}[6h])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[6h]))
+        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.3"}[6h])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[6h]))
   - name: shop-slo-burn
     rules:
       # Быстрое сгорание: бюджет горит в 14,4 раза быстрее нормы (порог 14,4 * 1% = 14,4% ошибок).
@@ -51,7 +51,7 @@ groups:
         labels: {severity: critical}
         annotations:
           summary: Бюджет по задержке каталога сгорает в 14,4 раза быстрее нормы
-          description: Больше 72 процентов запросов каталога медленнее 250 мс и за час, и за 5 минут.
+          description: Больше 72 процентов запросов каталога медленнее 300 мс и за час, и за 5 минут.
           runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html
       - alert: ShopLatencyBudgetBurnSlow
         expr: sli:catalog_slow_ratio:rate6h > (6 * 0.05) and sli:catalog_slow_ratio:rate30m > (6 * 0.05)
@@ -59,5 +59,5 @@ groups:
         labels: {severity: warning}
         annotations:
           summary: Бюджет по задержке каталога сгорает в 6 раз быстрее нормы
-          description: Больше 30 процентов запросов каталога медленнее 250 мс и за 6 часов, и за 30 минут.
+          description: Больше 30 процентов запросов каталога медленнее 300 мс и за 6 часов, и за 30 минут.
           runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html

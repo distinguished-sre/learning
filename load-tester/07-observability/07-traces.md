@@ -242,8 +242,8 @@ curl -s localhost:3200/ready
 
 ```text
 NAME             IMAGE                    COMMAND   SERVICE   STATUS          PORTS
-shop-alloy-1     grafana/alloy:v1.20.1    ...       alloy     Up 2 minutes    0.0.0.0:12345->12345/tcp
-shop-tempo-1     grafana/tempo:2.10.8     ...       tempo     Up 2 minutes    0.0.0.0:3200->3200/tcp
+shop-alloy-1     grafana/alloy:v1.20.1    ...       alloy     Up 2 minutes    127.0.0.1:12345->12345/tcp
+shop-tempo-1     grafana/tempo:2.10.8     ...       tempo     Up 2 minutes    127.0.0.1:3200->3200/tcp
 ready
 ```
 

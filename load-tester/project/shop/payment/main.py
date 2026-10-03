@@ -19,7 +19,7 @@ if config["delay_ms"] < 0 or not 0 <= config["fail_rate"] <= 1:
     raise ValueError("Неверные настройки оплаты")
 requests = Counter("payment_requests_total", "Оплаты", ("status",))
 duration = Histogram("payment_duration_seconds", "Длительность оплаты",
-                     buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10))
+                     buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.3, 0.5, 1, 2.5, 5, 10))
 
 
 class Payment(BaseModel):
