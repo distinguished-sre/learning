@@ -828,7 +828,9 @@
     node: node, html: html, num: num, list: list, json: json, fmt: fmt, ms: ms, sec: sec, pct: pct,
     esc: esc, plural: plural, niceMax: niceMax, scale: scale, lerp: lerp
   };
+  var started = false;
   function init() {
+    if (started) return; started = true;
     document.querySelectorAll('.viz[data-viz]').forEach(function (host) {
       try {
         var build = widgets[host.dataset.viz];
@@ -837,5 +839,8 @@
       } catch (e) { host.replaceChildren(html('p', e.message, 'viz-error')); console.warn('Viz:', e); }
     });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  // defer-скрипты выполняются при readyState «interactive», но до DOMContentLoaded:
+  // ждём его, чтобы файлы тем успели зарегистрировать свои виджеты.
+  if (document.readyState === 'complete') init();
+  else { document.addEventListener('DOMContentLoaded', init); addEventListener('load', init); }
 })();
