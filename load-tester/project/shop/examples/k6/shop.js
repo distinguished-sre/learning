@@ -10,6 +10,9 @@ export const options = {
   scenarios: {
     shop: {
       executor: 'constant-arrival-rate',
+      // 20 итераций в секунду это стресс, а не нагрузка: в каждой итерации есть заказ, а заказы
+      // упираются в пул соединений (DB_POOL_MAX=5, оплата внутри транзакции), около 5 в секунду.
+      // В уроках берут RATE=5, в CI RATE=2.
       rate: Number(__ENV.RATE || 20),
       timeUnit: '1s',
       duration: __ENV.DURATION || '2m',
@@ -36,6 +39,8 @@ export default function () {
   }
   const params = { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } };
   check(http.get(`${baseURL}/api/products`), { 'каталог: 200': (r) => r.status === 200 });
+  // Товар выбирается равномерно из 10 000, поэтому кэш карточек почти не срабатывает (hit ratio
+  // очень низкий при TTL 60 с). Для опыта с кэшем из урока 11.5 бери bn.js (80/20), а не этот файл.
   const productID = 1 + Math.floor(Math.random() * 10000);
   check(http.get(`${baseURL}/api/products/${productID}`, { tags: { name: '/api/products/[id]' } }),
     { 'карточка: 200': (r) => r.status === 200 });
