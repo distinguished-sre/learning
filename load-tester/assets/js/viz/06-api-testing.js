@@ -68,7 +68,7 @@
       min: -5, max: 30, tick: 5, name: 'page', def: 3,
       zones: [{ a: -5, b: 0, code: 422, label: 'меньше 1', cls: 'danger' }, { a: 1, b: 30, code: 200, label: '1 и больше', cls: 'ok' }],
       bounds: [0, 1], reps: [-3, 7],
-      why: function (n) { return n < 1 ? 'меньше 1: страницы считаются с единицы (<code>ge=1</code>)' : 'допустимое значение; верхнего предела у <code>page</code> нет, страница за концом списка вернёт <code>200</code> и пустой <code>items</code>'; }
+      why: function (n) { return n < 1 ? 'меньше 1: страницы считаются с единицы (<code>ge=1</code>)' : 'допустимое значение; верхнего предела у <code>page</code> нет (для разумных значений), страница за концом списка вернёт <code>200</code> и пустой <code>items</code>'; }
     }
   };
   function zoneOf(p, n) { for (var i = 0; i < p.zones.length; i++) if (n >= p.zones[i].a && n <= p.zones[i].b) return p.zones[i]; return p.zones[0]; }
@@ -107,7 +107,7 @@
       var z = zoneOf(P, val), edge = P.bounds.indexOf(val) >= 0;
       v.explain('<p class="viz-level ' + z.cls + '"><i></i>' + key + ' = <b>' + val + '</b>: ожидаем <b>' + z.code + '</b></p>' +
         'Класс «' + z.label + '»: ' + P.why(val) + '. ' + (edge ? 'Это <b>граничное</b> значение: ровно здесь ответ меняется, и здесь чаще всего прячутся ошибки «на единицу».' : 'Это значение из середины класса: если ответ верен для него, он, скорее всего, верен для всех соседей.') +
-        ' Минимальный набор: по одному значению из каждого класса (' + P.zones.length + ' ' + L.plural(P.zones.length, 'тест', 'теста', 'тестов') + '), с границами ' + (P.bounds.length + P.zones.length) + '.');
+        ' Минимальный набор: граничные значения (' + P.bounds.length + '), по одному значению из середины допустимого класса и ещё «не число», например <code>abc</code>.');
     }
     var prog = false;
     function sync() { prog = true; sliderEl.value = val; sliderEl.dispatchEvent(new Event('input')); prog = false; }
@@ -190,7 +190,7 @@
     function preset(a, b, c) { n.unit = a; n.api = b; n.ui = c; tt = 0; v.host.querySelectorAll('.viz-controls input').forEach(function (inp, i) { inp.value = [a, b, c][i]; inp.dispatchEvent(new Event('input')); }); }
     v.button('Пирамида 200 / 60 / 8', function () { preset(200, 60, 8); });
     v.button('Рожок 20 / 30 / 120', function () { preset(20, 30, 120); });
-    v.tryIt('нажми «Рожок»: те же 170 тестов превращаются из двух минут в полчаса, а ложные падения вырастают в разы. Потом верни пирамиду и двигай ползунок UI. Наведи на любой ряд: подсказка расскажет про уровень.');
+    v.tryIt('нажми «Рожок»: набор из 170 тестов идёт полчаса вместо двух минут у пирамиды, а ложные падения вырастают в разы. Потом верни пирамиду и двигай ползунок UI. Наведи на любой ряд: подсказка расскажет про уровень.');
     v.hover(function (e, q) {
       var i = Math.floor((q.y - geo.top) / (geo.rowH + geo.gap));
       if (i < 0 || i > 2) { v.hideTip(); return; }
@@ -223,7 +223,7 @@
       gt: '>       assert set(product) == {"id", "name", "price", "category_id", "stock"}', e: ['AssertionError: assert {\'category_id\', \'id\', \'name\', \'price\', \'quantity\'} == {\'category_id\', \'id\', \'name\', \'price\', \'stock\'}', '  Extra items in the left set:', '  \'quantity\'', '  Extra items in the right set:', '  \'stock\''], loc: 'test_products.py:12: AssertionError', short: 'AssertionError: assert {\'category_id\', \'id\', \'name\', \'price\', \'quantity\'} == ...',
       what: 'Поле stock переименовали в quantity. Любой клиент, который читает stock, теперь сломан: тест схемы заметил это раньше пользователей.' },
     order: { idx: 3, title: 'test_cart_starts_empty', src: ['session = <requests.sessions.Session object at 0x7f3a1c2b5d10>, base_url = \'http://localhost:8000\'', 'headers = {\'Authorization\': \'Bearer 9f2c41d7a0b3…\'}', '', '    def test_cart_starts_empty(session, base_url, headers):', '        response = session.get(base_url + "/api/cart", headers=headers, timeout=10)'],
-      gt: '>       assert response.json()["items"] == []', e: ['assert [{\'name\': \'Товар 1\', \'price\': 137.0, \'product_id\': 1, \'qty\': 2}] == []', '  Left contains one more item: {\'name\': \'Товар 1\', \'price\': 137.0, \'product_id\': 1, \'qty\': 2}'], loc: 'test_cart.py:8: AssertionError', short: 'assert [{\'name\': \'Товар 1\', ...}] == []',
+      gt: '>       assert response.json() == {"items": [], "total": 0}', e: ['assert {\'items\': [{\'product_id\': 1, \'name\': \'Товар 1\', \'price\': 137.0, \'qty\': 2}], \'total\': 274.0} == {\'items\': [], \'total\': 0}', '  Differing items:', '  {\'items\': [{\'product_id\': 1, \'name\': \'Товар 1\', \'price\': 137.0, \'qty\': 2}]} != {\'items\': []}'], loc: 'test_cart.py:8: AssertionError', short: 'assert {\'items\': [{...}], \'total\': 274.0} == {\'items\': [], \'total\': 0}',
       what: 'Приложение не виновато. Тест предположил, что корзина общего пользователя пуста, а в ней остался товар: его положил test_add_to_cart в прошлом прогоне и не убрал. Это зависимость тестов друг от друга: лечится отдельным пользователем на каждый тест.' }
   };
   var RTIPS = {
@@ -253,7 +253,7 @@
       add('collected ' + TESTS.length + ' items', 'at-hd', RTIPS.head);
       add('', '', '');
       TESTS.forEach(function (tc, i) {
-        var bad = f && f.idx === i, pct = Math.round((i + 1) / TESTS.length * 100), padPct = ('   ' + pct + '%').slice(-4);
+        var bad = f && f.idx === i, pct = Math.floor((i + 1) / TESTS.length * 100), padPct = ('   ' + pct + '%').slice(-4);
         var id = tc[0] + '::' + tc[1];
         lines.push({ text: id + ' ' + (bad ? 'FAILED' : 'PASSED') + '  [' + padPct + ']', cls: bad ? 'at-fail' : 'at-pass', tip: (bad ? RTIPS.fail : RTIPS.pass) + '<br>' + RTIPS.id, test: i });
       });
