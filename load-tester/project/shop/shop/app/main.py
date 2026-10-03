@@ -7,13 +7,14 @@ from decimal import Decimal
 from time import perf_counter
 
 import bcrypt
+from opentelemetry.instrumentation.utils import suppress_instrumentation
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from psycopg.errors import UniqueViolation
 from psycopg_pool import PoolTimeout
 from prometheus_client import CONTENT_TYPE_LATEST
 
-from . import metrics, settings
+from . import metrics, settings, telemetry
 from .auth import Credentials, Registration, current_user, password_hash
 from .cache import cached_product, redis, save_product
 from .db import connection, pool, update_pool_metrics
@@ -49,6 +50,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Учебный магазин", lifespan=lifespan)
+telemetry.setup(app)
 
 
 @app.middleware("http")
@@ -81,6 +83,8 @@ async def observe_request(request: Request, call_next):
     fields = {"method": request.method, "route": route, "path": request.url.path,
               "status": response.status_code, "duration_ms": round(duration * 1000, 2),
               "request_id": request_id}
+    if trace_id := telemetry.trace_id():
+        fields["trace_id"] = trace_id
     if hasattr(request.state, "user_id"):
         fields["user_id"] = request.state.user_id
     if response.status_code >= 500:
@@ -114,15 +118,17 @@ def healthz():
 @app.get("/readyz")
 def readyz():
     unavailable = []
-    try:
-        with connection() as conn:
-            conn.execute("SELECT 1").fetchone()
-    except Exception:
-        unavailable.append("postgres")
-    try:
-        redis.ping()
-    except Exception:
-        unavailable.append("redis")
+    # Проверки готовности каждые 5 секунд не должны превращаться в трейсы.
+    with suppress_instrumentation():
+        try:
+            with connection() as conn:
+                conn.execute("SELECT 1").fetchone()
+        except Exception:
+            unavailable.append("postgres")
+        try:
+            redis.ping()
+        except Exception:
+            unavailable.append("redis")
     if unavailable:
         raise HTTPException(503, {"unavailable": unavailable})
     return {"status": "ready"}

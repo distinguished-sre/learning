@@ -34,7 +34,8 @@ curl http://localhost:8000/readyz
 | Alertmanager | http://localhost:9093 |
 | Grafana | http://localhost:3000 |
 | Loki | http://localhost:3100 |
-| Alloy | http://localhost:12345 |
+| Tempo (трейсы, API поиска) | http://localhost:3200, смотреть в Grafana: Explore → Tempo |
+| Alloy | http://localhost:12345 (внутри сети Compose также OTLP/HTTP `alloy:4318`) |
 
 Реквизиты стенда открытые, Grafana разрешает анонимному пользователю роль Admin,
 а конфигурация оплаты меняется без авторизации. Запускайте стенд на своей учебной машине.
@@ -48,6 +49,12 @@ docker compose --profile monitoring down
 # Полностью сбросить стенд, включая ВСЕ заказы и сохранённые графики:
 docker compose --profile monitoring down -v
 ```
+
+Все долгоживущие сервисы имеют `restart: unless-stopped`: упавший или убитый по памяти
+(OOM) контейнер Docker поднимает сам, а после `docker compose stop` или `down` он остаётся
+остановленным. Число перезапусков: `docker inspect -f '{{.RestartCount}} {{.State.OOMKilled}}' shop-shop-1`
+(имя контейнера смотрите в `docker compose ps`). После рестарта shop его счётчики Prometheus
+начинаются с нуля, а `depends_on` заново не проверяется.
 
 Redis не имеет постоянного тома: сессии, корзины и кеш могут исчезнуть при пересоздании
 контейнера. Изменение `.env` применяется после `docker compose up -d`; для изменения
@@ -141,6 +148,9 @@ curl -fsS http://localhost:8001/admin/config -H 'Content-Type: application/json'
 | `PAYMENT_DELAY_MS` | `50` | Задержка оплаты, миллисекунды |
 | `PAYMENT_FAIL_RATE` | `0.0` | Вероятность отказа оплаты, 0…1 |
 | `PROMETHEUS_MULTIPROC_DIR` | `/tmp/shop-metrics` | Каталог внутри shop, не общий между контейнерами |
+| `TRACING_ENABLED` | `1` | Трейсы OpenTelemetry в shop и payment; `0` выключает полностью |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://alloy:4318` | Куда shop и payment шлют спаны (OTLP/HTTP) |
+| `OTEL_TRACES_SAMPLER` / `OTEL_TRACES_SAMPLER_ARG` | `parentbased_always_on` / `1.0` | Сэмплирование: все трейсы или `parentbased_traceidratio` с долей в ARG |
 
 `max_connections=100` ограничивает PostgreSQL целиком; оставьте место для экспортера,
 ручных запросов и фоновых процессов. Multiprocess-метрики суммируют gauges всех живых
@@ -150,8 +160,9 @@ curl -fsS http://localhost:8001/admin/config -H 'Content-Type: application/json'
 ## Метрики и логи
 
 Grafana автоматически получает дашборд «Магазин: обзор (эталон)» и источники Prometheus,
-Loki, Alertmanager. Он показывает RPS по шаблонам маршрутов, долю 5xx, p50/p95/p99,
+Loki, Tempo, Alertmanager. Он показывает RPS по шаблонам маршрутов, долю 5xx, p50/p95/p99,
 запросы в работе, пул и ожидание БД, CPU/память shop, соединения PostgreSQL и задержку оплаты.
+В запросах дашборда окно `[$__rate_interval]`, а не фиксированное `[1m]`.
 
 Метрики магазина: `http_requests_total{method,route,status}`,
 `http_request_duration_seconds{method,route}`, `http_requests_in_progress`,
@@ -172,8 +183,38 @@ Prometheus принимает k6 remote write по `/api/v1/write`.
 В Grafana Explore выберите Loki и запрос `{service="shop"}` или
 `{service="shop",level="ERROR"}`. Alloy добавляет service и container из метаданных Docker.
 
-Алерты видны в UI Alertmanager: недоступность shop, 5xx > 5%, p95 > 1 секунды,
-очередь в пуле, CPU хоста > 90%. Внешние уведомления не настроены.
+## Трейсы
+
+shop и payment отправляют трейсы через OpenTelemetry SDK (пакеты закреплены в `requirements.txt`):
+спан входящего HTTP-запроса, спаны SQL-запросов к PostgreSQL и команд Redis, спан ожидания
+соединения из пула `db.pool.getconn` и спан каждой попытки исходящего вызова в payment.
+Заголовок `traceparent` передаёт контекст от shop к payment, поэтому оплата попадает в тот же
+трейс. `/healthz`, `/readyz` и `/metrics` не трассируются. В JSON-логе shop рядом с
+`request_id` лежит `trace_id` (32 hex-символа).
+
+Путь спанов: shop/payment, затем Alloy (`otelcol.receiver.otlp`, порт 4318), затем Tempo
+(OTLP gRPC `tempo:4317`, хранение на диске в томе `tempo`, срок 24 часа). Спаны уходят
+пакетами в отдельном потоке: если профиль `monitoring` не запущен, сервисы работают как
+обычно, лишние спаны отбрасываются, ошибки экспорта в лог не пишутся (`OTEL_LOG_LEVEL=INFO`
+вернёт их). Grafana получает источник Tempo; из строки лога Loki поле `trace_id` ведёт
+в трейс, из спана есть переход в логи shop с тем же `trace_id`.
+
+```bash
+# Поиск трейсов через API Tempo (TraceQL): запросы к payment после нагрузки.
+curl -sG http://localhost:3200/api/search --data-urlencode 'q={ resource.service.name = "payment" }' | jq '.traces[0]'
+```
+
+Prometheus не скрейпит Tempo, цели `up` остаются восемью. Трейсы стоят CPU: для тестов с
+высоким RPS уменьшите долю (`OTEL_TRACES_SAMPLER=parentbased_traceidratio`,
+`OTEL_TRACES_SAMPLER_ARG=0.1`) или выключите (`TRACING_ENABLED=0`) и пересоздайте сервисы.
+
+Алерты видны в UI Alertmanager. `rules/alerts.yml`: недоступность shop, 5xx > 5%, p95 > 1 секунды,
+очередь в пуле, CPU хоста > 90%, `ExporterDown` (молчит экспортёр) и `ShopNoTraffic` (трафик был
+и пропал). В каждом алерте есть аннотация `runbook_url`. `rules/slo.yml`: recording rules
+`sli:http_error_ratio:rate{5m,30m,1h,6h}` и `sli:catalog_slow_ratio:rate{...}` и четыре
+multiwindow burn-rate алерта по SLO из урока 8.4 (14.4 на окнах 1h и 5m, 6 на окнах 6h и 30m).
+Внешние уведомления не настроены. Контейнер, убитый по памяти, Docker поднимает сам за 10-20
+секунд: `ShopDown` (`for: 1m`) может не успеть сработать, смотрите `RestartCount` и `docker events`.
 
 ## Эталонные проверки
 
@@ -243,7 +284,8 @@ docker compose exec -T postgres psql -U shop -d shop -c \
 после TTL. Базовая реализация кеша не защищает от гонки чтения и инвалидации.
 
 CI `.github/workflows/stand.yml` поднимает весь стенд, запускает API/Locust/k6,
-проверяет восемь scrape targets, HTTP RPS, метрики k6, логи в Loki, Grafana,
+проверяет восемь scrape targets, HTTP RPS, метрики k6, логи в Loki, трейс с обоими
+сервисами в Tempo, `trace_id` в логах, политику `restart`, Grafana,
 Alertmanager и наличие Seq Scan. Он всегда удаляет тома после проверки.
 После учебного исправления индекса такая проверка плана закономерно перестанет проходить:
 измените ожидание CI в своей учебной ветке.

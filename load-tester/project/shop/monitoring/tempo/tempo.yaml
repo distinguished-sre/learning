@@ -1,0 +1,26 @@
+# Tempo в одном процессе с локальным диском: только для учебного стенда.
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+ingester:
+  # Закрываем блок быстро, чтобы свежие трейсы находились поиском.
+  max_block_duration: 2m
+
+compactor:
+  compaction:
+    block_retention: 24h
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks

@@ -8,7 +8,10 @@ from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
+import telemetry
+
 app = FastAPI(title="Учебная оплата")
+telemetry.setup(app)
 lock = threading.Lock()
 config = {"delay_ms": float(os.getenv("PAYMENT_DELAY_MS", "50")),
           "fail_rate": float(os.getenv("PAYMENT_FAIL_RATE", "0.0"))}

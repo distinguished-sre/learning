@@ -2,6 +2,7 @@ name: shop
 
 services:
   shop:
+    restart: unless-stopped
     build: ./shop
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://shop:shop@postgres:5432/shop}
@@ -21,6 +22,13 @@ services:
       SESSION_TTL: ${SESSION_TTL:-3600}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PROMETHEUS_MULTIPROC_DIR: ${PROMETHEUS_MULTIPROC_DIR:-/tmp/shop-metrics}
+      TRACING_ENABLED: ${TRACING_ENABLED:-1}
+      OTEL_SERVICE_NAME: shop
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://alloy:4318}
+      OTEL_EXPORTER_OTLP_TIMEOUT: "3"
+      OTEL_BSP_SCHEDULE_DELAY: "1000"
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
     ports: ["8000:8000"]
     cpus: "1.0"
     mem_limit: 512m
@@ -36,10 +44,18 @@ services:
       start_period: 20s
 
   payment:
+    restart: unless-stopped
     build: ./payment
     environment:
       PAYMENT_DELAY_MS: ${PAYMENT_DELAY_MS:-50}
       PAYMENT_FAIL_RATE: ${PAYMENT_FAIL_RATE:-0.0}
+      TRACING_ENABLED: ${TRACING_ENABLED:-1}
+      OTEL_SERVICE_NAME: payment
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://alloy:4318}
+      OTEL_EXPORTER_OTLP_TIMEOUT: "3"
+      OTEL_BSP_SCHEDULE_DELAY: "1000"
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
     ports: ["8001:8001"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/healthz', timeout=3)"]
@@ -48,6 +64,7 @@ services:
       retries: 12
 
   postgres:
+    restart: unless-stopped
     image: postgres:18.6
     environment:
       POSTGRES_DB: shop
@@ -79,6 +96,7 @@ services:
       start_period: 30s
 
   redis:
+    restart: unless-stopped
     image: redis:8.10.2
     ports: ["6379:6379"]
     healthcheck:
@@ -88,6 +106,7 @@ services:
       retries: 12
 
   prometheus:
+    restart: unless-stopped
     image: prom/prometheus:v3.15.0
     profiles: [monitoring]
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--web.enable-remote-write-receiver"]
@@ -101,6 +120,7 @@ services:
       payment: {condition: service_healthy}
 
   alertmanager:
+    restart: unless-stopped
     image: prom/alertmanager:v0.34.1
     profiles: [monitoring]
     ports: ["9093:9093"]
@@ -108,6 +128,7 @@ services:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
 
   grafana:
+    restart: unless-stopped
     image: grafana/grafana:13.2.3
     profiles: [monitoring]
     environment:
@@ -122,6 +143,7 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
   node-exporter:
+    restart: unless-stopped
     image: prom/node-exporter:v1.12.1
     profiles: [monitoring]
     pid: host
@@ -129,6 +151,7 @@ services:
     volumes: ["/:/host:ro,rslave"]
 
   cadvisor:
+    restart: unless-stopped
     # Начиная с v0.53.0 официальный образ публикуется в GHCR.
     image: ghcr.io/google/cadvisor:v0.60.6
     profiles: [monitoring]
@@ -142,6 +165,7 @@ services:
       - /dev/disk:/dev/disk:ro
 
   postgres-exporter:
+    restart: unless-stopped
     image: prometheuscommunity/postgres-exporter:v0.20.1
     profiles: [monitoring]
     environment:
@@ -150,24 +174,38 @@ services:
       postgres: {condition: service_healthy}
 
   loki:
+    restart: unless-stopped
     image: grafana/loki:3.7.8
     profiles: [monitoring]
     command: ["-config.file=/etc/loki/local-config.yaml"]
     ports: ["3100:3100"]
     volumes: ["loki:/loki"]
 
+  tempo:
+    restart: unless-stopped
+    image: grafana/tempo:2.10.8
+    profiles: [monitoring]
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    ports: ["3200:3200"]
+    volumes:
+      - ./monitoring/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo:/var/tempo
+
   alloy:
+    restart: unless-stopped
     image: grafana/alloy:v1.20.1
     profiles: [monitoring]
     command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    # OTLP/HTTP от shop и payment (порт 4318) доступен внутри сети Compose.
     ports: ["12345:12345"]
     volumes:
       - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on: [loki]
+    depends_on: [loki, tempo]
 
 volumes:
   pgdata:
   prometheus:
   grafana:
   loki:
+  tempo:

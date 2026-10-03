@@ -5,6 +5,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
 from . import metrics, settings
+from .telemetry import span
 
 # Каждый воркер имеет свой пул; суммарный лимит = workers * DB_POOL_MAX.
 pool = ConnectionPool(settings.DATABASE_URL, min_size=settings.DB_POOL_MIN,
@@ -23,7 +24,9 @@ def update_pool_metrics():
 def connection():
     started = perf_counter()
     try:
-        conn = pool.getconn()
+        # Отдельный спан показывает ожидание свободного соединения в трейсе.
+        with span("db.pool.getconn"):
+            conn = pool.getconn()
     finally:
         # Даже неудачное ожидание важно для поиска насыщения пула.
         metrics.DB_WAIT.observe(perf_counter() - started)

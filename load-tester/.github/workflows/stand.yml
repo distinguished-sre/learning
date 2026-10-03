@@ -34,7 +34,7 @@ jobs:
       - name: Установка инструментов проверки
         run: |
           python -m pip install -r examples/api-tests/requirements.txt locust==2.46.6
-          python -m py_compile shop/app/*.py payment/main.py examples/api-tests/*.py examples/locust/locustfile.py
+          python -m py_compile shop/app/*.py payment/main.py payment/telemetry.py examples/api-tests/*.py examples/locust/locustfile.py
       - name: Эталонные API-тесты
         run: python -m pytest examples/api-tests -v
       - name: Locust — 20 пользователей на минуту
@@ -57,7 +57,7 @@ jobs:
             -e BASE_URL=http://localhost:8000 -e DURATION=60s -e RATE=2 \
             -e K6_PROMETHEUS_RW_SERVER_URL=http://localhost:9090/api/v1/write \
             grafana/k6:2.3.0 run -o experimental-prometheus-rw /scripts/shop.js
-      - name: Метрики, логи и интерфейсы наблюдения
+      - name: Метрики, логи, трейсы и интерфейсы наблюдения
         run: |
           # Компоненты без healthcheck могут ещё прогреваться; ограниченные повторы убирают гонку.
           retry() {
@@ -85,6 +85,19 @@ jobs:
               --data-urlencode 'query={service="shop"}' --data-urlencode 'limit=10' |
               jq -e '.status == "success" and ([.data.result[].values[]] | length > 0)'
           }
+          check_tempo() {
+            # Трейс запроса с оплатой должен содержать спаны обоих сервисов (traceparent shop -> payment).
+            local id
+            id=$(curl -fsSG http://localhost:3200/api/search --data-urlencode 'q={ resource.service.name = "payment" }' --data-urlencode 'limit=1' |
+              jq -er '.traces[0].traceID') || return 1
+            curl -fsS "http://localhost:3200/api/traces/${id}" |
+              jq -e '[.. | objects | select(.key? == "service.name") | .value.stringValue] | unique | (index("shop") != null and index("payment") != null)'
+          }
+          check_trace_id_in_logs() {
+            curl -fsSG http://localhost:3100/loki/api/v1/query_range \
+              --data-urlencode 'query={service="shop"} | json | trace_id != ""' --data-urlencode 'limit=5' |
+              jq -e '.status == "success" and ([.data.result[].values[]] | length > 0)'
+          }
           check_grafana() {
             curl -fsS http://localhost:3000/api/health | jq -e '.database == "ok"'
           }
@@ -92,8 +105,14 @@ jobs:
           retry check_rps
           retry check_k6
           retry check_loki
+          retry check_tempo
+          retry check_trace_id_in_logs
           retry check_grafana
           retry curl -fsS http://localhost:9093/-/ready
+          # Каждый запущенный контейнер стенда обязан перезапускаться сам.
+          docker compose --profile monitoring ps -q |
+            xargs docker inspect -f '{{.Name}} {{.HostConfig.RestartPolicy.Name}}' |
+            tee /dev/stderr | awk '$2 != "unless-stopped" { bad = 1 } END { exit bad }'
       - name: Учебное узкое место — Seq Scan по orders
         run: |
           docker compose exec -T postgres psql -U shop -d shop -v ON_ERROR_STOP=1 -At \

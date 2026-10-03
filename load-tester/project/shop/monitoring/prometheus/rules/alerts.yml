@@ -8,6 +8,7 @@ groups:
         annotations:
           summary: Магазин недоступен
           description: Prometheus не может получить метрики магазина больше минуты.
+          runbook_url: https://distinguished-sre.github.io/load-tester/07-observability/01-metrics-prometheus.html
       - alert: ShopHighErrorRate
         expr: sum(rate(http_requests_total{status=~"5.."}[1m])) / sum(rate(http_requests_total[1m])) > 0.05
         for: 2m
@@ -15,6 +16,7 @@ groups:
         annotations:
           summary: Много ошибок магазина
           description: Доля HTTP 5xx превышает 5 процентов две минуты.
+          runbook_url: https://distinguished-sre.github.io/load-tester/07-observability/06-alerts-incidents.html
       - alert: ShopHighLatencyP95
         expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[1m]))) > 1
         for: 5m
@@ -22,6 +24,7 @@ groups:
         annotations:
           summary: Магазин отвечает медленно
           description: p95 запросов превышает секунду в течение пяти минут.
+          runbook_url: https://distinguished-sre.github.io/load-tester/11-bottlenecks/01-method.html
       - alert: ShopDbPoolExhausted
         expr: shop_db_pool_waiting > 0
         for: 1m
@@ -29,6 +32,7 @@ groups:
         annotations:
           summary: Очередь в пуле БД
           description: Запросы ждут свободного соединения больше минуты.
+          runbook_url: https://distinguished-sre.github.io/load-tester/11-bottlenecks/03-database.html
       - alert: HostHighCpu
         expr: 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) > 0.9
         for: 2m
@@ -36,3 +40,25 @@ groups:
         annotations:
           summary: Высокая загрузка CPU
           description: Средняя загрузка CPU хоста превышает 90 процентов две минуты.
+          runbook_url: https://distinguished-sre.github.io/load-tester/11-bottlenecks/02-cpu.html
+  - name: shop-meta
+    rules:
+      - alert: ExporterDown
+        expr: up{job=~"payment|node|cadvisor|postgres|alertmanager|alloy"} == 0
+        for: 1m
+        labels: {severity: warning}
+        annotations:
+          summary: "Цель {{ $labels.job }} недоступна"
+          description: "Prometheus не может скрейпить {{ $labels.instance }} больше минуты: метрики этого источника не обновляются."
+          runbook_url: https://distinguished-sre.github.io/load-tester/07-observability/04-exporters.html
+      # Тишина после работы: трафик был за последние полчаса, а за последние пять минут запросов нет.
+      # В пустом стенде, куда никто не ходил, алерт молчит. На боевой системе добавляют ещё
+      # `or absent(http_requests_total)`: см. урок 7.6.
+      - alert: ShopNoTraffic
+        expr: sum(rate(http_requests_total[5m])) == 0 and sum(increase(http_requests_total[30m])) > 0
+        for: 10m
+        labels: {severity: info}
+        annotations:
+          summary: Запросы к магазину прекратились
+          description: Полчаса назад трафик был, а последние 5 минут запросов нет. После нагрузочного теста это нормально, в бою это потерянные пользователи.
+          runbook_url: https://distinguished-sre.github.io/load-tester/07-observability/06-alerts-incidents.html
