@@ -4,18 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Что это
 
-Два продукта на одном GitHub Pages (https://distinguished-sre.github.io/load-tester/, Jekyll 3.10, `baseurl: /load-tester`):
-
-1. **Лендинг-гайд** `index.html` в корне: «Путь в автоматизацию и нагрузочное тестирование с нуля». Статический файл без front matter, Jekyll копирует его как есть. Устройство и правила ниже в разделе «Лендинг».
-2. **Курс** нагрузочного тестирования и мониторинга для новичка: Markdown-уроки, которые Jekyll собирает в сайт (`/course/` главная курса, `_layouts/`, `_includes/`, `assets/`). Дизайн и механика взяты из соседнего курса DevOps (github.com/distinguished-sre/devops) и адаптированы.
+Курс нагрузочного тестирования и мониторинга для новичка на GitHub Pages (https://distinguished-sre.github.io/load-tester/, Jekyll 3.10, `baseurl: /load-tester`): Markdown-уроки, которые Jekyll собирает в сайт (`_layouts/`, `_includes/`, `assets/`). Главная курса в корне сайта, старый адрес `/course/` редиректит на неё. Дизайн и механика взяты из соседнего курса DevOps (github.com/distinguished-sre/devops) и адаптированы. `README.md` репозитория: сокращённая главная, цифры (уроки, часы, месяцы) правятся вместе с `_data/course.yml`.
 
 Курс общий, для любого новичка. Никаких имён конкретных учеников, работодателей и историй «для кого написан» в текстах, коммитах и примерах.
 
 ## Команды
 
 ```bash
-# лендинг без сборки
-python3 -m http.server 8777 --bind 127.0.0.1        # http://127.0.0.1:8777/index.html
 # аудит уроков: доля теории и термины до объяснения
 python3 tools/audit.py [урок]
 # стенд «Магазин» (нужен Docker; на Mac автора Docker нет, стенд проверяет CI .github/workflows/stand.yml)
@@ -28,7 +23,7 @@ cd project/shop && cp .env.example .env && docker compose --profile monitoring u
 
 - `_data/course.yml`: **единственный источник порядка курса** (13 тем, 57 уроков): `topics[].{n, dir, title, subtitle, time, layer, project, lessons[].{id, slug, title, time}}`. Время темы равно сумме уроков. Новый урок без записи здесь недостижим.
 - `<NN-тема>/index.md`: страница темы (`layout: topic`). `<NN-тема>/<NN-slug>.md`: урок, front matter `layout: lesson`, `title`, `topic` (число), `lesson` ("5.3"), `time`.
-- `course/index.md`: главная курса (`layout: home`, тексты в `_layouts/home.html`). `schedule.md`: расписание по неделям.
+- `index.md`: главная курса (`layout: home`, `permalink: /`, `redirect_from: /course/`, тексты в `_layouts/home.html`). `schedule.md`: расписание по неделям. `ai.md`: страница «ИИ-помощник» (выбор нейросети, правила, промпт преподавателя).
 - Ссылки только относительные на `.md`: в своей теме `03-dns.md`, в чужой `../05-docker/03-compose-shop.md`.
 - Пользовательский прогресс в `localStorage` с префиксом `lt:`: на том же origin живёт курс DevOps.
 
@@ -44,9 +39,10 @@ cd project/shop && cp .env.example .env && docker compose --profile monitoring u
 4. `## Теория`: главная часть, 40–50% объёма (обычно 1800–3000 слов; урок рассчитан на 1–2 занятия по 1,5–2 часа). Разделы `###` по одному понятию.
 5. `## Практика`: задания с командами, ожидаемым выводом и разбором.
 6. `## Сломай и почини`: намеренная поломка и диагностика.
-7. `## Словарик урока`: таблица «термин | простыми словами».
-8. `## Вопросы с собеседований`: 8–12 штук.
-9. `## Проверено на версиях` и `## Итог урока: ты умеешь` (чек-лист), затем ссылка «Дальше».
+7. `## ИИ в помощь`: 2–4 рабочих сценария темы: `**Задача:**`, готовый запрос в ```` ```text ```` со строкой `{: .wrap}` после блока, `**Проверь ответ:**` (что сверить и типичная ошибка нейросетей в теме). Ссылка на [ИИ-помощник](../ai.md), общие правила не повторять. По ходу практики 1–2 пометки цитатой с `{: .ai}` на следующей строке.
+8. `## Словарик урока`: таблица «термин | простыми словами».
+9. `## Вопросы с собеседований`: 8–12 штук.
+10. `## Проверено на версиях` и `## Итог урока: ты умеешь` (чек-лист), затем ссылка «Дальше».
 
 ### Как объяснять понятие
 
@@ -122,14 +118,3 @@ skip = YAML.load_file("_config.yml")["exclude"] || []
   ["{{", "{%"].each { |t| d = kept.scan(t).size - out.scan(t).size; puts "#{f}: после render пропало #{d} шт. #{t}" if d != 0 }
 rescue => e; puts "#{f}: #{e.message}"; end }'
 ```
-
-## Лендинг (`index.html`)
-
-Порядок в файле: `<head>` с мета-тегами и inline-скриптом анимации → `<style>` → `<main>` с семью `<section>` → три `<script>` в конце.
-
-- **Блокирующий скрипт в `<head>`** вешает `anim` на `<html>` и через IntersectionObserver добавляет `in` на `.hero`, `section`, `.track`; отключается при `prefers-reduced-motion` и на ширине ≤700px. `try/catch`-фолбэк показывает всё: не ломай его.
-- **Стили** на CSS-переменных в `:root`, тёмная тема через `@media (prefers-color-scheme: dark)`, светлое и тёмное значение правятся парой. Фон `body::before` (`bg.jpg`) и вуаль `body::after` (`--veil`).
-- **Двуязычность**: `data-en` (RU снимается из `textContent`), `data-en-aria`; словарь `EN_HTML` для блоков со ссылками (блок обязан иметь `id` = ключ); `EN_PROMPT` для промпта. **Правки промпта всегда парные: RU в `<pre id="prompt">` и EN в `EN_PROMPT`**, `grep -c '\${' index.html` должно быть 0. Язык в `localStorage` под `lang`.
-- **Третий скрипт**: копирование промпта, `#progress`, `#jump`, подсветка `.stop`, делегированный обработчик `a[href="#start"]` (ссылки в переводимых блоках пересоздаются).
-- `#osHint` по `navigator.platform`, тексты в `OS_HINT`.
-- Без внешних зависимостей, кроме Google Fonts; диаграммы inline-SVG; вес `index.html` около 100 КБ; `og.jpg` ровно 1200×630. Заголовок и описание правятся в четырёх местах: `<title>`, `meta[name=description]`, og-теги, `titleEn`/`metaEn`.

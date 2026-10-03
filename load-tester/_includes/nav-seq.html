@@ -15,14 +15,14 @@
   {%- assign nav_prev = e -%}
 {%- endfor -%}
 {%- if nav_cur_prev == '' -%}
-  {%- assign nav_prev_url = '/course/' | relative_url -%}{%- assign nav_prev_label = 'Главная' -%}
+  {%- assign nav_prev_url = '/' | relative_url -%}{%- assign nav_prev_label = 'Главная' -%}
 {%- else -%}
   {%- assign f = nav_cur_prev | split: '~~' -%}
   {%- capture nav_prev_path %}/{{ f[1] }}{% endcapture -%}
   {%- assign nav_prev_url = nav_prev_path | relative_url -%}{%- assign nav_prev_label = f[2] -%}
 {%- endif -%}
 {%- if nav_next == '' -%}
-  {%- assign nav_next_url = '/course/' | relative_url -%}{%- assign nav_next_label = 'На главную: карта курса' -%}
+  {%- assign nav_next_url = '/' | relative_url -%}{%- assign nav_next_label = 'На главную: карта курса' -%}
 {%- else -%}
   {%- assign f = nav_next | split: '~~' -%}
   {%- capture nav_next_path %}/{{ f[1] }}{% endcapture -%}

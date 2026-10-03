@@ -85,4 +85,4 @@ defaults:
   - scope: {path: "13-final"}
     values: {layout: lesson}
   - scope: {path: "schedule.md"}
-    values: {layout: default}
+    values: {layout: page}
