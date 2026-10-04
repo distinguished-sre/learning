@@ -611,6 +611,8 @@ li.checked .todo-text { color: var(--muted); text-decoration: line-through; text
 @media print { .flow-hidden .flow-step, .flow-in .flow-step { opacity: 1; transform: none; animation: none; } }
 
 .viz details { margin-top: 12px; max-width: 100%; overflow: auto; }
+/* .prose table делает таблицу блоком с рамкой во всю ширину: в виджетах рамка обнимает таблицу, широкая прокручивается (у mon-table своя раскладка) */
+.prose .viz table:not(.mu-tbl) { width: max-content; }
 .viz table { border-collapse: collapse; width: 100%; font-size: .8rem; }
 .viz th, .viz td { padding: 6px; border: 1px solid var(--line); text-align: left; }
 .mermaid-view { min-width: 0; overflow-x: auto; }

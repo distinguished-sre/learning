@@ -1,0 +1,170 @@
+/* Карта курсов на главной (_includes/hub-route.html). Только токены из style.scss: светлая и тёмная темы работают сами.
+   .hr-static: списки тем по курсам (без JS и на узких экранах). .hr-map: схема линий, её строит assets/js/viz/hub-route.js. */
+
+.hub-route {
+  --hr-devops: var(--accent);
+  --hr-monitoring: var(--green);
+  --hr-load-tester: var(--blue);
+  --hr-dash: color-mix(in srgb, var(--muted) 65%, transparent);
+  --hr-ease: cubic-bezier(.2, .7, .2, 1);
+  margin: 8px 0 0; min-width: 0; font-family: var(--sans);
+}
+.hub-route .hr-c-devops { --hr-line: var(--hr-devops); }
+.hub-route .hr-c-monitoring { --hr-line: var(--hr-monitoring); }
+.hub-route .hr-c-load-tester { --hr-line: var(--hr-load-tester); }
+
+/* ---------- схема ---------- */
+.hr-map { display: none; min-width: 0; overflow-x: auto; overflow-y: hidden; }
+.hub-route.has-map .hr-map { display: block; }
+.hr-canvas {
+  position: relative; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 18px; background: var(--bg);
+  box-shadow: var(--shadow);
+}
+.hr-map svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hr-map .hr-rail { fill: none; stroke: var(--hr-line); stroke-width: 4; stroke-linecap: round; }
+.hr-map .hr-rail-lead { stroke: var(--hr-dash); stroke-width: 2; stroke-dasharray: 1 7; }
+.hr-map .hr-xfer { fill: none; stroke: var(--hr-dash); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 1 7; }
+.hr-map .hr-rail-lead-label {
+  position: absolute; transform: translate(-50%, 0); width: max-content; max-width: 200px; text-align: center;
+  font: 400 12px/1.3 var(--mono); color: var(--muted); background: var(--bg); padding: 2px 4px; border-radius: 6px;
+}
+
+.hr-head {
+  position: absolute; top: 0; display: flex; flex-direction: column; gap: 3px; width: max-content; max-width: 320px;
+}
+.hr-head.side-left { align-items: flex-end; text-align: right; transform: translateX(-100%); }
+.hr-head.side-right { align-items: flex-start; text-align: left; }
+.hr-head.side-mid { align-items: center; text-align: center; transform: translateX(-50%); }
+.hr-head-name {
+  display: inline-flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none;
+  font: 600 16px/1.2 var(--sans); letter-spacing: -.01em;
+}
+.hr-head-name::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--hr-line); flex: none; }
+.hr-head.side-left .hr-head-name { flex-direction: row-reverse; }
+.hr-head-name:hover { color: var(--accent-ink); }
+.hr-head-meta { margin: 0; font: 400 12.5px/1.3 var(--mono); color: var(--muted); }
+.hr-head-progress { margin: 0; display: flex; align-items: center; gap: 8px; font: 500 12.5px/1.3 var(--mono); color: var(--green); }
+.hr-head-bar { width: 110px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.hr-head-bar i { display: block; height: 100%; width: var(--p, 0%); background: var(--hr-line); border-radius: 2px; }
+
+.hr-col { list-style: none; margin: 0; padding: 0; }
+.hr-col li { position: absolute; height: 0; }
+.hr-st {
+  position: absolute; display: flex; align-items: center; gap: 11px; color: var(--text); text-decoration: none;
+  font: 400 14.5px/1.25 var(--sans); border-radius: 8px; padding: 3px 4px; white-space: normal;
+  transition: color .2s;
+}
+.hr-st.side-left { right: 0; top: 0; transform: translateY(-50%); flex-direction: row-reverse; text-align: right; }
+.hr-st.side-right { left: 0; top: 0; transform: translateY(-50%); }
+.hr-st.side-mid { left: 50%; top: 0; transform: translate(-50%, -11px); flex-direction: column; gap: 6px; text-align: center; width: max-content; max-width: 100%; }
+.hr-st.side-left, .hr-st.side-right { max-width: 100%; }
+.hr-st-label { background: var(--bg); border-radius: 6px; padding: 1px 4px; }
+.hr-st.side-mid .hr-st-label { font-size: 13.5px; }
+.hr-dot {
+  flex: none; width: 16px; height: 16px; border-radius: 50%; position: relative;
+  background: var(--bg); border: 3px solid var(--hr-line); box-shadow: 0 0 0 3px var(--bg);
+  transition: transform .2s var(--hr-ease), background .2s;
+}
+.hr-st.side-left .hr-dot { margin-right: -8px; }
+.hr-st.side-mid.is-xfer { transform: translate(-50%, -13px); }
+.hr-st.side-right .hr-dot { margin-left: -8px; }
+.hr-st.side-mid .hr-dot { margin: 0; }
+.hr-st.is-xfer .hr-dot { width: 20px; height: 20px; border-width: 4px; }
+.hr-st.side-left.is-xfer .hr-dot { margin-right: -10px; }
+.hr-st.side-right.is-xfer .hr-dot { margin-left: -10px; }
+.hr-st.is-part .hr-dot { background: conic-gradient(var(--hr-line) var(--p, 0%), var(--bg) 0); }
+.hr-st.is-done .hr-dot { background: var(--hr-line); }
+.hr-st.is-done .hr-dot::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 2.5px; transform: translate(-55%, -70%) rotate(-45deg);
+  border-left: 2px solid var(--bg); border-bottom: 2px solid var(--bg);
+}
+.hr-st:hover, .hr-st:focus-visible { color: var(--accent-ink); }
+.hr-st:hover .hr-dot, .hr-st:focus-visible .hr-dot { transform: scale(1.2); }
+.hr-st:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hr-st-count { font: 400 12px/1 var(--mono); color: var(--muted); }
+
+.hr-pill {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+  font: 400 11.5px/1 var(--mono); color: var(--muted); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 999px; padding: 4px 9px;
+}
+
+.hr-tip {
+  position: absolute; z-index: 3; pointer-events: none; width: max-content; max-width: 280px;
+  background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+  padding: 10px 13px; font: 400 13px/1.45 var(--sans); opacity: 0; transition: opacity .15s;
+}
+.hr-tip.is-on { opacity: 1; }
+.hr-tip b { display: block; font-weight: 600; font-size: 13.5px; margin-bottom: 2px; }
+.hr-tip .hr-tip-meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.hr-tip .hr-tip-progress { font-family: var(--mono); font-size: 12px; color: var(--green); }
+.hr-tip .hr-tip-xfer { margin-top: 5px; padding-top: 5px; border-top: 1px dashed var(--line); font-size: 12.5px; color: var(--muted); }
+.hr-tip .hr-tip-xfer i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--hr-line); margin-right: 6px; vertical-align: 0; font-style: normal; }
+
+.hr-legend {
+  display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 14px 4px 0; font: 400 12.5px/1.4 var(--mono); color: var(--muted);
+}
+.hr-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.hr-legend .hr-lg-xfer::before { content: ""; width: 26px; border-top: 2px dotted var(--hr-dash); }
+.hr-legend .hr-lg-done::before {
+  content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); flex: none;
+}
+.hr-legend .hr-lg-part::before {
+  content: ""; width: 12px; height: 12px; border-radius: 50%; flex: none; border: 2px solid var(--muted);
+  background: conic-gradient(var(--muted) 40%, transparent 0);
+}
+
+/* появление: рельсы прорисовываются, станции проступают */
+.hr-canvas.is-animated .hr-rail { stroke-dasharray: var(--hr-len); stroke-dashoffset: var(--hr-len); animation: hr-draw 1.1s var(--hr-ease) forwards; }
+.hr-canvas.is-animated .hr-xfer, .hr-canvas.is-animated .hr-pill, .hr-canvas.is-animated .hr-rail-lead, .hr-canvas.is-animated .hr-rail-lead-label { opacity: 0; animation: hr-fade .5s .9s forwards; }
+.hr-canvas.is-animated .hr-col li { opacity: 0; animation: hr-fade .4s forwards; animation-delay: calc(.15s + var(--i, 0) * 45ms); }
+@keyframes hr-draw { to { stroke-dashoffset: 0; } }
+@keyframes hr-fade { to { opacity: 1; } }
+
+/* ---------- списки (без JS и на узких экранах) ---------- */
+.hr-static { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px clamp(20px, 3vw, 44px); }
+.hub-route.has-map .hr-static { display: none; }
+.hr-list { min-width: 0; }
+.hr-list-title { margin: 0 0 4px; font: 600 17px/1.25 var(--sans); letter-spacing: -.01em; display: flex; align-items: center; gap: 9px; }
+.hr-list-title::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--hr-line); flex: none; }
+.hr-list-title a { color: var(--text); text-decoration: none; }
+.hr-list-title a:hover { color: var(--accent-ink); }
+.hr-list-meta { margin: 0 0 12px 19px; font: 400 12.5px/1.4 var(--mono); color: var(--muted); }
+.hr-list-meta .hr-progress { display: block; color: var(--green); }
+.hr-list-topics { list-style: none; margin: 0; padding: 4px 0 4px 0; position: relative; }
+.hr-list-topics::before { content: ""; position: absolute; left: 4px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--hr-line); }
+.hr-list-topics li { position: relative; padding: 5px 0 9px 26px; }
+.hr-list-topics li::before {
+  content: ""; position: absolute; left: 0; top: 10px; width: 11px; height: 11px; border-radius: 50%;
+  background: var(--bg); border: 2.5px solid var(--hr-line); box-sizing: border-box;
+}
+.hr-list-topics li.is-done::before { background: var(--hr-line); }
+.hr-list-topics li.is-part::before { background: conic-gradient(var(--hr-line) var(--p, 0%), var(--bg) 0); }
+.hr-list-topic { display: flex; gap: 8px; align-items: baseline; color: var(--text); text-decoration: none; font-size: 15px; line-height: 1.35; border-radius: 6px; }
+.hr-list-topic:hover .hr-list-t, .hr-list-topic:focus-visible .hr-list-t { text-decoration: underline; text-underline-offset: 3px; color: var(--accent-ink); }
+.hr-list-n { font: 500 12.5px/1 var(--mono); color: var(--muted); min-width: 1.4em; }
+.hr-list-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 3px 0 0 2.1em; }
+.hr-list-x { font: 400 12px/1.4 var(--mono); color: var(--muted); }
+.hr-list-link {
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; white-space: nowrap;
+  font: 400 11.5px/1.5 var(--mono); color: var(--muted); text-decoration: none;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg-2);
+}
+.hr-list-link::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--hr-line); flex: none; }
+.hr-list-link:hover, .hr-list-link:focus-visible { border-color: var(--hr-line); color: var(--text); }
+.hr-list-arrow { opacity: .7; }
+
+@media (max-width: 719px) {
+  .hub-route.has-map .hr-map { display: none; }
+  .hub-route.has-map .hr-static { display: grid; }
+  .hr-static { grid-template-columns: 1fr; }
+}
+
+/* повторная сборка после первого показа: сразу итоговое состояние */
+.hr-canvas.is-settled .hr-rail { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .hr-canvas.is-animated .hr-rail, .hr-canvas.is-animated .hr-xfer, .hr-canvas.is-animated .hr-pill, .hr-canvas.is-animated .hr-rail-lead,
+  .hr-canvas.is-animated .hr-rail-lead-label, .hr-canvas.is-animated .hr-col li { animation: none; opacity: 1; stroke-dashoffset: 0; }
+  .hr-dot, .hr-st, .hr-tip { transition: none; }
+}

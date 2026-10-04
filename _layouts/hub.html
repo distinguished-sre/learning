@@ -2,85 +2,306 @@
 layout: default
 ---
 {%- comment -%}
-  Хаб: главная всего сайта со списком курсов. Числа курсов считаются из _data/courses/<курс>.yml.
-  Стили в assets/css/hub.css, подключаются только здесь.
+  Хаб: главная всего сайта. Тексты в _data/hub.yml (пишет редактор), числа курсов считаются
+  из _data/courses/<курс>.yml, карта курсов в _includes/hub-route.html (иллюстратор).
+  Стили в assets/css/hub.css, подключаются только здесь. Пустые строки и списки не выводятся:
+  в этом Liquid `!= blank` на строках не работает, поэтому строки сначала `| default: ''`, потом сравнение с ''.
+  Элементы списков могут быть строкой или объектом: facts {value,label}, audience/lesson {title,text},
+  faq {q,a}; синонимы ключей через default.
 {%- endcomment -%}
-{%- assign dv = site.data.courses.devops -%}
-{%- assign lt = site.data.courses['load-tester'] -%}
-{%- assign mn = site.data.courses.monitoring -%}
-{%- assign mn_lessons = 0 -%}{%- assign mn_hours = 0 -%}
-{%- for t in mn.topics -%}
-  {%- assign mn_lessons = mn_lessons | plus: t.lessons.size -%}
-  {%- assign h = t.time | remove: ' ч' | plus: 0 -%}
-  {%- assign mn_hours = mn_hours | plus: h -%}
-{%- endfor -%}
-{%- assign dv_lessons = 0 -%}{%- assign dv_hours = 0 -%}
-{%- for t in dv.topics -%}
-  {%- assign dv_lessons = dv_lessons | plus: t.lessons.size -%}
-  {%- assign h = t.time | remove: ' ч' | plus: 0 -%}
-  {%- assign dv_hours = dv_hours | plus: h -%}
-{%- endfor -%}
-{%- assign lt_lessons = 0 -%}{%- assign lt_hours = 0 -%}
-{%- for t in lt.topics -%}
-  {%- assign lt_lessons = lt_lessons | plus: t.lessons.size -%}
-  {%- assign h = t.time | remove: ' ч' | plus: 0 -%}
-  {%- assign lt_hours = lt_hours | plus: h -%}
-{%- endfor -%}
+{%- assign hub = site.data.hub -%}
+{%- assign hero_eyebrow = hub.hero.eyebrow | default: '' -%}
+{%- assign hero_lead = hub.hero.lead | default: '' -%}
+{%- assign cta1_text = hub.hero.cta_primary.text | default: '' -%}
+{%- assign cta1_href = hub.hero.cta_primary.href | default: '#courses' -%}
+{%- assign cta1_first = cta1_href | slice: 0, 1 -%}
+{%- assign cta2_text = hub.hero.cta_secondary.text | default: '' -%}
+{%- assign cta2_href = hub.hero.cta_secondary.href | default: '#lesson' -%}
+{%- assign cta2_first = cta2_href | slice: 0, 1 -%}
+{%- assign audience_lead = hub.audience.lead | default: '' -%}
+{%- assign courses_lead = hub.courses.lead | default: '' -%}
+{%- assign route_title = hub.route.title | default: '' -%}
+{%- assign route_lead = hub.route.lead | default: '' -%}
+{%- assign lesson_lead = hub.lesson.lead | default: '' -%}
+{%- assign faq_lead = hub.faq.lead | default: '' -%}
+{%- assign author_text = hub.author.text | default: '' -%}
 <div class="hub">
-  <section class="hub-hero">
+
+  {%- comment -%} ============ Первый экран ============ {%- endcomment %}
+  <section class="hub-hero" aria-labelledby="hero-h">
     <div class="hero-glow" aria-hidden="true"></div>
-    <div class="wrap">
-      <p class="eyebrow"><span class="spark" aria-hidden="true">✻</span> Бесплатные курсы Евгения Быкова</p>
-      <h1 class="display">Обучение</h1>
-      <p class="hero-lead">Три курса для тех, кто идёт в эксплуатацию и инфраструктуру: от первого терминала до мониторинга и нагрузочных тестов.</p>
+    <div class="hero-grid-bg" aria-hidden="true"></div>
+    <div class="wrap hero-copy">
+      {%- if hero_eyebrow != '' %}
+      <p class="eyebrow"><span class="spark" aria-hidden="true">✻</span> {{ hero_eyebrow }}</p>
+      {%- endif %}
+      <h1 id="hero-h" class="display">{{ hub.hero.title | default: page.title }}</h1>
+      {%- if hero_lead != '' %}
+      <p class="hero-lead">{{ hero_lead }}</p>
+      {%- endif %}
+      {%- if cta1_text != '' or cta2_text != '' %}
+      <div class="hero-cta">
+        {%- if cta1_text != '' %}
+        <a class="hbtn hbtn-primary" href="{% if cta1_first == '#' %}{{ cta1_href }}{% else %}{{ cta1_href | relative_url }}{% endif %}">{{ cta1_text }} <span class="arr" aria-hidden="true">{% if cta1_first == '#' %}↓{% else %}→{% endif %}</span></a>
+        {%- endif %}
+        {%- if cta2_text != '' %}
+        <a class="hbtn hbtn-ghost" href="{% if cta2_first == '#' %}{{ cta2_href }}{% else %}{{ cta2_href | relative_url }}{% endif %}">{{ cta2_text }} <span class="arr" aria-hidden="true">{% if cta2_first == '#' %}↓{% else %}→{% endif %}</span></a>
+        {%- endif %}
+      </div>
+      {%- endif %}
+      {%- if hub.hero.facts.size > 0 %}
+      <ul class="facts">
+        {%- for f in hub.hero.facts %}
+        {%- assign fv = f.value | default: f.num | default: f.title | default: f.b | default: '' -%}
+        {%- assign fl = f.label | default: f.text | default: f.span | default: '' -%}
+        {%- if fv != '' %}
+        <li class="fact-stat"><b>{{ fv }}</b>{% if fl != '' %}<span>{{ fl }}</span>{% endif %}</li>
+        {%- elsif f != '' %}
+        <li class="fact">{{ f }}</li>
+        {%- endif %}
+        {%- endfor %}
+      </ul>
+      {%- endif %}
     </div>
   </section>
 
-  <section class="band" aria-labelledby="courses-h">
+  {%- comment -%} ============ Для кого ============ {%- endcomment %}
+  {%- if hub.audience.items.size > 0 %}
+  <section class="band" id="audience" aria-labelledby="audience-h">
     <div class="wrap">
-      <h2 id="courses-h" class="h2">Курсы</h2>
+      <p class="kick">{{ hub.audience.kick | default: 'Кому подойдёт' }}</p>
+      <h2 id="audience-h" class="h2">{{ hub.audience.title | default: 'Для кого' }}</h2>
+      {%- if audience_lead != '' %}
+      <p class="lead2">{{ audience_lead }}</p>
+      {%- endif %}
+      <ul class="aud">
+        {%- for a in hub.audience.items %}
+        {%- assign at = a.title | default: a.name | default: a.who | default: '' -%}
+        {%- assign ax = a.text | default: a.lead | default: a.what | default: '' -%}
+        {%- assign as_text = a.start.text | default: '' -%}
+        {%- assign as_href = a.start.href | default: '' -%}
+        <li class="aud-item">
+          <span class="aud-n" aria-hidden="true">{{ forloop.index | prepend: '0' | slice: -2, 2 }}</span>
+          {%- if at != '' %}
+          <h3>{{ at }}</h3>
+          {%- if ax != '' %}<p>{{ ax }}</p>{% endif %}
+          {%- else %}
+          <p>{{ a }}</p>
+          {%- endif %}
+          {%- if as_text != '' and as_href != '' %}
+          <a class="aud-start" href="{{ as_href | relative_url }}">{{ as_text }} <span class="arr" aria-hidden="true">→</span></a>
+          {%- endif %}
+        </li>
+        {%- endfor %}
+      </ul>
+    </div>
+  </section>
+  {%- endif %}
+
+  {%- comment -%} ============ Курсы ============ {%- endcomment %}
+  <section class="band band-alt" id="courses" aria-labelledby="courses-h">
+    <div class="wrap">
+      <p class="kick">{{ hub.courses.kick | default: 'Три курса' }}</p>
+      <h2 id="courses-h" class="h2">{{ hub.courses.title | default: 'Курсы' }}</h2>
+      {%- if courses_lead != '' %}
+      <p class="lead2">{{ courses_lead }}</p>
+      {%- endif %}
       <ul class="hub-cards">
-        <li class="hub-card">
-          <p class="kick">Курс</p>
-          <h3>DevOps</h3>
-          <p class="hub-text">Десять блоков от Linux до Kubernetes и GitOps со сквозным проектом: теория простым языком, практика и вопросы с собеседований.</p>
+        {%- for c in hub.courses.items %}
+        {%- assign course = site.data.courses[c.key] -%}
+        {%- assign n_lessons = 0 -%}{%- assign n_hours = 0 -%}
+        {%- for t in course.topics -%}
+          {%- assign n_lessons = n_lessons | plus: t.lessons.size -%}
+          {%- assign h = t.time | remove: ' ч' | plus: 0 -%}
+          {%- assign n_hours = n_hours | plus: h -%}
+        {%- endfor -%}
+        {%- assign cbase = '/' | append: c.key | append: '/' -%}
+        {%- assign first_topic = course.topics | first -%}
+        {%- assign first_lesson = first_topic.lessons | first -%}
+        {%- capture first_url %}{{ cbase }}{{ first_topic.dir }}/{{ first_lesson.slug }}.html{% endcapture -%}
+        {%- assign c_tagline = c.tagline | default: '' -%}
+        {%- assign c_text = c.text | default: '' -%}
+        {%- assign c_for = c.for_whom | default: '' -%}
+        {%- assign c_hint = c.start_hint | default: '' -%}
+        <li class="hub-card" data-course="{{ c.key }}" id="course-{{ c.key }}">
+          <div class="hub-card-head">
+            <p class="kick">{{ c.kick | default: 'Курс' }}</p>
+            <h3>{{ c.name | default: course.title }}</h3>
+            {%- if c_tagline != '' %}
+            <p class="hub-tagline">{{ c_tagline }}</p>
+            {%- endif %}
+          </div>
+          {%- if c_text != '' %}
+          <p class="hub-text">{{ c_text }}</p>
+          {%- endif %}
+          {%- if c_for != '' %}
+          <p class="hub-for"><span class="hub-lbl">Для кого</span>{{ c_for }}</p>
+          {%- endif %}
+          {%- if c.outcomes.size > 0 %}
+          <div class="hub-out">
+            <p class="hub-lbl">{{ c.outcomes_title | default: 'После курса ты умеешь' }}</p>
+            <ul class="hub-outcomes">
+              {%- for o in c.outcomes %}
+              <li>{{ o }}</li>
+              {%- endfor %}
+            </ul>
+          </div>
+          {%- endif %}
+          {%- if course.topics.size > 0 %}
           <dl class="hub-stats">
-            <div><dt>тем</dt><dd>{{ dv.topics.size }}</dd></div>
-            <div><dt>уроков</dt><dd>{{ dv_lessons }}</dd></div>
-            <div><dt>часов</dt><dd>≈{{ dv_hours | round }}</dd></div>
+            <div><dt>тем</dt><dd>{{ course.topics.size }}</dd></div>
+            <div><dt>уроков</dt><dd>{{ n_lessons }}</dd></div>
+            <div><dt>часов</dt><dd>≈{{ n_hours | round }}</dd></div>
           </dl>
-          <a class="hbtn hbtn-primary" href="{{ '/devops/' | relative_url }}">Открыть курс <span class="arr" aria-hidden="true">→</span></a>
+          <details class="hub-topics">
+            <summary><span>Программа курса</span><span class="hub-chev" aria-hidden="true"></span></summary>
+            <ol class="hub-topic-list">
+              {%- for t in course.topics %}
+              <li><a href="{{ cbase | append: t.dir | append: '/' | relative_url }}"><span class="hub-topic-n">{{ t.n | default: forloop.index }}</span><span class="hub-topic-t">{{ t.title }}</span><span class="hub-topic-m">{{ t.lessons.size }} ур. · {{ t.time | replace: '.', ',' }}</span></a></li>
+              {%- endfor %}
+            </ol>
+          </details>
+          {%- endif %}
+          <p class="hub-progress" data-hub-progress="{{ c.key }}" data-total="{{ n_lessons }}" hidden></p>
+          <div class="hub-card-cta">
+            <a class="hbtn hbtn-primary" href="{{ cbase | relative_url }}" data-hub-open><span>Открыть курс</span> <span class="arr" aria-hidden="true">→</span></a>
+            {%- if first_lesson %}
+            <a class="hbtn hbtn-ghost" href="{{ first_url | relative_url }}">Первый урок <span class="arr" aria-hidden="true">→</span></a>
+            {%- endif %}
+          </div>
+          {%- if c_hint != '' %}
+          <p class="hub-hint">{{ c_hint }}</p>
+          {%- endif %}
         </li>
-        <li class="hub-card">
-          <p class="kick">Курс</p>
-          <h3>Нагрузочное тестирование</h3>
-          <p class="hub-text">С нуля до поиска узких мест: Linux, Python, автотесты API, Locust и k6 на учебном интернет-магазине.</p>
-          <dl class="hub-stats">
-            <div><dt>тем</dt><dd>{{ lt.topics.size }}</dd></div>
-            <div><dt>уроков</dt><dd>{{ lt_lessons }}</dd></div>
-            <div><dt>часов</dt><dd>≈{{ lt_hours | round }}</dd></div>
-          </dl>
-          <a class="hbtn hbtn-primary" href="{{ '/load-tester/' | relative_url }}">Открыть курс <span class="arr" aria-hidden="true">→</span></a>
-        </li>
-        <li class="hub-card">
-          <p class="kick">Курс</p>
-          <h3>Мониторинг</h3>
-          <p class="hub-text">Метрики, логи, трейсы и алерты: как понять, что с сервисом происходит, и узнать об этом раньше пользователей.</p>
-          <dl class="hub-stats">
-            <div><dt>тем</dt><dd>{{ mn.topics.size }}</dd></div>
-            <div><dt>уроков</dt><dd>{{ mn_lessons }}</dd></div>
-            <div><dt>часов</dt><dd>≈{{ mn_hours | round }}</dd></div>
-          </dl>
-          <a class="hbtn hbtn-primary" href="{{ '/monitoring/' | relative_url }}">Открыть курс <span class="arr" aria-hidden="true">→</span></a>
-        </li>
+        {%- endfor %}
       </ul>
     </div>
   </section>
 
-  <section class="band band-alt" aria-labelledby="links-h">
+  {%- comment -%} ============ Как курсы связаны ============ {%- endcomment %}
+  {%- if route_title != '' or route_lead != '' %}
+  <section class="band" id="route" aria-labelledby="route-h">
     <div class="wrap">
-      <h2 id="links-h" class="h2">Как курсы связаны</h2>
-      <p class="lead2">Мониторинг: общая база для обоих курсов: без метрик и логов непонятно ни как живёт сервис, ни что показал нагрузочный тест. DevOps и нагрузочное тестирование можно проходить независимо, в любом порядке.</p>
+      <p class="kick">{{ hub.route.kick | default: 'Маршрут' }}</p>
+      <h2 id="route-h" class="h2">{{ hub.route.title | default: 'Как курсы связаны' }}</h2>
+      {%- if route_lead != '' %}
+      <p class="lead2">{{ route_lead }}</p>
+      {%- endif %}
+      <div class="hub-route-host">
+        {% include hub-route.html %}
+      </div>
+      {%- if hub.route.items.size > 0 %}
+      <ul class="route-notes">
+        {%- for r in hub.route.items %}
+        {%- assign rt = r.title | default: '' -%}
+        {%- assign rx = r.text | default: '' -%}
+        <li>
+          {%- if rt != '' %}<h3>{{ rt }}</h3>{% endif %}
+          {%- if rx != '' %}<p>{{ rx }}</p>{% elsif rt == '' %}<p>{{ r }}</p>{% endif %}
+        </li>
+        {%- endfor %}
+      </ul>
+      {%- endif %}
     </div>
   </section>
+  {%- endif %}
+
+  {%- comment -%} ============ Как устроен урок ============ {%- endcomment %}
+  {%- if hub.lesson.items.size > 0 or lesson_lead != '' %}
+  <section class="band band-alt" id="lesson" aria-labelledby="lesson-h">
+    <div class="wrap">
+      <p class="kick">{{ hub.lesson.kick | default: 'Внутри урока' }}</p>
+      <h2 id="lesson-h" class="h2">{{ hub.lesson.title | default: 'Как устроен урок' }}</h2>
+      {%- if lesson_lead != '' %}
+      <p class="lead2">{{ lesson_lead }}</p>
+      {%- endif %}
+      {%- if hub.lesson.items.size > 0 %}
+      <ol class="steps">
+        {%- for s in hub.lesson.items %}
+        {%- assign st = s.title | default: s.name | default: '' -%}
+        {%- assign sx = s.text | default: s.lead | default: '' -%}
+        <li class="step">
+          <span class="step-n" aria-hidden="true">{{ forloop.index }}</span>
+          {%- if st != '' %}
+          <h3>{{ st }}</h3>
+          {%- if sx != '' %}<p>{{ sx }}</p>{% endif %}
+          {%- else %}
+          <p>{{ s }}</p>
+          {%- endif %}
+        </li>
+        {%- endfor %}
+      </ol>
+      {%- endif %}
+    </div>
+  </section>
+  {%- endif %}
+
+  {%- comment -%} ============ Частые вопросы ============ {%- endcomment %}
+  {%- if hub.faq.items.size > 0 %}
+  <section class="band" id="faq" aria-labelledby="faq-h">
+    <div class="wrap faq-wrap">
+      <div>
+        <p class="kick">{{ hub.faq.kick | default: 'Вопросы' }}</p>
+        <h2 id="faq-h" class="h2">{{ hub.faq.title | default: 'Частые вопросы' }}</h2>
+        {%- if faq_lead != '' %}
+        <p class="lead2">{{ faq_lead }}</p>
+        {%- endif %}
+      </div>
+      <div class="faq">
+        {%- for f in hub.faq.items %}
+        {%- assign fq = f.q | default: f.question | default: f.title | default: '' -%}
+        {%- assign fa = f.a | default: f.answer | default: f.text | default: '' -%}
+        {%- if fq != '' %}
+        <details>
+          <summary>{{ fq }}</summary>
+          {%- if fa != '' %}<div class="faq-a">{{ fa | markdownify }}</div>{% endif %}
+        </details>
+        {%- endif %}
+        {%- endfor %}
+      </div>
+    </div>
+  </section>
+  {%- endif %}
+
+  {%- comment -%} ============ Автор ============ {%- endcomment %}
+  {%- if author_text != '' %}
+  <section class="band band-alt band-author" id="author" aria-labelledby="author-h">
+    <div class="wrap author">
+      <div class="author-mark" aria-hidden="true">✻</div>
+      <div class="author-body">
+        {%- assign author_kick = hub.author.kick | default: '' -%}
+        {%- if author_kick != '' %}<p class="kick">{{ author_kick }}</p>{% endif %}
+        <h2 id="author-h" class="h2">{{ hub.author.title | default: 'Автор' }}</h2>
+        <div class="author-text">{{ author_text | markdownify }}</div>
+        {%- if hub.author.links.size > 0 %}
+        <ul class="author-links">
+          {%- for l in hub.author.links %}
+          {%- assign l_href = l.href | default: '' -%}
+          {%- if l_href != '' %}
+          <li><a href="{{ l_href }}"{% if l_href contains '://' %} rel="noopener"{% endif %}>{{ l.text | default: l_href }}</a></li>
+          {%- endif %}
+          {%- endfor %}
+        </ul>
+        {%- endif %}
+      </div>
+    </div>
+  </section>
+  {%- endif %}
 </div>
+<script>
+  /* Прогресс по курсам: только читаем существующие ключи localStorage (devops 'done', 'lt:done', 'mon:done'). Без JS карточки просто без строки прогресса. */
+  (function () {
+    var keys = { devops: 'done', 'load-tester': 'lt:done', monitoring: 'mon:done' };
+    var els = document.querySelectorAll('[data-hub-progress]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], k = keys[el.getAttribute('data-hub-progress')], total = +el.getAttribute('data-total') || 0, n = 0;
+      if (!k || !total) continue;
+      try { n = (JSON.parse(localStorage.getItem(k) || '[]') || []).length; } catch (e) { n = 0; }
+      if (!n) continue;
+      el.textContent = '✓ пройдено ' + Math.min(n, total) + ' из ' + total + ' уроков';
+      el.hidden = false;
+      var btn = el.parentNode.querySelector('[data-hub-open] > span:first-child');
+      if (btn) btn.textContent = 'Продолжить курс';
+    }
+  })();
+</script>

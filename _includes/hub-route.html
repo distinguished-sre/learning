@@ -1,0 +1,71 @@
+{%- comment -%}
+  Карта курсов на главной: три линии (DevOps, Мониторинг и SRE, Нагрузочное тестирование), станции это темы,
+  пересадки это связи между курсами, подтверждённые ссылками в уроках («Что нужно знать», «Глубже», «Где это применить»).
+  Без JS и на узких экранах показываются списки тем по курсам (.hr-static); JS строит схему (.hr-map) из JSON ниже
+  и читает прогресс из localStorage (ключи done, lt:done, mon:done, только чтение).
+  Стили: assets/css/hub-route.css, скрипт: assets/js/viz/hub-route.js.
+{%- endcomment -%}
+{%- assign hr_keys = "devops|monitoring|load-tester" | split: "|" -%}
+{%- assign hr_names = "DevOps|Мониторинг и SRE|Нагрузочное тестирование" | split: "|" -%}
+{%- assign hr_short = "DevOps|Мониторинг|Нагрузочное" | split: "|" -%}
+{%- comment -%} Пересадки: курс:тема>курс:тема>подпись. Каждая проверена по урокам. {%- endcomment -%}
+{%- assign hr_links = "devops:1>load-tester:1>Linux|devops:2>load-tester:2>HTTP и сеть|devops:4>load-tester:5>Docker|load-tester:5>monitoring:1>стенд «Магазин»|load-tester:7>monitoring:2>приборы под нагрузкой|devops:8>monitoring:3>наблюдаемость|devops:10>monitoring:5>инциденты|load-tester:11>monitoring:5>узкие места" | split: "|" -%}
+<link rel="stylesheet" href="{{ '/assets/css/hub-route.css' | relative_url }}">
+<div class="hub-route" data-hub-route>
+  <div class="hr-static">
+    {%- for key in hr_keys -%}
+    {%- assign idx = forloop.index0 -%}
+    {%- assign c = site.data.courses[key] -%}
+    {%- assign cname = hr_names[idx] -%}
+    {%- assign lessons = 0 -%}{%- assign hours = 0 -%}
+    {%- for t in c.topics -%}
+      {%- assign lessons = lessons | plus: t.lessons.size -%}
+      {%- assign h = t.time | remove: ' ч' | plus: 0 -%}
+      {%- assign hours = hours | plus: h -%}
+    {%- endfor -%}
+    <section class="hr-list hr-c-{{ key }}" aria-labelledby="hr-list-{{ key }}">
+      <h3 class="hr-list-title" id="hr-list-{{ key }}"><a href="{{ '/' | append: key | append: '/' | relative_url }}">{{ cname }}</a></h3>
+      <p class="hr-list-meta">{{ c.topics.size }} тем · {{ lessons }} уроков · ≈{{ hours | round }} ч<span class="hr-progress" data-progress-for="{{ key }}" hidden></span></p>
+      <ol class="hr-list-topics">
+        {%- for t in c.topics -%}
+        {%- assign tkey = key | append: ':' | append: t.n -%}
+        <li data-topic="{{ tkey }}">
+          <a class="hr-list-topic" href="{{ '/' | append: key | append: '/' | append: t.dir | append: '/index.html' | relative_url }}"><span class="hr-list-n" aria-hidden="true">{{ t.n }}</span><span class="hr-list-t">{{ t.title | escape }}</span></a>
+          <div class="hr-list-sub"><span class="hr-list-x">{{ t.lessons.size }} ур. · {{ t.time }}</span>
+          {%- for l in hr_links -%}
+            {%- assign p = l | split: '>' -%}
+            {%- assign other = '' -%}
+            {%- if p[0] == tkey -%}{%- assign other = p[1] -%}{%- elsif p[1] == tkey -%}{%- assign other = p[0] -%}{%- endif -%}
+            {%- if other != '' -%}
+              {%- assign op = other | split: ':' -%}
+              {%- assign okey = op[0] -%}
+              {%- assign oi = op[1] | plus: 0 | minus: 1 -%}
+              {%- assign ot = site.data.courses[okey].topics[oi] -%}
+              {%- for k2 in hr_keys -%}{%- if k2 == okey -%}{%- assign oname = hr_names[forloop.index0] -%}{%- assign oshort = hr_short[forloop.index0] -%}{%- endif -%}{%- endfor -%}
+              <a class="hr-list-link hr-c-{{ okey }}" href="{{ '/' | append: okey | append: '/' | append: ot.dir | append: '/index.html' | relative_url }}" aria-label="Пересадка ({{ p[2] | escape }}): {{ oname | escape }}, тема {{ ot.n }}, {{ ot.title | escape }}">{{ p[2] }} <span class="hr-list-arrow" aria-hidden="true">↔</span> {{ oshort | escape }}, тема {{ ot.n }}</a>
+            {%- endif -%}
+          {%- endfor -%}
+          </div>
+        </li>
+        {%- endfor -%}
+      </ol>
+    </section>
+    {%- endfor -%}
+  </div>
+  <script type="application/json" class="hr-data">{"courses":[
+    {%- for key in hr_keys -%}
+    {%- assign c = site.data.courses[key] -%}
+    {"key":{{ key | jsonify }},"name":{{ hr_names[forloop.index0] | jsonify }},"home":{{ '/' | append: key | append: '/' | relative_url | jsonify }},"topics":[
+      {%- for t in c.topics -%}
+      {"n":{{ t.n }},"title":{{ t.title | jsonify }},"time":{{ t.time | jsonify }},"url":{{ '/' | append: key | append: '/' | append: t.dir | append: '/index.html' | relative_url | jsonify }},"lessons":[{% for l in t.lessons %}{{ l.id | jsonify }}{% unless forloop.last %},{% endunless %}{% endfor %}]}{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]}{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+  ],"links":[
+    {%- for l in hr_links -%}
+    {%- assign p = l | split: '>' -%}
+    {"a":{{ p[0] | jsonify }},"b":{{ p[1] | jsonify }},"label":{{ p[2] | jsonify }}}{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+  ]}</script>
+</div>
+<script src="{{ '/assets/js/viz/hub-route.js' | relative_url }}" defer></script>

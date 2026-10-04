@@ -102,7 +102,7 @@
       '.viz .mu-gh button{min-height:28px;padding:1px 8px;font-size:.78rem;margin-left:auto}',
       '.mu-badge{display:inline-block;padding:1px 7px;border-radius:3px;font:700 .68rem/1.5 var(--sans);letter-spacing:.03em;color:var(--bg);background:currentColor;position:relative}',
       '.mu-badge>span{color:var(--bg)}',
-      '.mu-tbl{border-collapse:collapse;width:100%;font-size:.8rem}',
+      '.mu-tbl{border-collapse:collapse;width:100%;font-size:.8rem}.viz .mu-tbl{display:table;margin:0;border:0;border-radius:0}',
       '.mu-tbl th{text-align:left;padding:6px 10px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);border-top:1px solid var(--line);background:var(--bg-2);white-space:nowrap}',
       '.mu-tbl td{padding:6px 10px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);vertical-align:top}',
       '.mu-tbl tbody tr:hover td{background:var(--bg-2)}',
