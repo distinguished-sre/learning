@@ -191,7 +191,7 @@ flowchart TD
 - у Gateway: `Accepted` (контроллер принял объект) и `Programmed` (прокси реально настроен);
 - у HTTPRoute: `Accepted` (Gateway принял маршрут) и `ResolvedRefs` (все ссылки, в первую очередь на Service, найдены).
 
-Разобранный пример. Ты применил HTTPRoute, в `parentRefs` опечатка: `notes-gateway` вместо `notes-gw`. Команда `kubectl apply` отвечает «created»: формально объект корректен, Kubernetes не знает, что такого Gateway нет. Но в статусе будет `Accepted: False`, причина вроде `NoMatchingParent`. Снаружи запрос получит `404` от Envoy: прокси жив, но маршрута для этого хоста у него нет. Диагностика Gateway API почти всегда сводится к чтению conditions.
+Разобранный пример. Ты применил HTTPRoute, в `parentRefs` опечатка: `notes-gateway` вместо `notes-gw`. Команда `kubectl apply` отвечает «created»: формально объект корректен, Kubernetes не знает, что такого Gateway нет. Но в статусе маршрута не будет записи `parents`: контроллеру не к чему привязать маршрут, и писать условие ему некуда (`Accepted: False` с причиной `NoMatchingParent` бывает, когда Gateway есть, а listener или hostname не подошли). Смотри `kubectl get httproute -o yaml`: пустой `status` значит «Gateway не найден». Снаружи запрос получит `404` от Envoy: прокси жив, но маршрута для этого хоста у него нет. Диагностика Gateway API почти всегда сводится к чтению conditions.
 
 > **Прикинь сам:** кто в Gateway API решает, какие маршруты пустить на шлюз, и в каком поле?
 {: .predict}
@@ -417,14 +417,14 @@ status:
 - `reason`: короткая причина одним словом в стиле `CamelCase`. Именно её ищут в документации.
 - `message`: причина человеческим языком.
 
-При поломке меняется `status` и `reason`. Например, для опечатки в имени Gateway ты увидишь в `Accepted` значение `"False"` и причину `NoMatchingParent`, а если в `backendRefs` сервис назван неверно, `ResolvedRefs` станет `"False"` с причиной `BackendNotFound`. Точные тексты сообщений зависят от версии контроллера, поэтому смотри в `reason`, а не в `message`.
+При поломке меняется `status` и `reason`. Например, если Gateway найден, но listener или `hostnames` маршрута не подошли, ты увидишь в `Accepted` значение `"False"` и причину `NoMatchingParent`, а если в `backendRefs` сервис назван неверно, `ResolvedRefs` станет `"False"` с причиной `BackendNotFound`. Точные тексты сообщений зависят от версии контроллера, поэтому смотри в `reason`, а не в `message`.
 
 В `describe` те же данные напечатаны в разделе `Status:` в виде текста, поэтому в проверках ниже используется `sed -n '/Status:/,$p'`. Разбор: `sed -n` не печатает ничего по умолчанию, а `/Status:/,$p` значит «начиная со строки, где встретилось `Status:`, и до конца вывода (`$`) напечатай (`p`)». Так ты отрезаешь длинное начало `describe` и видишь только статус.
 
 > **Прикинь сам:** в `Accepted` значение `"False"` с причиной `NoMatchingParent`. Какое поле маршрута проверишь?
 {: .predict}
 
-`parentRefs`: в нём имя Gateway, которого нет (например, опечатка `notes-gateway`). Причина в `reason` подсказывает поле быстрее, чем `message`.
+`parentRefs` (имя Gateway, `sectionName`) и `hostnames`: Gateway есть, но listener или hostname не подошли. Если же в `status` маршрута вообще нет `parents`, ищи опечатку в имени Gateway (например, `notes-gateway` вместо `notes-gw`). Причина в `reason` подсказывает поле быстрее, чем `message`.
 
 Осторожно: значение `status` в YAML это строка в кавычках: `"True"`, а не булево.
 
@@ -441,8 +441,8 @@ status:
 |---|---|---|
 | `Connection refused`, обрыв или пустой ответ на порту 80 | до Envoy: нет проброса, NodePort не тот, Envoy не запущен | `kubectl get svc -n envoy-gateway-system`: должно быть `80:30080/TCP` |
 | `404` с телом от Envoy | Envoy жив, но маршрут не подошёл | conditions HTTPRoute, `hostnames`, `parentRefs` |
-| `503` | маршрут есть, но за сервисом нет готовых подов | `kubectl get endpointslices`, метки, `targetPort` (урок 5.3) |
-| `502` | Envoy дошёл до пода, но получил от него плохой ответ или обрыв | логи приложения, `port-forward` на сервис |
+| `503` | маршрут есть, но за сервисом нет готовых подов (или соединение с подом сброшено до ответа) | `kubectl get endpointslices`, метки, `targetPort` (урок 5.3) |
+| `502` | Envoy дошёл до пода, но получил от него некорректный HTTP-ответ | логи приложения, `port-forward` на сервис |
 | ошибка TLS (`certificate`, `SSL_ERROR_SYSCALL`) | сертификат не найден, не тот или не доверенный | conditions listener `https`, Secret |
 
 Порядок один: идёшь сверху вниз по цепочке из схемы, пока не найдёшь первое звено, которое не отвечает.
@@ -861,7 +861,7 @@ kubectl get endpointslices -n notes -l kubernetes.io/service-name=notes
 <details markdown="1">
 <summary>Разбор трёх сценариев</summary>
 
-**1. HTTPRoute без Accepted.** В `describe httproute` условие `Accepted: False`, причина `NoMatchingParent` (или похожая): в `parentRefs` опечатка в имени Gateway (например, `notes-gateway`). API такое принимает молча. Исправление: `parentRefs[0].name: notes-gw` и `kubectl apply -f k8s/base/32-httproute.yaml`. Симптом снаружи: `404` от Envoy.
+**1. HTTPRoute без Accepted.** В `kubectl get httproute -o yaml` у маршрута пустой `status` (нет `parents`; при несовпавшем listener или hostname было бы `Accepted: False` с причиной `NoMatchingParent`): в `parentRefs` опечатка в имени Gateway (например, `notes-gateway`). API такое принимает молча. Исправление: `parentRefs[0].name: notes-gw` и `kubectl apply -f k8s/base/32-httproute.yaml`. Симптом снаружи: `404` от Envoy.
 
 **2. Gateway без доступа снаружи.** Gateway `Programmed: True`, HTTPRoute `Accepted`, а с компьютера `curl` получает отказ или пустой ответ. Проверка `kubectl get svc -n envoy-gateway-system`: у Service Envoy NodePort не `30080` и `30443` (например, `80:31080/TCP`): в EnvoyProxy стоят другие номера (в реальной жизни это бывает и когда `nodePort` вовсе не указан: тогда номер случайный). Исправление: вернуть `nodePort: 30080` и `30443` в `30-envoyproxy.yaml`, применить, убедиться в `80:30080/TCP`. Ловушка: снаружи это выглядит как «Envoy упал», а Envoy в порядке, просто не совпали порты с пробросом kind.
 
@@ -948,7 +948,7 @@ Envoy, маршрут HTTPRoute, Service, поды. Скажи, на каком 
 Кластер в этой редакции не запускался. Манифесты Gateway API и Envoy проверены статически (`kubeconform -strict -ignore-missing-schemas`: у CRD Gateway API и Envoy Gateway схем нет, поэтому они пропускаются и синтаксис проверен только как YAML). Вывод команд оставлен по документации и знанию версий, имена, хэши и время условные. Скрипт поломок проверен `shellcheck`, но не запускался.
 
 - kind: v0.33.0
-- Kubernetes: 1.36.x и 1.37.x
+- Kubernetes: 1.37.1
 - kubectl: 1.37.1
 - Gateway API: v1.6.2 (CRD входят в манифест Envoy Gateway)
 - Envoy Gateway: v1.9.2 (`kubectl apply --server-side`, без Helm)

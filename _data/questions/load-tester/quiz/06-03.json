@@ -222,17 +222,17 @@
    "skill": "расшифровать uses с версией",
    "kind": "чтение",
    "type": "single",
-   "text": "Как читать `uses: actions/checkout@v5` и зачем в записи версия?",
+   "text": "Как читать `uses: actions/checkout@v7.0.1` и зачем в записи версия?",
    "options": [
     {
      "id": "a",
-     "text": "Действие `checkout` организации `actions`, версия 5",
+     "text": "Действие `checkout` организации `actions`, версия 7.0.1",
      "why": "Без номера новая версия действия могла бы изменить поведение workflow."
     },
     {
      "id": "b",
      "text": "Репозиторий `checkout` пользователя `actions`; версия указывает ветку проверки",
-     "why": "`actions` это организация, а `v5` версия действия, не ветка кода тестов."
+     "why": "`actions` это организация, а `v7.0.1` версия действия, не ветка кода тестов."
     },
     {
      "id": "c",
@@ -241,7 +241,7 @@
     },
     {
      "id": "d",
-     "text": "Команда оболочки `checkout`, а `v5` значит «пятая попытка»",
+     "text": "Команда оболочки `checkout`, а `v7.0.1` значит «седьмая попытка»",
      "why": "Это готовое действие, а не команда `run`."
     }
    ],
@@ -325,7 +325,7 @@
    "skill": "зачем path у второго checkout",
    "kind": "понимание",
    "type": "single",
-   "text": "Во втором шаге `checkout` стоит `repository: distinguished-sre/load-tester` и `path: stand`. Зачем нужен `path`?",
+   "text": "Во втором шаге `checkout` стоит `repository: distinguished-sre/learning` и `path: stand`. Зачем нужен `path`?",
    "options": [
     {
      "id": "a",
@@ -363,7 +363,7 @@
    "options": [
     {
      "id": "a",
-     "text": "Стенд изменили в основной ветке `load-tester`, а `checkout` взял свежую",
+     "text": "Стенд изменили в основной ветке `learning`, а `checkout` взял свежую",
      "why": "Тесты проверяют уже другой стенд."
     },
     {
@@ -427,12 +427,12 @@
    "kind": "чтение",
    "type": "single",
    "text": "На runner после двух шагов `checkout` такое дерево. В какой папке должен выполняться шаг `docker compose up`?",
-   "code": "/home/runner/work/perf-lab/perf-lab/\n├── 06-api-tests/\n├── requirements.txt\n└── stand/\n    └── project/shop/",
+   "code": "/home/runner/work/perf-lab/perf-lab/\n├── 06-api-tests/\n├── requirements.txt\n└── stand/\n    └── load-tester/project/shop/",
    "options": [
     {
      "id": "a",
-     "text": "`stand/project/shop`, где лежит `compose.yaml` стенда",
-     "why": "Это папка стенда внутри клона `load-tester`."
+     "text": "`stand/load-tester/project/shop`, где лежит `compose.yaml` стенда",
+     "why": "Это папка стенда внутри клона `learning`."
     },
     {
      "id": "b",
@@ -447,13 +447,13 @@
     {
      "id": "d",
      "text": "`stand`, потому что это корень клона репозитория со стендом",
-     "why": "Стенд лежит глубже: файлы Compose в `project/shop`, а не в корне клона."
+     "why": "Стенд лежит глубже: файлы Compose в `load-tester/project/shop`, а не в корне клона."
     }
    ],
    "correct": [
     "a"
    ],
-   "explain": "Клон `load-tester` лёг в `stand/`, а стенд внутри него по пути `project/shop`. В шаге это задаёт `working-directory`.",
+   "explain": "Клон `learning` лёг в `stand/`, а стенд внутри него по пути `load-tester/project/shop`. В шаге это задаёт `working-directory`.",
    "section": "Два репозитория: тесты и стенд"
   },
   {
@@ -461,7 +461,7 @@
    "skill": "стенд зелёный, тесты красные",
    "kind": "диагностика",
    "type": "single",
-   "text": "Шаг «Поднять стенд» зелёный, а первый же тест падает с `ConnectionError`. Из workflow убрали `--wait`, команда теперь просто `docker compose up -d --build`. Почему так вышло?",
+   "text": "Шаг «Поднять стенд» зелёный, а первый же тест падает с `ConnectionError`. Из workflow убрали `--wait`, команда теперь просто `docker compose up -d --build`, а проверку `curl` на `/readyz` убрали. Почему так вышло?",
    "options": [
     {
      "id": "a",
@@ -706,7 +706,7 @@
    "kind": "диагностика",
    "type": "single",
    "text": "Красный запуск. Все шаги до установки зависимостей зелёные, а шаг «Зависимости» красный с ошибкой `pip` о недоступной версии пакета. В какую категорию это относится?",
-   "code": "✓ Код тестов (perf-lab)\n✓ Код стенда (load-tester)\n✓ Python\n✗ Зависимости\n- Поднять стенд\n- Прогнать тесты\n✓ Логи стенда при падении\n✓ Погасить стенд",
+   "code": "✓ Код тестов (perf-lab)\n✓ Код стенда (learning)\n✓ Python\n✗ Зависимости\n- Поднять стенд\n- Прогнать тесты\n✓ Логи стенда при падении\n✓ Погасить стенд",
    "options": [
     {
      "id": "a",

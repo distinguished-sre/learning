@@ -475,7 +475,7 @@ git push
 | Симптом или текст | Причина | Что делать |
 |---|---|---|
 | `Error response from daemon: Minimum memory limit allowed is 6MB` | задан лимит меньше допустимого | поставь не меньше 6 МБ; для магазина осмысленно от 128 МБ |
-| `Memory limit should be smaller than already set memoryswap limit, update the memoryswap at the same time` | при `docker update --memory` не задан `--memory-swap` | добавь `--memory-swap` с тем же значением |
+| `Memory limit should be smaller than already set memoryswap limit, update the memoryswap at the same time` | новый `--memory` больше уже заданного потолка памяти со своп-ом (`--memory-swap`), а сам `--memory-swap` не передан | добавь `--memory-swap` с тем же значением (оба флага в одной команде) |
 | контейнер перезапускается (`Up 5 seconds`, растёт `RestartCount`), в логах приложения тишина | OOM-kill: убит ядром без возможности записать лог, `restart: unless-stopped` поднял его снова | `docker events` (событие `oom`), `docker inspect ... RestartCount`; график памяти; подними лимит или чини утечку |
 | контейнер `Exited (137)` и не поднимается | у контейнера нет политики `restart` или его остановили руками | `docker inspect ... OOMKilled`; `docker compose up -d` |
 | `docker stats` показывает `--` или нули | контейнер остановлен или только создан | `docker ps`; запусти контейнер |

@@ -222,7 +222,7 @@ stateDiagram-v2
 <details markdown="1">
 <summary>Ответ</summary>
 
-Контроллер прерывает релиз: вес canary в `HTTPRoute` возвращается в 0, весь трафик идёт на stable ReplicaSet. Canary-поды масштабируются вниз через `scaleDownDelaySeconds`. Rollout получает статус `Degraded`. Чтобы выкатить повторно, нужна новая ревизия пода.
+Контроллер прерывает релиз: вес canary в `HTTPRoute` возвращается в 0, весь трафик идёт на stable ReplicaSet. Canary-поды при прерывании масштабируются вниз через `abortScaleDownDelaySeconds`. Rollout получает статус `Degraded`. Чтобы выкатить повторно, нужна новая ревизия пода.
 
 </details>
 
@@ -249,16 +249,16 @@ stateDiagram-v2
 
 На малом трафике доля ошибок шумит: одна ошибка на пять запросов это 20%. Поэтому условие задают с запасом, а окно `rate` делают не короче двух-трёх интервалов сбора (scrape, период, с которым Prometheus опрашивает `/metrics`). Пятиминутное окно смешивает данные до и после начала canary и реагирует с опозданием, поэтому берём 2 минуты.
 
-Ещё одна тонкость: как записать условие. Если написать `failureCondition: result[0] >= 0.05` («провал, если много ошибок»), то при пустом ответе условие невычислимо и анализ может пройти как успешный: отсутствие данных выглядит как отсутствие ошибок. Поэтому мы пишем `successCondition: result[0] < 0.05` («успех только если данные есть и ошибок мало»), и пустой ответ даёт `Inconclusive`, а не ложный успех.
+Ещё одна тонкость: как записать условие. При пустом ответе `result[0]` вычислить нельзя: условие без проверки длины даёт ошибку измерения (`Error`), а не внятный статус. Если оставить одно `failureCondition: result[0] >= 0.05` («провал, если много ошибок»), отсутствие данных выглядит как отсутствие ошибок. Поэтому мы пишем оба условия с проверкой `len(result) > 0`: `successCondition: len(result) > 0 && result[0] < 0.05` («успех только если данные есть и ошибок мало») и `failureCondition: len(result) > 0 && result[0] >= 0.05` («провал только по настоящему числу»). Пустой ответ не подходит ни под одно, и это `Inconclusive`, а не ложный успех.
 
 > **Прикинь сам:** на canary пришло 200 запросов, 6 закончились ошибкой. Какая доля ошибок у canary и пройдёт ли она порог 5%?
 {: .predict}
 
-6 / 200 = 0,03, то есть 3%. Порог 5% не превышен, `successCondition: result[0] < 0.05` выполнено.
+6 / 200 = 0,03, то есть 3%. Порог 5% не превышен, `successCondition: len(result) > 0 && result[0] < 0.05` выполнено.
 
 Осторожно: «нет ошибок в метрике значит всё хорошо». Нет данных и нет ошибок разные вещи.
 
-> **Главное:** считай долю ошибок только по подам canary, окно бери 2 минуты, а условие пиши как `successCondition`, чтобы пустой ответ не считался успехом.
+> **Главное:** считай долю ошибок только по подам canary, окно бери 2 минуты, а условия пиши с проверкой `len(result) > 0`, чтобы пустой ответ не считался успехом и не давал ошибку.
 {: .key}
 
 > **Проверь понимание:** почему для анализа canary нельзя использовать `rate5m`, а лучше окно 2m?
@@ -305,7 +305,7 @@ notes_http_requests_total{pod="notes-5b4c-xyz12",status="500"}    60
 <details markdown="1">
 <summary>Ответ</summary>
 
-`Inconclusive`. Запрос ничего не находит и возвращает пустой результат, а не число, поэтому `successCondition` нечем проверить. `Failed` бывает только тогда, когда число получено и оно плохое.
+`Inconclusive`. Запрос ничего не находит и возвращает пустой результат, а не число: проверка `len(result) > 0` не пропускает ни `successCondition`, ни `failureCondition`. `Failed` бывает только тогда, когда число получено и оно плохое.
 
 </details>
 
@@ -585,7 +585,7 @@ kubectl -n argo-rollouts rollout restart deploy/argo-rollouts
 kubectl -n argo-rollouts rollout status deploy/argo-rollouts
 ```
 
-Плагин для командной строки `kubectl argo rollouts` скачай бинарником `kubectl-argo-rollouts-linux-amd64` со страницы релиза v1.10.0, сверь SHA256 с файлом контрольных сумм на той же странице, положи в `~/.local/bin/kubectl-argo-rollouts` и сделай исполняемым.
+Плагин для командной строки `kubectl argo rollouts` скачай бинарником `kubectl-argo-rollouts-linux-amd64` со страницы релиза v1.10.0, сверь SHA256 с файлом контрольных сумм на той же странице, положи в `~/.local/bin/kubectl-argo-rollouts` и сделай исполняемым. На ARM (Apple Silicon, ВМ на ARM) замени `amd64` на `arm64` и в этом имени, и в `location` плагина выше: контроллер в kind-узле запускает бинарник той же архитектуры, что и хост.
 
 **Что должно получиться:**
 
@@ -704,7 +704,7 @@ spec:
 ```
 {% endraw %}
 
-4. Создай `templates/analysistemplate.yaml`. Запрос считает долю ошибок только по подам canary. Разбор: `interval` как часто повторять запрос; `initialDelay: 60s` подождать минуту перед первой проверкой, пока у canary накопится трафик; `failureLimit` сколько неудачных проверок допустимо; `successCondition` условие успеха (`result[0]` первое число из ответа Prometheus); `provider.prometheus` куда ходить. Странная запись из двойных фигурных скобок с обратными кавычками нужна, чтобы Helm не раскрыл `args.canary-hash` сам, а оставил Rollouts:
+4. Создай `templates/analysistemplate.yaml`. Запрос считает долю ошибок только по подам canary. Разбор: `interval` как часто повторять запрос; `initialDelay: 60s` подождать минуту перед первой проверкой, пока у canary накопится трафик; `failureLimit` сколько неудачных проверок допустимо; `successCondition` и `failureCondition` условия успеха и провала (`result[0]` первое число из ответа Prometheus, `len(result) > 0` проверка, что ответ не пустой); `provider.prometheus` куда ходить. Странная запись из двойных фигурных скобок с обратными кавычками нужна, чтобы Helm не раскрыл `args.canary-hash` сам, а оставил Rollouts:
 
 {% raw %}
 ```yaml
@@ -721,8 +721,9 @@ spec:
       interval: {{ .Values.rollout.analysis.interval }}
       initialDelay: 60s
       failureLimit: {{ .Values.rollout.analysis.failureLimit }}
-      # Пустой ответ (нет метрики) не считается успехом: будет Inconclusive
-      successCondition: result[0] < {{ .Values.rollout.analysis.maxErrorRatio }}
+      # Пустой ответ (нет метрики) не подходит ни под одно условие: будет Inconclusive
+      successCondition: len(result) > 0 && result[0] < {{ .Values.rollout.analysis.maxErrorRatio }}
+      failureCondition: len(result) > 0 && result[0] >= {{ .Values.rollout.analysis.maxErrorRatio }}
       provider:
         prometheus:
           address: {{ .Values.rollout.analysis.prometheus }}
@@ -772,7 +773,7 @@ kind: AnalysisTemplate
 
 **Объясни себе:**
 - Зачем в запросе `pod=~"notes-<hash>-.*"`, а не общая метрика сервиса?
-- Почему `successCondition` выбран, а не `failureCondition`? Что изменится на пустом ответе?
+- Зачем в условиях `len(result) > 0`? Что изменится на пустом ответе?
 
 **Типичные ошибки:**
 - `Error: template: notes/templates/analysistemplate.yaml: ... function "args" not defined`: Helm попытался раскрыть аргумент Rollouts как свой шаблон. Экранируй так, как показано выше (обратные кавычки внутри двойных фигурных скобок).
@@ -816,7 +817,18 @@ def should_fail():
 
 **Шаги:**
 
-1. Собери и загрузи образ в kind, включи Rollout в git (в `gitops/apps/notes/` у HelmRelease: чарт 0.5.0, `values: rollout.enabled: true`, `image.tag: "0.7.0"`), дождись синхронизации Flux.
+1. Собери и загрузи образ в kind, включи Rollout в git (в `gitops/apps/notes/` у HelmRelease: чарт 0.5.0, `values: rollout.enabled: true`, `image.tag: "0.7.0"`), дождись синхронизации Flux. Веса `HTTPRoute` и селекторы `Service` меняют плагин и Argo Rollouts, а `driftDetection` у `HelmRelease` откатил бы их назад. Поэтому в `driftDetection` добавь исключения:
+
+```yaml
+  driftDetection:
+    mode: enabled
+    ignore:
+      - paths: ["/spec/rules/0/backendRefs/0/weight", "/spec/rules/0/backendRefs/1/weight"]
+        target: {kind: HTTPRoute}
+      - paths: ["/spec/selector"]
+        target: {kind: Service}
+```
+
 2. Запусти фоновую нагрузку. Canary получает лишь долю запросов, без потока метрикам не на чем считаться. Разбор: `while true; do ...; done` бесконечный цикл; `curl -s -o /dev/null URL` запрос без вывода и без тела ответа; `sleep 0.1` пауза 0.1 секунды, отсюда около 10 запросов в секунду; `&` в конце запускает цикл в фоне; `$!` номер фонового процесса, его сохраняем в файл, чтобы потом остановить.
 
 ```bash
@@ -965,7 +977,7 @@ Strategy:        Canary
 kubectl -n notes describe analysisrun | tail -30
 kubectl -n argo-rollouts logs deploy/argo-rollouts | tail -30
 kubectl -n notes get httproute notes -o yaml | grep -A8 backendRefs
-kubectl -n notes logs deploy/notes --tail=20
+kubectl -n notes logs -l app.kubernetes.io/name=notes --tail=20
 ```
 
 `describe analysisrun` показывает результат каждой проверки и сообщение об ошибке; логи контроллера показывают проблемы с плагином и правами; `grep -A8 backendRefs` печатает 8 строк после совпадения, там видны текущие веса.
@@ -1004,7 +1016,7 @@ kubectl -n notes logs deploy/notes --tail=20
 ```
 {: .wrap}
 
-**Проверь ответ:** в запросе должен быть фильтр по `pod` с хешем canary, а `successCondition` не должен быть заменён на `failureCondition`. Типичная ошибка: общая доля ошибок сервиса без фильтра по подам, из-за чего плохая версия проходит.
+**Проверь ответ:** в запросе должен быть фильтр по `pod` с хешем canary, а условия должны содержать проверку `len(result) > 0`. Типичная ошибка: общая доля ошибок сервиса без фильтра по подам, из-за чего плохая версия проходит.
 
 **Задача:** спланировать миграцию БД под автоматический откат.
 

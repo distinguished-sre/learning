@@ -918,7 +918,7 @@
     },
     {
      "id": "b",
-     "text": "Контейнер без образа и ошибка apply"
+     "text": "Ошибка разбора YAML при apply"
     },
     {
      "id": "c",
@@ -934,7 +934,7 @@
    "correct": [
     "b"
    ],
-   "explain": "Ошибка ловится заранее через --dry-run=server или kubeconform.",
+   "explain": "Дефис и image оказываются на одном уровне, YAML не разбирается (did not find expected '-' indicator). Ошибка ловится заранее через --dry-run=server или kubeconform.",
    "section": "YAML: отступы это структура"
   },
   {

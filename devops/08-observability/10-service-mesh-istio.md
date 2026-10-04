@@ -335,7 +335,7 @@ flowchart LR
 <details markdown="1">
 <summary>Ответ</summary>
 
-Нет ярлыка `istio.io/dataplane-mode=ambient` на namespace (опечатка или не тот namespace), либо под был запущен до установки `istio-cni` и не подхвачен: его нужно перезапустить.
+Нет ярлыка `istio.io/dataplane-mode=ambient` на namespace (опечатка или не тот namespace), либо `istio-cni-node` не отработал на узле: смотри его лог (`kubectl -n istio-system logs ds/istio-cni-node`). Перезапускать под обычно не нужно, это крайняя мера.
 
 </details>
 
@@ -446,7 +446,7 @@ Waypoint это обычный Deployment с Envoy, объявленный ка�
 
 ztunnel отдаёт метрики уровня TCP (сколько соединений, сколько байт) на порту 15020. Waypoint отдаёт HTTP-метрики (число запросов, коды ответов, задержка). Формат Prometheus, собираются так же, как всё остальное в [уроке 8.9](09-k8s-monitoring.md): ServiceMonitor или PodMonitor. ServiceMonitor и PodMonitor напоминаю: это объекты, которыми говорят Prometheus, откуда в кластере забирать метрики (как запись «заходи к этому сервису раз в 15 секунд»). По этим метрикам строят золотые сигналы (golden signals, главные показатели здоровья сервиса: сколько запросов, сколько ошибок, как долго отвечает) для каждой пары «клиент, сервер».
 
-Разберём на примере. Если `notes` начал получать 5xx только от одного клиента, метрики waypoint покажут пару `source=curl-ok, destination=notes, code=503`, а метрики самого `notes` покажут лишь общее число. Пара помогает найти, кто именно страдает.
+Разберём на примере. Если `notes` начал получать 5xx только от одного клиента, метрики waypoint (`istio_requests_total`) покажут пару `source_workload=curl-ok, destination_workload=notes, response_code=503`, а метрики самого `notes` покажут лишь общее число. Пара помогает найти, кто именно страдает.
 
 Осторожно, тут часто путают. Что L7-метрики есть без waypoint. Без него ztunnel видит только соединения и байты, но не коды ответов.
 
@@ -622,7 +622,7 @@ notes     notes-7d9f8b6c5-x2k4p 10.244.0.15 notes-control-plane None     HBONE
 
 - `curl: (7) Failed to connect to notes.notes port 8080 after 5 ms: Could not connect to server`: в ns `notes` действует default-deny без правила для 15008. Примени `allow-hbone` из шага 2.
 - `Error from server (Forbidden): pods "curl-ok" is forbidden: violates PodSecurity`: клиент создан в ns `notes` с PSS `restricted`. Клиенты живут в `mesh-lab`, там PSS не включён.
-- Пусто в `PROTOCOL` (`TCP` вместо `HBONE`): namespace без метки или под создан до istio-cni. Проверь `kubectl get ns notes --show-labels` и перезапусти под.
+- Пусто в `PROTOCOL` (`TCP` вместо `HBONE`): namespace без метки или `istio-cni-node` не отработал на узле. Проверь `kubectl get ns notes --show-labels` и лог `kubectl -n istio-system logs ds/istio-cni-node`; перезапуск пода только как крайняя мера.
 
 ### Задание 3. AuthorizationPolicy: пускаем только своих
 
@@ -665,6 +665,9 @@ spec:
         # Единственный разрешённый учебный клиент
         - source:
             principals: ["cluster.local/ns/mesh-lab/sa/curl-ok"]
+        # Waypoint из задания 4: после его включения ztunnel видит identity waypoint, а не клиента
+        - source:
+            principals: ["cluster.local/ns/notes/sa/waypoint"]
       to:
         - operation:
             ports: ["8080"]
@@ -747,7 +750,11 @@ spec:
       name: notes
       port: 8080
   rules:
-    - timeouts:
+    # retry только для идемпотентных методов: повтор GET и HEAD безопасен
+    - matches:
+        - method: GET
+        - method: HEAD
+      timeouts:
         request: 2s
       retry:
         attempts: 2
@@ -756,9 +763,15 @@ spec:
       backendRefs:
         - name: notes
           port: 8080
+    # остальные методы (POST /notes и другие): только таймаут, без повторов
+    - timeouts:
+        request: 2s
+      backendRefs:
+        - name: notes
+          port: 8080
 ```
 
-2. Примени, привяжи waypoint к namespace и проверь таймаут. Разбор: `kubectl wait --for=condition=Programmed` ждёт, пока Istio создаст под waypoint. Ярлык `istio.io/use-waypoint=waypoint` на namespace говорит: «направляй трафик сервисов этого namespace через waypoint». `time` перед командой печатает, сколько она длилась:
+2. Примени, привяжи waypoint к namespace и проверь таймаут. Разбор: `kubectl wait --for=condition=Programmed` ждёт, пока Istio создаст под waypoint. Ярлык `istio.io/use-waypoint=waypoint` на namespace говорит: «направляй трафик сервисов этого namespace через waypoint». После этого к приложению приходит уже waypoint, и ztunnel проверяет его identity (`cluster.local/ns/notes/sa/waypoint`), поэтому мы добавили её в политику из задания 3; L7-правила по пути и методу вешают на сам waypoint через `targetRefs`. Правило с `retry` в `waypoint.yaml` ограничено методами GET и HEAD: повтор `POST /notes` мог бы создать заметку дважды. `time` перед командой печатает, сколько она длилась:
 
 ```bash
 kubectl apply -f k8s/mesh/waypoint.yaml
@@ -890,7 +903,7 @@ kubectl get ns notes envoy-gateway-system --show-labels
 istioctl ztunnel-config workload -n notes
 istioctl ztunnel-config service -n notes
 kubectl -n notes get gateway waypoint
-kubectl -n istio-system logs ds/ztunnel --tail=50 | grep -i deny
+kubectl -n istio-system logs ds/ztunnel --tail=50 | grep -iE 'rejection|denied'
 ```
 
 Смотри на: есть ли ALLOW-политика и кого она перечисляет; колонку `PROTOCOL` (HBONE или TCP); колонку `WAYPOINT` у сервиса; в логе ztunnel слова `policy rejection`.

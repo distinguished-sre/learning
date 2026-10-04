@@ -924,7 +924,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://notes.lab/readyz --cacert <(kub
 
 ```bash
 grep -rn 'kind: Secret' k8s/ helm/ || echo "Secret-манифестов с паролем нет"
-sed -i '1i # Только для локальной отладки в compose. На платформе пароль лежит в Vault (урок 9.2).' .env.example
+{ echo '# Только для локальной отладки в compose. На платформе пароль лежит в Vault (урок 9.2).'; cat .env.example; } > .env.example.new && mv .env.example.new .env.example
 git add k8s/platform helm/notes .env.example
 git commit -m "9.2: пароль БД из Vault через External Secrets Operator (chart 0.4.0)"
 ```
@@ -959,7 +959,7 @@ Secret-манифестов с паролем нет
 - Что мешает удалить `.env` из compose совсем? Почему для платформы долг закрыт, а для локальной отладки остаётся пометка?
 
 **Типичные ошибки:**
-- `Error: UPGRADE FAILED: ... Secret "notes-db" ... invalid ownership metadata`: ручной Secret не удалён или пересоздан, повтори `kubectl delete secret notes-db`.
+- `ExternalSecret notes-db` в `SecretSyncedError`, в `kubectl describe externalsecret notes-db` жалоба, что Secret уже существует и ему не принадлежит (при `creationPolicy: Owner` ESO чужой Secret не берёт): ручной Secret не удалён или пересоздан, повтори `kubectl -n notes delete secret notes-db`. Ошибка Helm `invalid ownership metadata` здесь не при чём: она бывает, когда в манифестах релиза лежит объект с чужим владельцем.
 - `FATAL: password authentication failed for user "notes"` в логах приложения: пропущен шаг 4, пароль в БД не совпал с Vault.
 - `could not parse ... invalid port number in URL` или `invalid URL`: в пароле есть `/` или `+`, а шаблон без `| urlquery`.
 - `error calling urlquery`/`function "urlqery" not defined`: опечатка в имени функции, ошибка видна в `kubectl describe externalsecret notes-db`.
@@ -1090,7 +1090,7 @@ kubectl -n vault get pods,endpoints vault
 ## Проверено на версиях
 
 - External Secrets Operator: v2.11.0 (Helm-чарт 2.11.0), Vault v2.1.1 (чарт HashiCorp, standalone), PostgreSQL 18: версии из курса, кластер в этой редакции не запускался, вывод `kubectl` и `vault` сверен по документации и предыдущей редакции.
-- Helm: v4.3.0, kind: v0.33.0, kubectl: 1.37.1, Kubernetes: 1.36.x / 1.37.x: версии стенда курса, не перепроверялись.
+- Helm: v4.3.0, kind: v0.33.0, kubectl: 1.37.1, Kubernetes: 1.37.1: версии стенда курса, не перепроверялись.
 - Шаблон `externalsecret.yaml`: разбор экранирования скобок сделан по правилам Helm, `helm template` не прогонялся.
 - `break.sh`: проверен `shellcheck` и чтением, на кластере не запускался.
 

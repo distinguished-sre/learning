@@ -311,7 +311,7 @@
    "kind": "чтение",
    "type": "multiple",
    "text": "Вот часть вывода `docker history shop-lab:exp`. Какие утверждения верны?",
-   "code": "IMAGE          CREATED CREATED BY                                      SIZE\n5e8c1a2d93b7   2 min   ENTRYPOINT [\"./entrypoint.sh\"]                  0B\n<missing>      2 min   EXPOSE map[8000/tcp:{}]                         0B\n<missing>      2 min   ENV PYTHONUNBUFFERED=1 PROMETHEUS_MULTIPROC…    0B\n<missing>      2 min   RUN /bin/sh -c chmod +x entrypoint.sh           424B\n<missing>      2 min   COPY entrypoint.sh .                            424B\n<missing>      2 min   COPY app ./app                                  21.5kB\n<missing>      2 min   RUN /bin/sh -c pip install --no-cache-dir -…    128MB\n<missing>      2 min   COPY requirements.txt .                         158B\n<missing>      2 min   WORKDIR /app                                    0B",
+   "code": "IMAGE          CREATED CREATED BY                                      SIZE\n5e8c1a2d93b7   2 min   ENTRYPOINT [\"./entrypoint.sh\"]                  0B\n<missing>      2 min   EXPOSE map[8000/tcp:{}]                         0B\n<missing>      2 min   ENV PYTHONUNBUFFERED=1 PROMETHEUS_MULTIPROC…    0B\n<missing>      2 min   RUN /bin/sh -c chmod +x entrypoint.sh           424B\n<missing>      2 min   COPY entrypoint.sh .                            424B\n<missing>      2 min   COPY app ./app                                  21.5kB\n<missing>      2 min   RUN /bin/sh -c pip install --no-cache-dir -…    128MB\n<missing>      2 min   COPY requirements.txt .                         437B\n<missing>      2 min   WORKDIR /app                                    0B",
    "options": [
     {
      "id": "a",

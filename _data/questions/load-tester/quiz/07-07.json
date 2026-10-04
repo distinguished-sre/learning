@@ -75,7 +75,7 @@
    "kind": "чтение",
    "type": "single",
    "text": "Ты открыл трейс медленного заказа. Какой спан виноват в задержке?",
-   "code": "спан                сервис    мс\nPOST /api/orders    shop      2046\n GET                shop         1\n HGETALL            shop         1\n db.pool.getconn    shop         2\n SELECT             shop         4\n INSERT             shop         6\n POST               shop      2004\n  POST /pay         payment   1998\n DEL                shop         1",
+   "code": "спан                сервис    мс\nPOST /api/orders    shop      2046\n GET                shop         1\n HGETALL            shop         1\n DEL                shop         1\n db.pool.getconn    shop         2\n SELECT             shop         4\n INSERT             shop         6\n POST               shop      2004\n  POST /pay         payment   1998",
    "options": [
     {
      "id": "a",

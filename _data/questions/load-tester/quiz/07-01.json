@@ -387,7 +387,7 @@
    "kind": "диагностика",
    "type": "multiple",
    "text": "Ты остановил `shop` командой `docker compose stop shop` и открыл страницу targets в Prometheus. Что там написано в колонке ошибки и какие утверждения верны?",
-   "code": "shop   DOWN   http://shop:8000/metrics\nError: Get \"http://shop:8000/metrics\": dial tcp 172.18.0.7:8000: connect: connection refused",
+   "code": "shop   DOWN   http://shop:8000/metrics\nError: Get \"http://shop:8000/metrics\": dial tcp: lookup shop on 127.0.0.11:53: no such host",
    "options": [
     {
      "id": "a",
@@ -400,12 +400,12 @@
     },
     {
      "id": "c",
-     "text": "Prometheus не смог найти имя контейнера `shop` в DNS",
-     "why": "Тогда в тексте ошибки было бы `no such host`, а здесь адрес разрешился и дошло до `connection refused`."
+     "text": "Prometheus не смог найти имя контейнера `shop` в DNS"
     },
     {
      "id": "d",
-     "text": "До адреса добрались, но на порту 8000 никто не слушает"
+     "text": "До адреса добрались, но на порту 8000 никто не слушает",
+     "why": "Так выглядит `connection refused` у живого контейнера без процесса на порту; здесь имя не нашлось вовсе (`no such host`)."
     },
     {
      "id": "e",
@@ -415,9 +415,9 @@
    ],
    "correct": [
     "a",
-    "d"
+    "c"
    ],
-   "explain": "`connection refused` означает, что адрес найден, а порт закрыт: процесс остановлен. Неудачный скрейп Prometheus записывает как `up = 0`.",
+   "explain": "Остановленный контейнер выпадает из сети compose, его имя перестаёт разрешаться: `no such host`. `connection refused` бывает, когда контейнер жив, а на порту никто не слушает. Неудачный скрейп Prometheus записывает как `up = 0`.",
    "section": "Сломай и почини"
   },
   {

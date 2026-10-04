@@ -847,7 +847,7 @@ Success! The configuration is valid.
        # Проверки без секретов: fmt, validate, trivy
        runs-on: ubuntu-24.04
        steps:
-         - uses: actions/checkout@v4
+         - uses: actions/checkout@v7.0.1
          - uses: hashicorp/setup-terraform@v3
            with:
              terraform_version: 1.16.4
@@ -875,7 +875,7 @@ Success! The configuration is valid.
          AWS_ACCESS_KEY_ID: ${{ secrets.STATE_ACCESS_KEY }}
          AWS_SECRET_ACCESS_KEY: ${{ secrets.STATE_SECRET_KEY }}
        steps:
-         - uses: actions/checkout@v4
+         - uses: actions/checkout@v7.0.1
          - uses: hashicorp/setup-terraform@v3
            with:
              terraform_version: 1.16.4

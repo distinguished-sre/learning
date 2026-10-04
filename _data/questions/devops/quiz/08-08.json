@@ -587,12 +587,12 @@
     },
     {
      "id": "c",
-     "text": "`http.status_code`",
+     "text": "`http.response.status_code`",
      "why": "Это атрибут конкретного шага."
     },
     {
      "id": "d",
-     "text": "`http.method`",
+     "text": "`http.request.method`",
      "why": "Это атрибут конкретного шага."
     }
    ],
@@ -607,7 +607,7 @@
    "skill": "Трейсов нет: как искать обрыв по участкам",
    "kind": "диагностика",
    "type": "single",
-   "text": "В логе приложения `Connection refused` при экспорте. Где обрыв?",
+   "text": "В логе приложения `Connection reset by peer` при экспорте. Где обрыв?",
    "options": [
     {
      "id": "a",

@@ -191,7 +191,31 @@ provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
 > **Главное:** OpenTelemetry создаёт спаны, OTLP возвращает их в одном формате, а работает это в фоне и не должно ломать то, что наблюдает.
 {: .key}
 
-Спаны отправлены. Куда они приходят?
+Спаны отправлены. Но откуда они вообще берутся и когда одной готовой инструментации мало?
+
+### Как спан появляется: автоинструментация и ручной спан
+
+Есть два способа получить спан. **Автоинструментация** (auto-instrumentation) это готовая библиотека, которая сама оборачивает известные вызовы: входящий HTTP, SQL, Redis, исходящий запрос. Ты подключаешь её один раз, и спаны появляются без правок кода. **Ручной спан** ты создаёшь сам в коде вокруг шага, о котором библиотека ничего не знает: расчёт скидки, ожидание соединения из пула, обработка сообщения из очереди. Как контролёры с секундомерами на маршруте: на проходных они уже стоят, а на внутреннем складе секундомер нужно выдать самому.
+
+На стенде выглядит так: спаны `GET`, `SELECT`, `POST` создаёт автоинструментация, а `db.pool.getconn` ручной. Вот заказ с ними:
+
+<div class="viz" data-viz="mon-trace" data-title="Tempo: автоматические и ручной спан" data-trace-id="0e7b3c9a4d1f4a2b8c5e6f7a8b9c0d1e" data-focus="a3" data-explain="Спаны SELECT, INSERT, POST и POST /pay создала автоинструментация, выделенный db.pool.getconn добавлен вручную в коде." data-spans='[{"id":"r0","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":92,"status":"ok","attrs":{"http.method":"POST","http.route":"/api/orders","http.status_code":201}},{"id":"a3","parent":"r0","service":"shop","name":"db.pool.getconn","start":5,"dur":1,"status":"ok"},{"id":"a4","parent":"r0","service":"shop","name":"SELECT","start":7,"dur":4,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"a5","parent":"r0","service":"shop","name":"INSERT","start":12,"dur":5,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"c1","parent":"r0","service":"shop","name":"POST","start":24,"dur":56,"status":"ok","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":200}},{"id":"p1","parent":"c1","service":"payment","name":"POST /pay","start":27,"dur":50,"status":"ok","attrs":{"http.route":"/pay","http.status_code":200}}]'></div>
+
+Выделенный спан в 1 мс стоит отдельной полосой между Redis и SQL. Если пул переполнится, именно он станет длинным и покажет, что время ушло на ожидание соединения, а не на сам запрос.
+
+Подключить трассировку к новому сервису можно тремя шагами: поставить библиотеки OpenTelemetry для языка и нужные инструментации, указать в переменных окружения имя сервиса, адрес сборщика и сэмплирование (`OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_SAMPLER`), и убедиться, что заголовок `traceparent` передаётся дальше. Для ручного спана добавляют обёртку вокруг шага, как `with span("db.pool.getconn")` выше.
+
+> **Прикинь сам:** разработчик хочет ручной спан на каждый из 5000 товаров в корзине внутри цикла. Хорошая ли идея?
+{: .predict}
+
+Нет: получится пять тысяч спанов на один запрос, трейс станет огромным и дорогим, а полезного в нём мало. Спан ставят на шаг, который можно назвать и про который хочется знать время, а детали (идентификатор заказа, число товаров) кладут в атрибуты спана. Имя спана делают коротким и постоянным, как `db.pool.getconn`, без номеров заказов внутри.
+
+Осторожно: ручной спан нужно закрыть. Конструкция `with` делает это сама, даже если внутри случилась ошибка, а забытый незакрытый спан в Tempo не появится.
+
+> **Главное:** автоинструментация создаёт спаны на границах (HTTP, SQL, Redis) без правок кода, а ручной спан ставят на свой шаг, который библиотека не видит.
+{: .key}
+
+Спаны созданы и отправлены. Куда они приходят?
 
 ### Alloy и Tempo: путь спанов
 
@@ -216,6 +240,12 @@ flowchart TD
 
 Осторожно: сразу после заказа трейса в Tempo может ещё не быть: спаны уходят раз в секунду-две, а хранилище отдаёт их с задержкой. Подожди 10-15 секунд, прежде чем решить, что трейсов нет.
 
+Заодно проверь, кто из служб виден Prometheus. Вот страница целей стенда:
+
+<div class="viz" data-viz="mon-targets" data-title="Status → Targets" data-explain="Восемь целей Prometheus, все UP. Tempo в списке нет." data-targets='[{"job":"shop","endpoint":"http://shop:8000/metrics","state":"up","labels":{"instance":"shop:8000","job":"shop"},"last":"3.1s ago","duration":"9ms","error":""},{"job":"payment","endpoint":"http://payment:8001/metrics","state":"up","labels":{"instance":"payment:8001","job":"payment"},"last":"2.4s ago","duration":"5ms","error":""},{"job":"node","endpoint":"http://node-exporter:9100/metrics","state":"up","labels":{"instance":"node-exporter:9100","job":"node"},"last":"4.0s ago","duration":"31ms","error":""},{"job":"cadvisor","endpoint":"http://cadvisor:8080/metrics","state":"up","labels":{"instance":"cadvisor:8080","job":"cadvisor"},"last":"1.2s ago","duration":"48ms","error":""},{"job":"postgres","endpoint":"http://postgres-exporter:9187/metrics","state":"up","labels":{"instance":"postgres-exporter:9187","job":"postgres"},"last":"2.9s ago","duration":"14ms","error":""},{"job":"prometheus","endpoint":"http://prometheus:9090/metrics","state":"up","labels":{"instance":"prometheus:9090","job":"prometheus"},"last":"0.8s ago","duration":"6ms","error":""},{"job":"alertmanager","endpoint":"http://alertmanager:9093/metrics","state":"up","labels":{"instance":"alertmanager:9093","job":"alertmanager"},"last":"3.5s ago","duration":"4ms","error":""},{"job":"alloy","endpoint":"http://alloy:12345/metrics","state":"up","labels":{"instance":"alloy:12345","job":"alloy"},"last":"1.7s ago","duration":"12ms","error":""}]'></div>
+
+Посчитай цели: восемь, и `tempo` среди них нет. Prometheus его не опрашивает, поэтому готовность Tempo проверяют запросом `curl -s localhost:3200/ready`, как в практике 1.
+
 > **Главное:** сервисы шлют спаны в Alloy, Alloy в Tempo, а искать быстро можно только по `trace_id`.
 {: .key}
 
@@ -229,11 +259,17 @@ flowchart TD
 
 Начни со сценария «Заказ: всё хорошо»: корневая полоса охватывает остальные, SQL идёт друг за другом, оплата стоит одним блоком. Затем переключись на «Медленную оплату»: одна полоса занимает почти всю ширину, и виновник виден сразу.
 
-Три типичные формы водопада стоит узнавать с одного взгляда. **Одна длинная полоса**: один спан занимает почти всё время, например `POST /pay` две секунды. Чинить нужно именно его. **Лесенка одинаковых коротких спанов**: десятки `SELECT` подряд это N+1 (запрос в цикле: один запрос за списком и по одному на каждый элемент). Каждый запрос быстр и в списке медленных запросов базы его нет, а в трейсе лесенка видна сразу. **Повторы подряд**: несколько одинаковых красных вызовов оплаты это ретраи (повторные попытки) без паузы. Метрики показали бы это как «запросов к оплате втрое больше, чем заказов», а трейс одного заказа показывает все попытки.
+Три типичные формы водопада стоит узнавать с одного взгляда. **Одна длинная полоса**: один спан занимает почти всё время, например `POST /pay` две секунды. Чинить нужно именно его. **Лесенка одинаковых коротких спанов**: десятки `SELECT` подряд это N+1 (запрос в цикле: один запрос за списком и по одному на каждый элемент). Каждый запрос быстр и в списке медленных запросов базы его нет, а в трейсе лесенка видна сразу. **Повторы подряд**: несколько одинаковых красных вызовов оплаты это ретраи (повторные попытки) без паузы. Метрики показали бы это как «запросов к оплате вчетверо больше, чем заказов» (до четырёх попыток на заказ), а трейс одного заказа показывает все попытки.
 
 <div class="viz" data-viz="trace-waterfall" data-scenario="retries"></div>
 
 Здесь четыре красные попытки оплаты друг за другом. Переключись на «N+1: список заказов» и нажми «Свернуть повторы»: двадцать полос сложатся в одну с подписью `SELECT x20`.
+
+Вот как это выглядит в Tempo при `fail_rate` 0,7, когда оплата отказывает:
+
+<div class="viz" data-viz="mon-trace" data-title="Tempo: заказ с ретраями оплаты" data-trace-id="1b9e03a759aac23a9a22e050148a298c" data-focus="r0" data-explain="Четыре красные попытки оплаты друг за другом: каждая это пара POST и POST /pay." data-spans='[{"id":"r0","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":212,"status":"error","attrs":{"http.method":"POST","http.route":"/api/orders","http.status_code":502}},{"id":"a1","parent":"r0","service":"shop","name":"db.pool.getconn","start":2,"dur":1,"status":"ok"},{"id":"a2","parent":"r0","service":"shop","name":"SELECT","start":4,"dur":3,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"a3","parent":"r0","service":"shop","name":"INSERT","start":8,"dur":4,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"c1","parent":"r0","service":"shop","name":"POST","start":14,"dur":46,"status":"error","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":500}},{"id":"p1","parent":"c1","service":"payment","name":"POST /pay","start":17,"dur":40,"status":"error","attrs":{"http.route":"/pay","http.status_code":500}},{"id":"c2","parent":"r0","service":"shop","name":"POST","start":63,"dur":46,"status":"error","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":500}},{"id":"p2","parent":"c2","service":"payment","name":"POST /pay","start":66,"dur":40,"status":"error","attrs":{"http.route":"/pay","http.status_code":500}},{"id":"c3","parent":"r0","service":"shop","name":"POST","start":112,"dur":46,"status":"error","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":500}},{"id":"p3","parent":"c3","service":"payment","name":"POST /pay","start":115,"dur":40,"status":"error","attrs":{"http.route":"/pay","http.status_code":500}},{"id":"c4","parent":"r0","service":"shop","name":"POST","start":161,"dur":46,"status":"error","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":500}},{"id":"p4","parent":"c4","service":"payment","name":"POST /pay","start":164,"dur":40,"status":"error","attrs":{"http.route":"/pay","http.status_code":500}}]'></div>
+
+Посчитай красные пары `POST` и `POST /pay`: их четыре, это первая попытка и три повтора. Корень тоже красный, потому что после последнего отказа заказ вернул `502`.
 
 > **Проверь понимание:** в трейсе заказа десять одинаковых коротких `SELECT` подряд, каждый по 2 мс. В списке медленных запросов базы ничего нет. Это ошибка мониторинга?
 
@@ -287,6 +323,19 @@ flowchart TD
 
 Есть два подхода. При **head-сэмплировании** (решение в начале) трейс берут или нет вслепую, в момент старта, например каждый десятый. При **tail-сэмплировании** (решение в конце) решают, когда трейс закончился, и сохраняют все с ошибками или длиннее секунды: в Alloy это отдельная настройка. Режим `parentbased` делает так: первый сервис на пути решает, остальные следуют его флагу из `traceparent` (последняя цифра `01`). Иначе `shop` сохранил бы свой кусок, а `payment` нет, и трейс вышел бы рваным.
 
+На практике tail-сэмплирование ведёт себя так:
+
+```mermaid
+flowchart TD
+    A["Трейс закончился"] --> B{"Есть ошибка?"}
+    B -->|да| S["Хранить"]
+    B -->|нет| C{"Дольше<br>1 секунды?"}
+    C -->|да| S
+    C -->|нет| D["Хранить 10%<br>остальных"]
+```
+
+Схема показывает правило: ошибки и медленные трейсы сохраняют все, а из обычных берут десятую часть. Это те трейсы, ради которых трассировку и включают: при расследовании нужен именно сбойный запрос, а не случайный. Цена такая: сборщик держит все спаны трейса в памяти, пока трейс не закончится, и все спаны одного трейса должны прийти на один экземпляр сборщика, иначе решение примут по обрывку. Head проще и дешевле, tail удобнее для расследований.
+
 На стенде хранится всё: `OTEL_TRACES_SAMPLER=parentbased_always_on` и `OTEL_TRACES_SAMPLER_ARG=1.0`. Для высокой нагрузки ставят `parentbased_traceidratio` с `0.1`: 10% трейсов.
 
 > **Прикинь сам:** в метриках p95 заказов 1,2 с, а в Tempo при 10% видно всего три медленных трейса. Метрики врут?
@@ -303,7 +352,7 @@ flowchart TD
 
 ### Связь трёх сигналов
 
-Три сигнала хранятся в трёх системах и сами по себе не связаны. Связывает их Grafana, и делает это тремя приёмами. Первый это **производное поле** (derived field) в источнике Loki: регулярное выражение `"trace_id":\s*"(\w+)"` вытаскивает номер из строки лога и рисует кнопку «Открыть трейс», которая открывает Tempo. Второй это обратная связь в источнике Tempo (`tracesToLogs`): из спана переходишь к логам `{service="shop"} |= "<trace_id>"` в окне минута до и минута после спана. Третий это общее время и метки, как в уроке 4.1: график метрики и панель логов делят интервал.
+Три сигнала хранятся в трёх системах и сами по себе не связаны. Связывает их Grafana, и делает это тремя приёмами. Первый это **производное поле** (derived field) в источнике Loki: регулярное выражение `"trace_id":\s*"(\w+)"` вытаскивает номер из строки лога и рисует кнопку «Открыть трейс», которая открывает Tempo. Второй это обратная связь в источнике Tempo (в provisioning стенда ключ `tracesToLogsV2`, в интерфейсе «Trace to logs»): из спана переходишь к логам `{service="shop"} |= "<trace_id>"` в окне минута до и минута после спана. Третий это общее время и метки, как в уроке 4.1: график метрики и панель логов делят интервал.
 
 Есть и четвёртый приём, **экземпляры** (exemplars): метрика может хранить рядом с числом пример `trace_id` запроса, который попал в корзину гистограммы, и на графике появляются точки со ссылкой на трейс. На нашем стенде они не включены, но в боевых системах встречаются: знай, что так бывает.
 
@@ -322,6 +371,8 @@ flowchart TD
 
 > **Главное:** метрика показывает, где и когда, лог называет запрос, трейс показывает шаг, а `trace_id` в строке лога склеивает их.
 {: .key}
+
+Как эта цепочка работает в реальном инциденте, где на неё уходят минуты, разберёт [урок 5.1](../05-reliability/01-incidents.md).
 
 Теория закончилась. Давай пройдём цепочку руками.
 
@@ -396,6 +447,12 @@ docker compose logs shop --no-log-prefix | grep '"/api/orders"' | tail -n 1 | jq
 
 **Как читать вывод:** корень длиннее суммы детей: в нём ещё время самого кода. Оплата около 50 мс это норма: заглушка отвечает за 50 мс.
 
+Вот как выглядит здоровый заказ из шага 2 в Grafana:
+
+<div class="viz" data-viz="mon-trace" data-title="Tempo: заказ, всё хорошо" data-trace-id="0e7b3c9a4d1f4a2b8c5e6f7a8b9c0d1e" data-focus="p1" data-explain="Корень POST /api/orders занимает 92 мс. Под ним Redis, пул, SQL и оплата." data-spans='[{"id":"r0","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":92,"status":"ok","attrs":{"http.method":"POST","http.route":"/api/orders","http.status_code":201}},{"id":"a1","parent":"r0","service":"shop","name":"GET","start":1,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a2","parent":"r0","service":"shop","name":"HGETALL","start":3,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a3","parent":"r0","service":"shop","name":"db.pool.getconn","start":5,"dur":1,"status":"ok"},{"id":"a4","parent":"r0","service":"shop","name":"SELECT","start":7,"dur":4,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"a5","parent":"r0","service":"shop","name":"INSERT","start":12,"dur":5,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"a6","parent":"r0","service":"shop","name":"UPDATE","start":18,"dur":4,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"c1","parent":"r0","service":"shop","name":"POST","start":24,"dur":56,"status":"ok","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":200}},{"id":"p1","parent":"c1","service":"payment","name":"POST /pay","start":27,"dur":50,"status":"ok","attrs":{"http.route":"/pay","http.status_code":200}},{"id":"a7","parent":"r0","service":"shop","name":"DEL","start":82,"dur":2,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a8","parent":"r0","service":"shop","name":"HINCRBY","start":85,"dur":2,"status":"ok","attrs":{"db.system":"redis"}}]'></div>
+
+Смотри на самую длинную полосу под корнем: это `POST /pay`, около 50 мс из 92, и она вложена в клиентский `POST` из `shop`. Остальное короткое: `db.pool.getconn` около 1 мс говорит, что соединение с базой было свободно.
+
 ### 4. Из лога в трейс и обратно
 
 В Explore выбери источник **Loki** и выполни запрос из урока 4.1:
@@ -405,6 +462,12 @@ docker compose logs shop --no-log-prefix | grep '"/api/orders"' | tail -n 1 | jq
 ```
 
 Раскрой любую строку: у поля `trace_id` будет кнопка **Открыть трейс**. Нажми её: откроется водопад. В водопаде раскрой любой спан и нажми кнопку перехода к логам: вернёшься к строкам лога этого запроса.
+
+Вот как выглядят строки такого запроса:
+
+<div class="viz" data-viz="mon-logs" data-title="Explore: Loki" data-query="{service=&quot;shop&quot;} | json | route=&quot;/api/orders&quot;" data-highlight="trace_id" data-explain="Каждая строка заказа несёт trace_id: по нему кнопка Открыть трейс ведёт в Tempo." data-lines='[{"ts":"2026-10-04 15:52:10.318","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T12:52:10.318402+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 201, \"duration_ms\": 92.4, \"request_id\": \"8d2f61c0a59e4b73a1f0c4e2b6d37a15\", \"trace_id\": \"0e7b3c9a4d1f4a2b8c5e6f7a8b9c0d1e\", \"user_id\": 1}"},{"ts":"2026-10-04 15:52:07.940","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T12:52:07.940115+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 201, \"duration_ms\": 88.7, \"request_id\": \"9250b9912ee91d6b46e23299459ecd6e\", \"trace_id\": \"ea850b5908187ec2bd2d7c3c36d9f0db\", \"user_id\": 1}"},{"ts":"2026-10-04 15:52:05.552","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T12:52:05.552873+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 201, \"duration_ms\": 95.1, \"request_id\": \"de2d91dc0a2580414e9a70f7dfc76af7\", \"trace_id\": \"2487e569037e7be270172e38df22004d\", \"user_id\": 1}"}]'></div>
+
+Первым делом найди `trace_id` в любой строке: это 32 символа, и они совпадают с номером трейса сверху. Верхняя строка это тот самый заказ на 92 мс, как в шаге 2.
 
 **Типичные ошибки:**
 
@@ -432,6 +495,32 @@ done
 
 **Как читать вывод:** список отсортирован по времени, у каждого трейса видны корневое имя и длительность. Если список пуст, снизь порог до `duration > 50ms`: на здоровом стенде медленных заказов мало.
 
+Вот как выглядит ответ на запрос `{ name = "POST /api/orders" && duration > 100ms }` после двадцати заказов:
+
+<div class="viz" data-viz="mon-table" data-title="Tempo: результат TraceQL" data-query="{ name = &quot;POST /api/orders&quot; &amp;&amp; duration > 100ms }" data-explain="Список трейсов: у каждого номер, время начала, корневое имя и длительность." data-highlight-col="3" data-highlight-row="0" data-columns='["Trace ID","Start time","Name","Duration"]' data-rows='[["a41c7e90b3d2458f9e6a1c0b7d3f52e8","2026-10-04 15:55:18","shop POST /api/orders","184 ms"],["5be08d3a91c447f2a6d9e0c1b8a73f46","2026-10-04 15:55:07","shop POST /api/orders","131 ms"],["c7d92f1e08a64b35b4e1a9d6c3f07e82","2026-10-04 15:54:52","shop POST /api/orders","117 ms"],["29f6b4a0d3e1485c8a7b0e5c9d1f3a64","2026-10-04 15:54:33","shop POST /api/orders","108 ms"]]'></div>
+
+Самый длинный трейс на 184 мс стоит первым, а типичный заказ около 90 мс в список не попал: порог 100 мс его отсёк. Открой первый и сравни его с трейсом из шага 3: разница обычно в одном-двух спанах.
+
+Тот же поиск можно сделать без Grafana, прямо в API Tempo:
+
+```bash
+curl -sG localhost:3200/api/search --data-urlencode 'q={ name = "POST /api/orders" && duration > 100ms }' --data-urlencode limit=3 | jq '.traces[0]'
+```
+
+**Что должно получиться** (пример):
+
+```json
+{
+  "traceID": "a41c7e90b3d2458f9e6a1c0b7d3f52e8",
+  "rootServiceName": "shop",
+  "rootTraceName": "POST /api/orders",
+  "startTimeUnixNano": "1759589718204000000",
+  "durationMs": 184
+}
+```
+
+**Как читать вывод:** `traceID` вставь в Explore, `durationMs` это длина всего трейса, а время начала хранится в наносекундах от 1970 года. Если вместо трейса пришло `null`, под условие ничего не подошло: снизь порог.
+
 ### 6. Лесенка N+1
 
 На стенде по умолчанию включён заложенный баг `BUG_N_PLUS_ONE=1`: список заказов делает отдельный запрос на каждый заказ.
@@ -449,6 +538,12 @@ curl -s -o /dev/null localhost:8000/api/orders -H "Authorization: Bearer $TOKEN"
 **Что должно получиться:** трейс `GET /api/orders` с лесенкой одинаковых `SELECT`. При 20 заказах у пользователя их 21: один за списком и по одному на каждый заказ (сколько их будет у тебя, зависит от числа твоих заказов).
 
 **Как читать вывод:** каждый `SELECT` быстрый, но их много. Это та форма водопада, которую метрики не показывают.
+
+Вот как выглядит такой трейс:
+
+<div class="viz" data-viz="mon-trace" data-title="Tempo: GET /api/orders, N+1" data-trace-id="414f30f20f4d1cedcb52caa35f464c81" data-focus="q1" data-explain="Один запрос списка заказов породил 21 SQL-запрос подряд: лесенка одинаковых коротких спанов." data-spans='[{"id":"r0","parent":null,"service":"shop","name":"GET /api/orders","start":0,"dur":69,"status":"ok","attrs":{"http.method":"GET","http.route":"/api/orders","http.status_code":200}},{"id":"a1","parent":"r0","service":"shop","name":"GET","start":1,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a2","parent":"r0","service":"shop","name":"db.pool.getconn","start":3,"dur":1,"status":"ok"},{"id":"q0","parent":"r0","service":"shop","name":"SELECT","start":5,"dur":3,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q1","parent":"r0","service":"shop","name":"SELECT","start":8,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q2","parent":"r0","service":"shop","name":"SELECT","start":11,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q3","parent":"r0","service":"shop","name":"SELECT","start":14,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q4","parent":"r0","service":"shop","name":"SELECT","start":17,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q5","parent":"r0","service":"shop","name":"SELECT","start":20,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q6","parent":"r0","service":"shop","name":"SELECT","start":23,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q7","parent":"r0","service":"shop","name":"SELECT","start":26,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q8","parent":"r0","service":"shop","name":"SELECT","start":29,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q9","parent":"r0","service":"shop","name":"SELECT","start":32,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q10","parent":"r0","service":"shop","name":"SELECT","start":35,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q11","parent":"r0","service":"shop","name":"SELECT","start":38,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q12","parent":"r0","service":"shop","name":"SELECT","start":41,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q13","parent":"r0","service":"shop","name":"SELECT","start":44,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q14","parent":"r0","service":"shop","name":"SELECT","start":47,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q15","parent":"r0","service":"shop","name":"SELECT","start":50,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q16","parent":"r0","service":"shop","name":"SELECT","start":53,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q17","parent":"r0","service":"shop","name":"SELECT","start":56,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q18","parent":"r0","service":"shop","name":"SELECT","start":59,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q19","parent":"r0","service":"shop","name":"SELECT","start":62,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"q20","parent":"r0","service":"shop","name":"SELECT","start":65,"dur":2,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}}]'></div>
+
+Считай полосы: `SELECT` идёт 21 раз подряд, один за списком и по одному на каждый из двадцати заказов. Каждый стоит 2-3 мс, но вместе они занимают почти весь трейс, и это видно только здесь.
 
 ### 7. Собери всю цепочку и сохрани
 
@@ -498,6 +593,26 @@ done
 **Что получится** (пример): в водопаде одна длинная полоса `POST /pay` около 2 с в сервисе `payment`, а базовые `SELECT` и Redis короткие.
 
 **Как читать вывод:** сначала метрика сузила виновного (оплата), потом лог дал конкретный запрос и номер, и наконец трейс показал шаг. Гипотезы 1, 2 и 4 отпали: SQL-спаны короткие, `db.pool.getconn` почти нулевой.
+
+Вот как выглядят эти шаги у тебя на экране. Сначала метрики:
+
+Метрики этого же сбоя в Grafana выглядят так:
+
+<div class="viz" data-viz="mon-panel" data-title="Заказы и оплата: время" data-query="p95 заказов и среднее время оплаты" data-unit="s" data-explain="Две линии идут вместе: оплата тянет за собой весь заказ." data-x='["12:30","12:31","12:32","12:33","12:34","12:35","12:36","12:37","12:38","12:39","12:40","12:41","12:42"]' data-series='[{"name":"p95 заказов","values":[0.11,0.1,0.12,0.11,0.1,2.08,2.11,2.1,2.09,2.12,2.1,0.12,0.11],"color":"orange"},{"name":"среднее время оплаты","values":[0.052,0.05,0.051,0.05,0.05,2.0,2.01,1.99,2.0,2.02,2.0,0.05,0.051],"color":"blue"}]' data-thresholds='[{"value":1,"color":"red","label":"порог 1 с"}]' data-annotations='[{"at":"12:35","text":"delay_ms=2000"},{"at":"12:41","text":"delay_ms=50"}]'></div>
+
+Обе линии прыгают с 0,1 до 2 секунд ровно на первой отметке и возвращаются на второй. Линия оплаты почти равна линии заказов, и по этому совпадению видно, куда ушло время.
+
+<div class="viz" data-viz="mon-stat" data-title="Отсев гипотез" data-explain="Четыре числа с дашборда во время сбоя: плохо только время." data-stats='[{"title":"p95 заказов","value":2.1,"unit":"s","color":"red","sub":"норма 0,11 с"},{"title":"Оплата, среднее","value":2.0,"unit":"s","color":"red","sub":"норма 0,05 с"},{"title":"Ждут соединение","value":0,"unit":"","color":"green","sub":"shop_db_pool_waiting"},{"title":"Доля 5xx","value":0,"unit":"%","color":"green"}]'></div>
+
+Зелёные карточки закрывают гипотезы 1 и 4: очередь за соединением пуста, ошибок нет. Красные две сходятся на оплате, и дальше остаётся подтвердить это трейсом.
+
+И трейс из последнего шага:
+
+Вот как выглядит трейс одного из шести заказов:
+
+<div class="viz" data-viz="mon-trace" data-title="Tempo: медленная оплата" data-trace-id="71bfc882b54bbe93dbaeb9ce80dc258a" data-focus="p1" data-explain="Один спан POST /pay занимает почти всю ширину трейса, остальное короткое." data-spans='[{"id":"r0","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":2080,"status":"ok","attrs":{"http.method":"POST","http.route":"/api/orders","http.status_code":201}},{"id":"a1","parent":"r0","service":"shop","name":"GET","start":1,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a2","parent":"r0","service":"shop","name":"HGETALL","start":3,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a3","parent":"r0","service":"shop","name":"db.pool.getconn","start":5,"dur":1,"status":"ok"},{"id":"a4","parent":"r0","service":"shop","name":"SELECT","start":7,"dur":4,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"a5","parent":"r0","service":"shop","name":"INSERT","start":12,"dur":5,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"a6","parent":"r0","service":"shop","name":"UPDATE","start":18,"dur":4,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"c1","parent":"r0","service":"shop","name":"POST","start":24,"dur":2044,"status":"ok","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":200}},{"id":"p1","parent":"c1","service":"payment","name":"POST /pay","start":27,"dur":2038,"status":"ok","attrs":{"http.route":"/pay","http.status_code":200}},{"id":"a7","parent":"r0","service":"shop","name":"DEL","start":2070,"dur":2,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a8","parent":"r0","service":"shop","name":"HINCRBY","start":2073,"dur":2,"status":"ok","attrs":{"db.system":"redis"}}]'></div>
+
+Первым делом найди самую длинную полосу: `POST /pay` в сервисе `payment` около 2 секунд из 2,08. Redis, SQL и `db.pool.getconn` те же, что в здоровом заказе, поэтому виновата оплата, а не база.
 
 ### Исправление
 
@@ -559,6 +674,7 @@ curl -fsS localhost:8001/admin/config -H 'Content-Type: application/json' -d '{"
 | Tempo | Хранилище трейсов, быстрое по `trace_id` |
 | TraceQL | Язык запросов к трейсам: условия на спаны в `{}` |
 | Сэмплирование | Выбор, какую долю трейсов хранить (head или tail) |
+| Ручной спан | Спан, который разработчик ставит в коде вокруг своего шага, например `db.pool.getconn` |
 | N+1 | Один запрос за списком и по одному на каждый элемент: лесенка в водопаде |
 
 ## Вопросы с собеседований
@@ -578,7 +694,8 @@ curl -fsS localhost:8001/admin/config -H 'Content-Type: application/json' -d '{"
 - [ ] Описать путь спана от сервиса через Alloy до Tempo и назвать порты 4317 и 4318.
 - [ ] Узнать по форме водопада медленный шаг, N+1 и ретраи.
 - [ ] Найти трейс запросом TraceQL и по `trace_id` из лога.
-- [ ] Объяснить сэмплирование и почему при нём метрики не врут.
+- [ ] Объяснить сэмплирование (head и tail) и почему при нём метрики не врут.
+- [ ] Отличить спаны автоинструментации от ручного и сказать, когда нужен ручной.
 - [ ] Пройти цепочку «график, строка лога, трейс» и назвать шаг, который нужно чинить.
 
 ## Где это применить
@@ -588,4 +705,4 @@ curl -fsS localhost:8001/admin/config -H 'Content-Type: application/json' -d '{"
 - [load-tester, урок 11.5: кэш и внешние зависимости](../../load-tester/11-bottlenecks/05-cache-dependencies.md): ретраи и медленная оплата как узкое место, которое ты теперь узнаёшь в трейсе.
 - [DevOps, тема 8 целиком](../../devops/08-observability/index.md): Kubernetes, service mesh и паттерны надёжности с burn rate.
 
-Дальше: курс «Мониторинг: основы» закончен. Применяй его в прикладных курсах: [DevOps, тема 8](../../devops/08-observability/index.md) строит мониторинг проекта «Заметки», а [load-tester, тема 7](../../load-tester/07-observability/index.md) учит находить узкие места под нагрузкой.
+Дальше: [урок 5.1. Инцидент: от алерта до восстановления](../05-reliability/01-incidents.md) в курсе «Мониторинг и SRE». Ты уже находишь причину по метрике, логу и трейсу, а там научишься вести весь инцидент: от первого алерта до восстановления и разбора. Прикладные курсы остаются рядом: [DevOps, тема 8](../../devops/08-observability/index.md) строит мониторинг проекта «Заметки», а [load-tester, тема 7](../../load-tester/07-observability/index.md) учит находить узкие места под нагрузкой.

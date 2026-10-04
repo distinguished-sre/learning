@@ -256,6 +256,8 @@ Helm возьмёт настройки ревизии 2 и создаст из �
 
 </details>
 
+Осторожно: если «Заметки» ведёт Flux (`HelmRelease`, [урок 9.3](../09-secrets-gitops/03-gitops-flux.md)), ручной `helm rollback` и `helm upgrade` через минуты перезатрёт helm-controller. Тогда откат делают через `git revert` релизного коммита, а для срочной митигации сначала ставят паузу `flux suspend helmrelease notes -n notes`, откатывают, а потом вносят правку в git и снимают паузу (`flux resume`). Если включён `rollout.enabled` ([урок 9.6](../09-secrets-gitops/06-progressive-delivery.md)), Deployment `notes` не существует: в командах ниже вместо `deploy/notes` пиши `rollout/notes`, а перезапуск делает `kubectl argo rollouts restart notes -n notes`.
+
 Осторожно: откат «возвращает время назад». Он возвращает только настройки и образ приложения. Данные в БД остаются как были. Если релиз изменил схему БД (переименовал колонку), старый код может не понять новую схему, и откат не поможет. Поэтому изменения схемы делают в два шага: сначала совместимые с обоими версиями, потом чистка.
 
 > **Главное:** `helm rollback notes <ревизия>` возвращает образ и настройки, но не данные в БД, а история ревизий только растёт.
@@ -967,7 +969,7 @@ kubectl exec -n notes deploy/notes -- df -h /data
 <details markdown="1">
 <summary>Разбор сценариев</summary>
 
-**OOM.** Признак: `RESTARTS` растёт, в `kubectl describe pod` `Reason: OOMKilled`, `Exit Code: 137`. Митигация: `kubectl rollout restart deployment/notes -n notes`. Исправление: найти утечку или поднять `resources.limits.memory` в `values.yaml` (см. [урок 5.7](../05-kubernetes/07-probes-resources-rollouts.md)) и выкатить через `helm upgrade`. Ловушка: рестарт освобождает память на время, поэтому без исправления инцидент вернётся.
+**OOM.** Признак: `RESTARTS` растёт, в `kubectl describe pod` `Reason: OOMKilled`, `Exit Code: 137`. Митигация: `kubectl rollout restart deployment/notes -n notes` (для Rollout: `kubectl argo rollouts restart notes -n notes`). Исправление: найти утечку или поднять `resources.limits.memory` в `values.yaml` (см. [урок 5.7](../05-kubernetes/07-probes-resources-rollouts.md)) и выкатить через `helm upgrade` (под Flux через коммит в git). Ловушка: рестарт освобождает память на время, поэтому без исправления инцидент вернётся.
 
 **Диск.** Признак: `No space left on device` в логах, `/readyz` 503. Проверка: `kubectl exec -n notes deploy/notes -- df -h /data`. Митигация: освободить место или расширить том. Исправление: ротация и алерт `NotesDiskFillingUp` с запасом по времени. Ловушка: `du` может показывать мало, если файл удалён, но процесс держит его открытым (см. [урок 1.5](../01-linux/05-disk-memory-cpu.md)).
 

@@ -274,7 +274,7 @@ drwxr-xr-x 3 student student 4096 Oct  3 11:02 ..
 -rw-r--r-- 1 student student  284 Oct  3 11:02 Dockerfile
 drwxr-xr-x 3 student student 4096 Oct  3 11:02 app
 -rw-r--r-- 1 student student  424 Oct  3 11:02 entrypoint.sh
--rw-r--r-- 1 student student  158 Oct  3 11:02 requirements.txt
+-rw-r--r-- 1 student student  437 Oct  3 11:02 requirements.txt
 ```
 
 **Как читать вывод:** четыре элемента контекста сборки: рецепт `Dockerfile`, папка кода `app`, скрипт запуска и список библиотек. У `entrypoint.sh` права `-rw-r--r--`: буквы `x` (исполнение) нет, в репозитории файл хранится без неё. Поэтому в Dockerfile есть строка `RUN chmod +x entrypoint.sh`: без неё запуск образа упал бы с `permission denied`. Размеры могут слегка отличаться.
@@ -351,7 +351,7 @@ IMAGE          CREATED          CREATED BY                                      
 <missing>      2 minutes ago    COPY entrypoint.sh . # buildkit                 424B      buildkit.dockerfile.v0
 <missing>      2 minutes ago    COPY app ./app # buildkit                       21.5kB    buildkit.dockerfile.v0
 <missing>      2 minutes ago    RUN /bin/sh -c pip install --no-cache-dir -…   128MB     buildkit.dockerfile.v0
-<missing>      2 minutes ago    COPY requirements.txt . # buildkit              158B      buildkit.dockerfile.v0
+<missing>      2 minutes ago    COPY requirements.txt . # buildkit              437B      buildkit.dockerfile.v0
 <missing>      2 minutes ago    WORKDIR /app                                    0B        buildkit.dockerfile.v0
 <missing>      3 weeks ago      CMD ["python3"]                                 0B        buildkit.dockerfile.v0
 ...
@@ -531,7 +531,7 @@ time docker stop noexec
 <details markdown="1">
 <summary>Разбор</summary>
 
-`docker stop` займёт около 10 секунд (`real 0m10.2s`), а код выхода будет `137`. Причина: теперь PID 1 это оболочка `sh`, она не передаёт SIGTERM дочернему uvicorn; Docker ждёт положенные 10 секунд и шлёт SIGKILL. Вернув `exec` (пересобрав образ), увидишь остановку за долю секунды и код `0` или `143`.
+`docker stop` займёт около 10 секунд (`real 0m10.2s`), а код выхода будет `137`. Причина: теперь PID 1 это оболочка `sh`, она не передаёт SIGTERM дочернему uvicorn; Docker ждёт положенные 10 секунд и шлёт SIGKILL. Для сравнения верни `exec`, пересобери образ и запусти его с рабочей базой (`--network shop_default` и `DATABASE_URL=postgresql://shop:shop@postgres:5432/shop` при поднятом стенде): остановка займёт долю секунды, код будет `0` или `143`. Без базы такое сравнение нечестное: `lifespan` ждёт пул до 60 секунд и на SIGTERM не отреагирует, даже если `uvicorn` стал PID 1.
 
 Вывод для диагностики: когда остановка контейнера «зависает» на десять секунд, смотри, кто PID 1 внутри (`docker exec ИМЯ cat /proc/1/cmdline`: если там `/bin/sh`, а не `uvicorn`, остановка будет медленной). Если это оболочка, а не сервис, ищи `exec` или передавай сигналы явно. Убери за собой: `docker rm -f noexec; docker image rm shop-lab:noexec`.
 

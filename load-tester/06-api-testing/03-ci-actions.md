@@ -96,20 +96,20 @@ jobs:
     timeout-minutes: 20          # убить, если зависло
     steps:
       - name: Забрать код
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7.0.1
       - name: Показать версию
         run: python3 --version
 ```
 
 Здесь `push:` и `pull_request:` значат «любой push» и «любой pull request», а `workflow_dispatch:` добавляет кнопку ручного запуска. Блок `permissions: contents: read` ограничивает права «пропуска» (токена), который GitHub выдаёт запуску: тестам незачем писать в репозиторий, поэтому даём только чтение.
 
-`runs-on` выбирает образ машины. `timeout-minutes: 20` нужен, потому что зависший шаг без него держал бы машину шесть часов. Каждый шаг в `steps:` начинается с `-`, а `name:` подписывает его. Запись `actions/checkout@v5` читается так: действие `checkout` из организации `actions`, версия 5. Версию пишут всегда: автор действия выпускает новые версии, и без номера твой запуск однажды изменится без тебя.
+`runs-on` выбирает образ машины. `timeout-minutes: 20` нужен, потому что зависший шаг без него держал бы машину шесть часов. Каждый шаг в `steps:` начинается с `-`, а `name:` подписывает его. Запись `actions/checkout@v7.0.1` читается так: действие `checkout` из организации `actions`, версия 7.0.1. Версию пишут всегда: автор действия выпускает новые версии, и без номера твой запуск однажды изменится без тебя.
 
 Главная ловушка YAML: **отступы это синтаксис**. Один лишний пробел, и шаг окажется внутри чужого блока. Теперь шаг с несколькими командами: многострочный блок начинается с `run: |` (черта значит «дальше текст в несколько строк»).
 
 ```yaml
       - name: Поднять стенд
-        working-directory: stand/project/shop
+        working-directory: stand/load-tester/project/shop
         run: |
           cp .env.example .env
           docker compose up -d --build --wait --wait-timeout 300
@@ -122,23 +122,23 @@ jobs:
 > **Главное:** workflow это явная инструкция для чистой машины, где каждый шаг живёт в своей оболочке, а отступы и версии действий решают всё.
 {: .key}
 
-В примере мелькнула папка `stand/project/shop`. Откуда там стенд, если тесты лежат в другом репозитории?
+В примере мелькнула папка `stand/load-tester/project/shop`. Откуда там стенд, если тесты лежат в другом репозитории?
 
 ### Два репозитория: тесты и стенд
 
-Тесты лежат в твоём `perf-lab`, а стенд «Магазин» живёт в `distinguished-sre/load-tester`. Чтобы проверить стенд, машине нужны оба.
+Тесты лежат в твоём `perf-lab`, а стенд «Магазин» живёт в `distinguished-sre/learning`. Чтобы проверить стенд, машине нужны оба.
 
 Шаг `actions/checkout` без параметров клонирует текущий репозиторий. С параметрами он клонирует любой доступный:
 
 ```yaml
       - name: Код тестов (perf-lab)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - name: Код стенда (load-tester)
-        uses: actions/checkout@v5
+      - name: Код стенда (learning)
+        uses: actions/checkout@v7.0.1
         with:
-          repository: distinguished-sre/load-tester
+          repository: distinguished-sre/learning
           path: stand
           persist-credentials: false
 ```
@@ -149,8 +149,8 @@ jobs:
 /home/runner/work/perf-lab/perf-lab/     <- рабочая папка (код твоего perf-lab)
 ├── 06-api-tests/                        <- тесты
 ├── requirements.txt
-└── stand/                               <- клон load-tester
-    └── project/shop/                    <- стенд: compose.yaml, .env.example
+└── stand/                               <- клон learning
+    └── load-tester/project/shop/        <- стенд: compose.yaml, .env.example
 ```
 
 Осторожно: какую версию стенда ты тестируешь? По умолчанию `checkout` берёт основную ветку (`main`), то есть всегда свежий стенд. Твои тесты могут упасть оттого, что стенд изменили, хотя ты ничего не пушил. Чтобы стенд не менялся, укажи `ref: <тег или коммит>` (ref это «метка», на какую версию кода встать).
@@ -215,7 +215,7 @@ docker compose up -d --build --wait --wait-timeout 300
 
       - name: Логи стенда при падении
         if: failure()
-        working-directory: stand/project/shop
+        working-directory: stand/load-tester/project/shop
         run: docker compose logs --no-color --tail=200
 ```
 
@@ -262,12 +262,11 @@ flowchart TD
 Теперь другой запуск: первые шаги зелёные, «Поднять стенд» красный, остальные серые, «Логи стенда» выполнен. Значит, тесты даже не начинались. Открываем лог стенда:
 
 ```text
-shop-1  | psycopg_pool.PoolTimeout: couldn't get a connection after 60.00 sec
 shop-1  | ... 
 Error response from daemon: ... dependency failed to start: container shop-postgres-1 is unhealthy
 ```
 
-Приложение не дождалось базы, а контейнер PostgreSQL не стал здоровым: проблема стенда или машины, не тестов. Нажми **Re-run jobs**, а при повторе ищи причину в логе PostgreSQL выше.
+Контейнер PostgreSQL не стал здоровым, поэтому `shop`, который ждёт его в `depends_on`, даже не запустился: проблема стенда или машины, не тестов. Нажми **Re-run jobs**, а при повторе ищи причину в логе PostgreSQL выше.
 
 Осторожно: перезапуск вслепую. Если красный запуск позеленел сам, это нестабильный тест ([урок 6.2](02-api-autotests.md)): запиши, что упало, и разберись.
 
@@ -367,14 +366,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Код тестов (perf-lab)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
-      - name: Код стенда (load-tester)
-        uses: actions/checkout@v5
+      - name: Код стенда (learning)
+        uses: actions/checkout@v7.0.1
         with:
-          repository: distinguished-sre/load-tester
+          repository: distinguished-sre/learning
           path: stand
           persist-credentials: false
 
@@ -388,7 +387,7 @@ jobs:
         run: python -m pip install -r requirements.txt
 
       - name: Поднять стенд
-        working-directory: stand/project/shop
+        working-directory: stand/load-tester/project/shop
         run: |
           cp .env.example .env
           docker compose up -d --build --wait --wait-timeout 300
@@ -407,12 +406,12 @@ jobs:
 
       - name: Логи стенда при падении
         if: failure()
-        working-directory: stand/project/shop
+        working-directory: stand/load-tester/project/shop
         run: docker compose logs --no-color --tail=200
 
       - name: Погасить стенд
         if: always()
-        working-directory: stand/project/shop
+        working-directory: stand/load-tester/project/shop
         run: docker compose down -v
 ```
 
@@ -442,7 +441,7 @@ git push
 ```text
 ✓ Set up job                      2s
 ✓ Код тестов (perf-lab)           1s
-✓ Код стенда (load-tester)        2s
+✓ Код стенда (learning)        2s
 ✓ Python                          3s
 ✓ Зависимости                     5s
 ✓ Поднять стенд                2m 31s
@@ -459,7 +458,7 @@ git push
 
 - Шаг «Поднять стенд» красный: `dependency failed to start`: раскрой лог выше и найди, какой контейнер нездоров. Сначала просто перезапусти запуск (**Re-run all jobs**): бывает сбой скачивания образа.
 - Шаг тестов красный, `ConnectionError`: стенд не готов, проверь, что `--wait` стоит и `curl .../readyz` отработал.
-- `Error: Unable to resolve action 'actions/checkout@v5'`: опечатка в имени или версии действия.
+- `Error: Unable to resolve action 'actions/checkout@v7.0.1'`: опечатка в имени или версии действия.
 
 > Workflow красный, а строка с ошибкой в логе непонятна? Вставь нейросети свой `api-tests.yml` и текст упавшего шага, спроси, что значит ошибка. Проверь правку в ветке, а не в `main`: нейросети часто предлагают версии действий, которых нет, поэтому сверь `uses:` с репозиторием действия на GitHub.
 {: .ai}
@@ -529,11 +528,11 @@ git push origin --delete experiment/red-ci
 
 ## Сломай и почини
 
-**Поломка 1: опечатка в YAML.** В `api-tests.yml` сдвинь строку `uses: actions/checkout@v5` одного из шагов на один пробел вправо, закоммить и запушь в ветку эксперимента. Запуск не начнётся вообще: на странице Actions появится запись «Invalid workflow file» (или красная плашка в самом файле) с номером строки. Сравни: ни одного шага не выполнено, а значит, причина в самом файле. Верни отступ.
+**Поломка 1: опечатка в YAML.** В `api-tests.yml` сдвинь строку `uses: actions/checkout@v7.0.1` одного из шагов на один пробел вправо, закоммить и запушь в ветку эксперимента. Запуск не начнётся вообще: на странице Actions появится запись «Invalid workflow file» (или красная плашка в самом файле) с номером строки. Сравни: ни одного шага не выполнено, а значит, причина в самом файле. Верни отступ.
 
 **Поломка 2: забытый `always()`.** Убери `if: always()` у шага «Сохранить отчёт pytest» и повтори сценарий из шага 6. Запуск красный, но раздел Artifacts пуст: отчёт не сохранён именно тогда, когда нужен. Верни условие.
 
-**Поломка 3: стенд не успевает.** Замени `--wait --wait-timeout 300` на просто `-d` (убрав `--wait`). Запуск (при невезении, а иногда и всегда) упадёт на первом же тесте с `ConnectionError`: контейнеры созданы, но «Магазин» ещё не готов. Диагностика по категории: стенд-шаг зелёный, тесты красные с ошибкой подключения, значит, виновата синхронизация. Верни `--wait`.
+**Поломка 3: стенд не успевает.** Замени `--wait --wait-timeout 300` на просто `-d` (убрав `--wait`) и удали строку с `curl --fail ... /readyz`: она сама дождалась бы готовности или покраснела. Запуск (при невезении, а иногда и всегда) упадёт на первом же тесте с `ConnectionError`: контейнеры созданы, но «Магазин» ещё не готов. Диагностика по категории: стенд-шаг зелёный, тесты красные с ошибкой подключения, значит, виновата синхронизация. Верни `--wait`.
 
 Не оставляй сломанное в `main`: все три упражнения делай в ветке `experiment/red-ci` и удаляй её (команды из шага 6).
 
@@ -592,7 +591,7 @@ GitHub Actions, workflow api-tests.yml на ubuntu-latest. Вот файл: <в�
 
 ## Проверено на версиях
 
-GitHub Actions: `actions/checkout@v5`, `actions/setup-python@v6`, `actions/upload-artifact@v4`, runner `ubuntu-latest` (Ubuntu 24.04, Docker Compose v2). Python 3.12, pytest 9.1.1, requests 2.34.2. Октябрь 2026. Версии действий проверь на странице действия в GitHub Marketplace, они обновляются.
+GitHub Actions: `actions/checkout@v7.0.1`, `actions/setup-python@v6`, `actions/upload-artifact@v4`, runner `ubuntu-latest` (Ubuntu 24.04, Docker Compose v2). Python 3.12, pytest 9.1.1, requests 2.34.2. Октябрь 2026. Версии действий проверь на странице действия в GitHub Marketplace, они обновляются.
 
 ## Итог урока: ты умеешь
 

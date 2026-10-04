@@ -288,12 +288,12 @@ http_requests_total{method="POST",route="/api/orders",status="201"} 1.0
 Откроем настройки стенда и включим кэш карточек. Это временный эксперимент: в конце мы вернём настройку назад.
 
 ```bash
-sed -i 's/^CACHE_ENABLED=0/CACHE_ENABLED=1/' .env
+sed -i.bak 's/^CACHE_ENABLED=0/CACHE_ENABLED=1/' .env && rm -f .env.bak
 grep CACHE_ENABLED .env
 docker compose up -d --wait shop
 ```
 
-Разбор: `sed -i 's/было/стало/' файл` заменяет текст прямо в файле (`^` означает «в начале строки»). `up -d --wait shop` пересоздаёт только сервис `shop` с новыми настройками, остальные не трогает.
+Разбор: `sed -i.bak 's/было/стало/' файл` заменяет текст прямо в файле (суффикс `.bak` нужен, чтобы команда работала и в GNU sed, и в BSD sed на macOS; копию `.env.bak` убирает `rm`; `^` означает «в начале строки»). `up -d --wait shop` пересоздаёт только сервис `shop` с новыми настройками, остальные не трогает.
 
 ```text
 CACHE_ENABLED=1
@@ -324,7 +324,7 @@ shop_cache_requests_total{result="hit"} 1.0
 Верни настройку на место, чтобы не мешать будущим урокам (кэш мы намеренно включим в [уроке 11.5](../11-bottlenecks/05-cache-dependencies.md)):
 
 ```bash
-sed -i 's/^CACHE_ENABLED=1/CACHE_ENABLED=0/' .env
+sed -i.bak 's/^CACHE_ENABLED=1/CACHE_ENABLED=0/' .env && rm -f .env.bak
 docker compose up -d --wait shop
 ```
 

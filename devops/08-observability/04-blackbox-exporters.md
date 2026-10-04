@@ -23,7 +23,7 @@ time: "3 ч"
 - [Урок 2.6: TLS](../02-network/06-tls.md): сертификат, срок, цепочка доверия, самоподписанный сертификат.
 - [Урок 2.8: путь запроса](../02-network/08-request-path-troubleshooting.md): слои DNS, порт, TLS, HTTP.
 - [Урок 4.6: Compose, nginx и TLS](../04-docker/06-compose-nginx-tls.md): сервисы `proxy`, `notes`, `db`, сеть `notes-net`, каталог `deploy/tls`.
-- Если хочешь разобрать основы на другом стенде, см. [Экспортёры](../../monitoring/02-metrics/03-exporters.md) в курсе «Мониторинг: основы».
+- Если хочешь разобрать основы на другом стенде, см. [Экспортёры](../../monitoring/02-metrics/03-exporters.md) в курсе «Мониторинг и SRE».
 
 ## Картина целиком
 
@@ -696,7 +696,7 @@ bash /tmp/break-8.4.sh 1
 
 ### Симптом
 
-В Prometheus одна или несколько проб показывают `probe_success 0`, хотя приложение живо (`docker compose ps`), а в браузере сайт открывается или, наоборот, не открывается.
+В Prometheus одна или несколько проб показывают `probe_success 0` (или ряд пропал, а цель в Targets DOWN), хотя приложение живо (`docker compose ps`), а в браузере сайт открывается или, наоборот, не открывается.
 
 ### Гипотезы
 
@@ -721,7 +721,7 @@ bash /tmp/break-8.4.sh 1
 
 **Сценарий 1: `probe_success 0` из-за TLS.** Из модуля `http_2xx_tls` убран `tls_config` с `ca_file`. В `debug` виден `x509: certificate signed by unknown authority`. Ту же картину дали бы перевыпущенный сертификат (смонтирован не тот файл) или истёкший (`x509: certificate has expired`). Починка: верни `tls_config.ca_file: /etc/blackbox/notes.crt`, проверь, что монтируется актуальный файл, перезапусти blackbox (`docker compose -f monitoring/compose.yml restart blackbox`). Не лечи это `insecure_skip_verify: true`: проба перестанет видеть проблемы сертификата, ради которых она нужна.
 
-**Сценарий 2: неверный module.** В job `blackbox-https` вместо `http_2xx_tls` написано `http_2xx_tsl` (опечатка). Проба красная, метрик `probe_http_*` нет. Причину показывает `debug=true` или лог blackbox: неизвестный модуль. Починка: в `params.module` укажи существующий модуль из `blackbox.yml`; тип модуля должен соответствовать цели (http для URL, tcp для `host:port`). Перезапусти Prometheus.
+**Сценарий 2: неверный module.** В job `blackbox-https` вместо `http_2xx_tls` написано `http_2xx_tsl` (опечатка). На неизвестный модуль blackbox отвечает HTTP 400, для Prometheus это неудачный сбор: цель в Status - Targets в состоянии DOWN с ошибкой `server returned HTTP status 400 Bad Request`, `up{job="blackbox-https"}` равна 0, а ряды `probe_success` и `probe_http_*` пропадают (а не становятся 0). Причину показывает `debug=true` (та же ошибка Unknown module) или лог blackbox. Починка: в `params.module` укажи существующий модуль из `blackbox.yml`; тип модуля должен соответствовать цели (http для URL, tcp для `host:port`). Перезапусти Prometheus.
 
 **Сценарий 3: внешняя проверка красная при живом приложении.** Остановлен `proxy`. Прямая проба `notes:8080` и `db:5432` зелёные, обе HTTPS красные. `docker compose ps` покажет, что `proxy` не запущен, а `docker compose logs proxy` объяснит причину, если он падает. Починка: `docker compose up -d proxy`. Вывод: метрики приложения не заметили бы этой аварии, а blackbox заметил.
 

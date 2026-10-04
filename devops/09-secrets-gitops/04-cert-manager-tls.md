@@ -421,6 +421,8 @@ spec:
                 kind: Gateway
 ```
 
+Солвер `gatewayHTTPRoute` работает, только если в cert-manager включена поддержка Gateway API (`config.gatewayAPI.enabled: true` в values, в задании 2 это уже сделано), иначе `Challenge` зависнет.
+
 Отлаживайся на staging-адресе Let's Encrypt: у боевого жёсткие лимиты на число запросов, и десяток неудачных попыток закроет выпуск на несколько дней.
 
 Осторожно: «Let's Encrypt проверяет мой сервер». Он проверяет, что ты управляешь доменом: отвечаешь на HTTP по этому имени или можешь создать DNS-запись.
@@ -510,6 +512,11 @@ spec:
     crds:
       enabled: true               # CRD ставим и обновляем вместе с чартом
       keep: true                  # при удалении релиза CRD (и сертификаты) не сносим
+    config:
+      apiVersion: controller.config.cert-manager.io/v1alpha1
+      kind: ControllerConfiguration
+      gatewayAPI:
+        enabled: true             # нужно солверу gatewayHTTPRoute (ACME, ниже), по умолчанию выключено
 YAML
 ```
 

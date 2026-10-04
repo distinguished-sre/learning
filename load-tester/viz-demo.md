@@ -296,3 +296,69 @@ Load average и ядра (`data-cores`, `data-load`):
 Тренажёр вопросов на скорость (`data-seconds`, `data-questions` в JSON):
 
 <div class="viz" data-viz="final-speed-quiz" data-seconds="30" data-questions='[{"q":"Что такое p95?","a":"Значение, ниже которого лежат 95% замеров."},{"q":"Чем rate отличается от increase?","a":"rate даёт прирост в секунду, increase прирост за всё окно."}]'></div>
+
+## Мониторинг: как в настоящих интерфейсах
+
+Эти виджеты рисуют данные в виде, привычном по рабочим инструментам: панель Grafana, Explore с Loki, водопад Tempo, страница Targets в Prometheus. Данные статичные, берутся из атрибутов (JSON в одинарных кавычках, без апострофов внутри). Широкое содержимое прокручивается внутри виджета. Двойные фигурные скобки в запросах и логах нужно оборачивать в raw (правило в CLAUDE.md).
+
+Панель Time series: `mon-panel` (`data-query`, `data-x`, `data-series` с `name`, `values`, `color` green/yellow/orange/red/blue/purple, `null` в values рвёт линию, `data-unit`, `data-thresholds`, `data-annotations`, `data-stack`):
+
+<div class="viz" data-viz="mon-panel" data-title="Задержка запросов магазина" data-query='histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="shop"}[5m]))) * 1000' data-unit="ms" data-x='["14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13","14:14","14:15","14:16","14:17","14:18","14:19","14:20","14:21","14:22","14:23","14:24","14:25","14:26","14:27","14:28","14:29","14:30"]' data-series='[{"name":"p95","values":[116.0,122.0,134.0,136.0,137.0,143.0,149.0,143.0,136.0,119.0,116.0,104.0,191.0,280.0,375.0,483.0,580.0,680.0,688.0,686.0,486.0,438.0,385.0,330.0,271.0,196.0,139.0,133.0,122.0,109.0,106.0],"color":"orange"},{"name":"p50","values":[52,55,60,61,62,64,67,64,61,54,52,47,86,126,169,217,261,306,310,309,219,197,173,148,122,88,63,60,55,49,48],"color":"green"}]' data-thresholds='[{"value":500,"color":"red","label":"SLO"}]' data-annotations='[{"at":"14:11","text":"выкатка v2"}]'></div>
+
+Та же панель с накоплением серий (коды ответов) и разрывом линии, когда нет данных:
+
+<div class="viz" data-viz="mon-panel" data-title="Запросы по кодам ответа" data-query='sum by (status) (rate(http_requests_total{job="shop"}[1m]))' data-unit="req/s" data-stack="true" data-x='["14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13","14:14","14:15","14:16","14:17","14:18","14:19","14:20","14:21","14:22","14:23","14:24","14:25","14:26","14:27","14:28","14:29","14:30"]' data-series='[{"name":"2xx","values":[78,85,86,86,86,90,88,90,89,86,84,84,81,77,76,77,71,70,73,71,73,73,73,79,76,79,80,84,84,86,89],"color":"green"},{"name":"4xx","values":[5,4,3,3,3,5,4,4,3,5,4,4,3,3,3,5,3,3,4,4,5,3,4,5,4,5,4,4,4,3,4],"color":"yellow"},{"name":"5xx","values":[0,1,1,0,0,0,1,1,0,0,0,1,2,5,8,10,12,15,15,18,13,11,9,7,5,3,0,0,1,0,1],"color":"red"}]'></div>
+
+<div class="viz" data-viz="mon-panel" data-title="Память процесса (есть пропуск данных)" data-query='process_resident_memory_bytes{job="shop"}' data-unit="MB" data-x='["14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13","14:14","14:15","14:16","14:17","14:18","14:19","14:20","14:21","14:22","14:23","14:24","14:25","14:26","14:27","14:28","14:29","14:30"]' data-series='[{"name":"shop:8000","values":[298,310,316,319,322,331,337,343,350,361,362,368,381,385,395,397,407,412,null,null,430,433,441,452,459,466,468,477,484,490,498],"color":"blue"}]'></div>
+
+Ряд Stat: `mon-stat` (`data-stats`: `title`, `value`, `unit`, `color` green/yellow/orange/red, `spark`, `sub`):
+
+<div class="viz" data-viz="mon-stat" data-stats='[{"title":"Ошибки 5xx","value":2.4,"unit":"%","color":"yellow","spark":[0,0,0,1,2,5,8,10,12,15,15,18,13,11,9,7],"sub":"за 5 минут"},{"title":"p95 задержка","value":820,"unit":"ms","color":"red","spark":[136.0,119.0,116.0,104.0,191.0,280.0,375.0,483.0,580.0,680.0,688.0,686.0,486.0,438.0,385.0,330.0],"sub":"SLO 500 ms"},{"title":"Запросов в секунду","value":86,"unit":"req/s","color":"green","spark":[89,86,84,84,81,77,76,77,71,70,73,71,73,73,73,79]},{"title":"Память","value":512,"unit":"MB","color":"orange","spark":[298,310,316,319,322,331,337,343,350,361,362,368,381,385,395,397],"sub":"лимит 768 MB"}]'></div>
+
+Explore с Loki: `mon-logs` (`data-query`, `data-lines` от новых к старым: `ts`, `level`, `labels`, `line`, `data-highlight`):
+
+<div class="viz" data-viz="mon-logs" data-title="Explore" data-query='{service=~"shop|payment"} |= "4bf92f3577b34da6"' data-highlight="4bf92f3577b34da6" data-lines='[{"ts":"2026-10-04 14:05:31.920","level":"error","labels":{"service":"shop","env":"prod"},"line":"{\"ts\":\"2026-10-04T14:05:31.920Z\",\"level\":\"error\",\"msg\":\"payment failed\",\"trace_id\":\"4bf92f3577b34da6\",\"order_id\":1042,\"status\":500,\"duration_ms\":2003}"},{"ts":"2026-10-04 14:05:31.118","level":"warn","labels":{"service":"shop","env":"prod"},"line":"{\"ts\":\"2026-10-04T14:05:31.118Z\",\"level\":\"warn\",\"msg\":\"payment slow\",\"trace_id\":\"4bf92f3577b34da6\",\"duration_ms\":1850}"},{"ts":"2026-10-04 14:05:29.004","level":"info","labels":{"service":"shop","env":"prod"},"line":"POST /api/orders 201 94ms trace_id=9aa1c0de11"},{"ts":"2026-10-04 14:05:28.511","level":"info","labels":{"service":"shop","env":"prod"},"line":"GET /api/products 200 12ms trace_id=77be02c9d1"},{"ts":"2026-10-04 14:05:27.730","level":"error","labels":{"service":"payment","env":"prod"},"line":"connection refused: bank-gw:443 trace_id=4bf92f3577b34da6"},{"ts":"2026-10-04 14:05:26.402","level":"info","labels":{"service":"shop","env":"prod"},"line":"GET /api/products 200 11ms trace_id=0c4a8e71aa"},{"ts":"2026-10-04 14:05:25.019","level":"debug","labels":{"service":"shop","env":"prod"},"line":"pool: acquired connection in 0.4ms"},{"ts":"2026-10-04 14:05:24.660","level":"info","labels":{"service":"shop","env":"prod"},"line":"POST /api/orders 201 88ms trace_id=5d90b3f2c8"},{"ts":"2026-10-04 14:05:22.275","level":"error","labels":{"service":"shop","env":"prod"},"line":"POST /api/orders 500 2010ms trace_id=e41f7a0b23"},{"ts":"2026-10-04 14:05:21.840","level":"info","labels":{"service":"shop","env":"prod"},"line":"GET /healthz 200 1ms trace_id=-"}]'></div>
+
+Водопад Tempo: `mon-trace` (`data-trace-id`, `data-spans`: `id`, `parent`, `service`, `name`, `start` и `dur` в мс, `status`, `attrs`, `data-focus`):
+
+<div class="viz" data-viz="mon-trace" data-title="Trace: медленный заказ" data-trace-id="4bf92f3577b34da6a3ce929d0e0e4736" data-focus="a7" data-spans='[{"id":"a1","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":2046,"status":"ok","attrs":{"http.method":"POST","http.status_code":201}},{"id":"a2","parent":"a1","service":"redis","name":"GET session","start":1,"dur":2,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a3","parent":"a1","service":"postgres","name":"SELECT products","start":7,"dur":7,"status":"ok","attrs":{"db.system":"postgresql","db.statement":"SELECT ... FROM products WHERE id = ANY(...)"}},{"id":"a4","parent":"a1","service":"postgres","name":"INSERT orders","start":14,"dur":4,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"a5","parent":"a1","service":"shop","name":"POST payment","start":30,"dur":2010,"status":"ok","attrs":{"http.url":"http://payment:8001/pay","http.status_code":200}},{"id":"a6","parent":"a5","service":"payment","name":"POST /pay","start":33,"dur":2004,"status":"ok","attrs":{"PAYMENT_DELAY_MS":2000}},{"id":"a7","parent":"a6","service":"payment","name":"bank.charge","start":38,"dur":1990,"status":"error","attrs":{"error":"timeout waiting for bank-gw","peer.service":"bank-gw"}},{"id":"a8","parent":"a1","service":"redis","name":"DEL cart","start":2042,"dur":2,"status":"ok","attrs":{"db.system":"redis"}}]'></div>
+
+Жизнь алерта: `mon-alert` (`data-x`, `data-values`, `data-unit`, `data-threshold`, `data-for` в точках, `data-name`, `data-group-wait` в точках; состояния считаются из данных). Короткий всплеск 15:06 до порога не доживает, второй держится дольше `for` и срабатывает:
+
+<div class="viz" data-viz="mon-alert" data-title="HighLatency" data-name="p95 задержка" data-unit="ms" data-threshold="500" data-for="3" data-group-wait="2" data-x='["15:00","15:01","15:02","15:03","15:04","15:05","15:06","15:07","15:08","15:09","15:10","15:11","15:12","15:13","15:14","15:15","15:16","15:17","15:18","15:19","15:20","15:21","15:22","15:23","15:24"]' data-values='[211,218,219,198,231,233,548,532,233,218,187,697,694,705,666,705,624,681,640,222,231,196,185,231,186]'></div>
+
+Prometheus Targets: `mon-targets` (`data-targets`: `job`, `endpoint`, `state` up/down/unknown, `labels`, `last`, `duration`, `error`):
+
+<div class="viz" data-viz="mon-targets" data-title="Targets" data-targets='[{"job":"shop","endpoint":"http://shop:8000/metrics","state":"up","labels":{"instance":"shop:8000","job":"shop"},"last":"3.1s ago","duration":"12ms","error":""},{"job":"shop","endpoint":"http://shop-2:8000/metrics","state":"down","labels":{"instance":"shop-2:8000","job":"shop"},"last":"8.4s ago","duration":"10.000s","error":"Get http://shop-2:8000/metrics: context deadline exceeded"},{"job":"payment","endpoint":"http://payment:8001/metrics","state":"up","labels":{"instance":"payment:8001","job":"payment"},"last":"1.7s ago","duration":"9ms","error":""},{"job":"node","endpoint":"http://node-exporter:9100/metrics","state":"up","labels":{"instance":"node-exporter:9100","job":"node"},"last":"6.0s ago","duration":"41ms","error":""},{"job":"postgres","endpoint":"http://pg-exporter:9187/metrics","state":"unknown","labels":{"instance":"pg-exporter:9187","job":"postgres"},"last":"never","duration":"0s","error":""}]'></div>
+
+Вкладка Table: `mon-table` (`data-query`, `data-columns`, `data-rows`, `data-highlight-col`, `data-highlight-row`):
+
+<div class="viz" data-viz="mon-table" data-title="Table" data-query='sum by (instance) (rate(http_requests_total{status=~"5.."}[5m]))' data-columns='["Время","instance","Значение"]' data-rows='[["14:30:00","shop:8000",0.02],["14:30:00","shop-2:8000",3.41],["14:30:00","payment:8001",0.0]]' data-highlight-col="2" data-highlight-row="1"></div>
+
+### Тема 5 мониторинга: надёжность и инциденты, урок 5.1
+
+Хронология инцидента (`mon5-timeline`): двигай ползунки MTTD, MTTA, MTTI и MTTM, смотри MTTR, расход бюджета ошибок и темп расхода; наведи на отрезок, чтобы прочитать подсказку:
+
+<div class="viz" data-viz="mon5-timeline"></div>
+
+### Тема 5 мониторинга: надёжность и инциденты, урок 5.2
+
+Проверка задач из постмортема (`mon52-actions`): выбери задачу кнопкой и посмотри, какие из пяти проверок она проходит; наведи на строку, чтобы прочитать правило:
+
+<div class="viz" data-viz="mon52-actions"></div>
+
+### Тема 5 мониторинга: надёжность и инциденты, урок 5.3
+
+Оплата ломается на 40 секунд из двух минут (`mon5-resilience`, `data-orders` заказов в секунду, `data-retries` повторов, `data-timeout` таймаут попытки в секундах, `data-kind` hang или error, `data-breaker` 1 включает выключатель): сколько попыток уходит к оплате, как долго ждёт покупатель и хватает ли пула из пяти соединений:
+
+<div class="viz" data-viz="mon5-resilience" data-orders="2" data-retries="3" data-timeout="1" data-kind="hang" data-breaker="0"></div>
+
+### Тема 5 мониторинга: надёжность и инциденты, урок 5.4
+
+Выкатка сразу всем и по ступеням canary (`rel-rollout`, `data-error` доля ошибок новой версии в процентах, `data-detect` через сколько минут заметили): сколько месячного бюджета ошибок съела плохая версия; наведи на график, чтобы увидеть минуту:
+
+<div class="viz" data-viz="rel-rollout" data-error="20" data-detect="4"></div>
+
+RPO и RTO на одной линии времени (`rel-dr`, `data-interval` минут между копиями, `data-restore` минут самого восстановления, `data-rpo` и `data-rto` цели в минутах):
+
+<div class="viz" data-viz="rel-dr" data-interval="60" data-restore="8" data-rpo="15" data-rto="45"></div>

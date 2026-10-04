@@ -112,7 +112,7 @@
         "middle"
       ],
       "q": "Как откатить релиз в Kubernetes и чем отличается откат в GitOps?",
-      "answer": "Без GitOps смотрю `kubectl rollout history deployment/notes`, откатываю `kubectl rollout undo deployment/notes` и слежу за `kubectl rollout status`. С GitOps ручной откат будет перезатёрт: Flux вернёт состояние из git. Поэтому делаю revert коммита и жду применения, либо временно делаю `flux suspend`, откатываю и потом исправляю git. Откат кода не откатывает миграции базы, об этом нужно помнить заранее.\n\n**Что хотят услышать:** rollout undo, history и status, в GitOps откат через git, миграции БД не откатываются сами.\n\n**Красный флаг:** откатывает руками и удивляется, что Flux всё вернул."
+      "answer": "Без GitOps смотрю `kubectl rollout history deployment/notes`, откатываю `kubectl rollout undo deployment/notes` и слежу за `kubectl rollout status` (для Argo Rollout то же делают `kubectl argo rollouts history/undo notes`). С GitOps ручной откат будет перезатёрт: Flux вернёт состояние из git. Поэтому делаю revert коммита и жду применения, либо временно делаю `flux suspend` для `Kustomization` и `HelmRelease`, откатываю и потом исправляю git. Откат кода не откатывает миграции базы, об этом нужно помнить заранее.\n\n**Что хотят услышать:** rollout undo, history и status, в GitOps откат через git, миграции БД не откатываются сами.\n\n**Красный флаг:** откатывает руками и удивляется, что Flux всё вернул."
     },
     {
       "id": "o09-06-13",

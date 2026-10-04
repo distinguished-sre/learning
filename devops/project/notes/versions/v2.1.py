@@ -102,7 +102,7 @@ class Handler(BaseHTTPRequestHandler):
             self.json(500, {"error": "storage"})
 
     def log_message(self, fmt, *args):
-        if self.path not in ("/healthz", "/readyz"):
+        if getattr(self, "path", "") not in ("/healthz", "/readyz"):
             print(f"{self.address_string()} {fmt % args}", file=sys.stderr)
 
 

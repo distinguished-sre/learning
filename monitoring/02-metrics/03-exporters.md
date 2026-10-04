@@ -57,6 +57,13 @@ flowchart TD
 
 Поэтому для просмотра `/metrics` экспортёров мы заходим через контейнер Prometheus, у которого есть и сеть, и `wget`. Об этом в практике.
 
+Все цели стенда видны на странице Status, Targets (`http://localhost:9090/targets`):
+
+<div class="viz" data-viz="mon-targets" data-title='Prometheus: Status, Targets (всё в порядке)' data-targets='[{"job":"shop","endpoint":"http://shop:8000/metrics","state":"up","labels":{"instance":"shop:8000","job":"shop"},"last":"2.1s ago","duration":"9ms","error":""},{"job":"payment","endpoint":"http://payment:8001/metrics","state":"up","labels":{"instance":"payment:8001","job":"payment"},"last":"3.4s ago","duration":"4ms","error":""},{"job":"node","endpoint":"http://node-exporter:9100/metrics","state":"up","labels":{"instance":"node-exporter:9100","job":"node"},"last":"1.2s ago","duration":"21ms","error":""},{"job":"cadvisor","endpoint":"http://cadvisor:8080/metrics","state":"up","labels":{"instance":"cadvisor:8080","job":"cadvisor"},"last":"4.0s ago","duration":"46ms","error":""},{"job":"postgres","endpoint":"http://postgres-exporter:9187/metrics","state":"up","labels":{"instance":"postgres-exporter:9187","job":"postgres"},"last":"0.8s ago","duration":"14ms","error":""},{"job":"prometheus","endpoint":"http://prometheus:9090/metrics","state":"up","labels":{"instance":"prometheus:9090","job":"prometheus"},"last":"2.6s ago","duration":"5ms","error":""},{"job":"alertmanager","endpoint":"http://alertmanager:9093/metrics","state":"up","labels":{"instance":"alertmanager:9093","job":"alertmanager"},"last":"3.1s ago","duration":"3ms","error":""},{"job":"alloy","endpoint":"http://alloy:12345/metrics","state":"up","labels":{"instance":"alloy:12345","job":"alloy"},"last":"1.7s ago","duration":"8ms","error":""}]' data-explain='Восемь целей стенда: у каждой свой job, адрес внутри сети Docker и время последнего скрейпа.'></div>
+
+Восемь групп, у каждой счётчик «1/1 up» и время последнего скрейпа: свежее значит, что сбор идёт. Сначала ищи красное состояние и текст в колонке ошибки: он быстрее всего показывает, какой экспортёр замолчал.
+
+
 Осторожно: экспортёр это ещё один процесс со своими ошибками. «Нет метрик от node-exporter» может значить поломку не хоста, а самого экспортёра. Поэтому алерт «цель недоступна» нужен и для экспортёров тоже: у стенда он называется `ExporterDown`.
 
 > **Главное:** экспортёр это переводчик: отвечает только в момент запроса, историю хранит Prometheus; сам экспортёр тоже может сломаться, и за ним тоже нужен присмотр.
@@ -100,6 +107,11 @@ flowchart TD
 
 Разберём числа. Магазину выдан 1 ядро, и за минуту он работал 48 секунд: 48 / 60 = 0.8 ядра, 80% от лимита. Память: `working_set` равен 410 МБ, лимит 512 МБ, доля 410 / 512 = 0.8. Оба ресурса на 80%: запас есть, но небольшой.
 
+<div class="viz" data-viz="mon-stat" data-title='Контейнер shop: четыре числа из примера' data-stats='[{"title":"Процессор от лимита","value":80,"unit":"%","color":"orange","spark":[77.0,79.0,74.0,82.0,81.0,82.0,76.0,76.0,74.0,76.0,74.0,80.0,77.0,81.0],"sub":"0.8 ядра из 1.0"},{"title":"Память от лимита","value":80,"unit":"%","color":"orange","spark":[78.0,79.0,80.0,79.0,79.0,79.0,80.0,80.0,79.0,80.0,80.0,79.0,79.0,79.0],"sub":"410 из 512 МБ"},{"title":"Троттлинг","value":0,"unit":"%","color":"green","spark":[0,0,0,0,0,0,0,0,0,0,0,0,0,0],"sub":"доля притормозивших периодов"},{"title":"Соединений с базой","value":6,"unit":"","color":"green","spark":[6,6,6,6,6,6,6,6,6,6,6,6,6,6],"sub":"из 100"}]' data-explain='Те же числа, что в абзаце, но как на табло: оранжевый значит «запас небольшой».'></div>
+
+Оранжевые две карточки про запас, зелёные две про отсутствие очереди и ошибок. Сначала смотри на троттлинг: при нуле процессор ещё не мешает ответам.
+
+
 > **Проверь понимание:** занятость процессора контейнера 0.98 ядра при лимите 1.0, а хост свободен на 70%. Где искать причину медленных ответов?
 
 <details markdown="1">
@@ -108,6 +120,12 @@ flowchart TD
 В лимите контейнера: он упёрся в свой процессор, хотя у хоста запас. Проверь троттлинг (`cfs_throttled_periods` к `cfs_periods`) и подумай, не поднять ли лимит.
 
 </details>
+
+Так выглядит контейнер, который упёрся в свой потолок, пока хост свободен (сценарий из практики 2):
+
+<div class="viz" data-viz="mon-panel" data-title='Процессор: контейнер shop против хоста' data-query='rate(container_cpu_usage_seconds_total{name="shop-shop-1"}[1m]) / 1.0, 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m])), доля троттлинга' data-x='["15:00","15:01","15:02","15:03","15:04","15:05","15:06","15:07","15:08","15:09","15:10","15:11","15:12","15:13","15:14","15:15","15:16","15:17","15:18","15:19"]' data-series='[{"name":"shop, % от лимита","values":[34.0,34.0,34.0,33.0,36.0,32.0,34.0,36.0,97.0,98.0,98.0,99.0,99.0,99.0,98.0,97.0,99.0,98.0,98.0,97.0],"color":"red"},{"name":"хост, % занятости","values":[18.0,19.0,16.0,18.0,16.0,19.0,17.0,17.0,32.0,33.0,29.0,29.0,33.0,30.0,30.0,31.0,31.0,32.0,31.0,31.0],"color":"blue"},{"name":"троттлинг, % периодов","values":[0,0,0,0,0,0,0,0,58.0,64.0,56.0,68.0,58.0,61.0,66.0,68.0,63.0,65.0,63.0,67.0],"color":"orange"}]' data-unit='%' data-thresholds='[{"value":100,"color":"red","label":"лимит контейнера"}]' data-annotations='[{"at":"15:08","text":"100 входов, 20 параллельно"}]' data-explain='Пачка входов упёрла магазин в его один процессор, а хост остался с запасом.'></div>
+
+После отметки красная линия магазина прижата к лимиту (около 100%), синяя линия хоста поднялась только до 31%, а оранжевая показывает, что больше половины периодов контейнер притормаживали. Сначала смотри на красную и синюю линии вместе: по хосту одному беды не видно.
 
 Осторожно: набор меток у cAdvisor зависит от системы. На Linux в метке `name` стоит имя контейнера, а на Docker Desktop (Mac, Windows) часть меток может быть пустой. Если запрос с `name="shop-shop-1"` ничего не вернул, посмотри, какие метки есть на самом деле: запрос `container_cpu_usage_seconds_total` без условий.
 
@@ -134,6 +152,11 @@ flowchart TD
 Выяснить, кто открывает соединения: вырос ли трафик, не утекают ли соединения в приложении (пул не возвращает), не зависли ли запросы. Поднимать `max_connections` как первую меру неправильно: это лечит симптом, а лишние соединения тратят память базы.
 
 Осторожно: postgres-exporter показывает базу со стороны базы. Если приложение жалуется на «ожидание соединения», смотри и со стороны приложения: `shop_db_pool_waiting`. Сочетание «база не загружена, а очередь в пуле есть» значит, что узкое место в размере пула, а не в базе.
+
+<div class="viz" data-viz="mon-panel" data-title='База спокойна, а очередь в пуле растёт' data-query='pg_stat_database_numbackends{datname="shop"} и shop_db_pool_waiting' data-x='["15:00","15:01","15:02","15:03","15:04","15:05","15:06","15:07","15:08","15:09","15:10","15:11","15:12","15:13","15:14","15:15","15:16","15:17","15:18","15:19"]' data-series='[{"name":"shop_db_pool_waiting","values":[0,0,0,0,0,0,2,4,5,7,6,8,7,6,5,7,6,6,5,6],"color":"red"},{"name":"pg_stat_database_numbackends","values":[6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],"color":"blue"}]' data-unit='' data-annotations='[{"at":"15:06","text":"пик заказов"}]' data-explain='Соединений с базой ровно столько, сколько позволяет пул (5 магазина и одно экспортёра), а запросы магазина стоят в очереди.'></div>
+
+Синяя линия ровная: база новых соединений не получает и не тормозит. Красная растёт: запросы магазина ждут свободного соединения внутри самого магазина. Первым смотри на то, что синяя линия никуда не делась, и делай вывод про размер пула, а не про базу.
+
 
 > **Главное:** postgres-exporter даёт соединения, попадание в кеш и seq scan; тяжёлые запросы смотрят через `pg_stat_statements` в SQL.
 {: .key}
@@ -420,11 +443,43 @@ docker compose --profile monitoring exec postgres psql -U shop -d shop -c "selec
 ```text
  calls | mean_ms |                       left
 -------+---------+--------------------------------------------------
-   200 |     1.8 | SELECT o.id, o.total FROM orders o WHERE o.user_id
+  2400 |     0.4 | SELECT oi.order_id, oi.product_id, p.name, oi.qty,
+   200 |     0.6 | SELECT id, status, total, created_at FROM orders W
    ...
 ```
 
-**Как читать вывод:** запросов 200, как и в цикле, среднее время 1.8 мс. Вызовов много, но каждый быстрый: на малой таблице полное чтение незаметно. Смысл упражнения в том, чтобы увидеть связь: рост `seq_scan` в метриках и конкретный запрос в статистике.
+**Как читать вывод:** списков заказов было 200, как и в цикле, а запросов за позициями заказов 2400: на каждый заказ из 12 приходит отдельный запрос. Это N+1 (один запрос списка и ещё N запросов по одному на каждую строку), на стенде он включён по умолчанию. Каждый запрос быстрый, 0.4 мс, но их в двенадцать раз больше, чем нужно. Смысл упражнения в том, чтобы увидеть связь: рост `seq_scan` в метриках и конкретный запрос в статистике.
+
+<div class="viz" data-viz="mon-table" data-title='Тот же запрос после BUG_N_PLUS_ONE=0' data-query='select calls, round(mean_exec_time::numeric,1) as mean_ms, left(query,50) from pg_stat_statements order by total_exec_time desc limit 3' data-columns='["calls","mean_ms","left"]' data-rows='[["200","0.9","SELECT oi.order_id, oi.product_id, p.name, oi.qty,"],["200","0.6","SELECT id, status, total, created_at FROM orders W"]]' data-highlight-col='0' data-highlight-row='0' data-explain='Позиции заказов читаются одним запросом на весь список: вызовов 200, а не 2400.'></div>
+
+Исправление включается в `.env` (`BUG_N_PLUS_ONE=0`) и перезапуском магазина. А вот как это же видно в трейсе, открытом из Grafana (Tempo, подробно в теме 4):
+
+<div class="viz" data-viz="mon-trace" data-title='Tempo: GET /api/orders с N+1' data-trace-id='f3d8cfa59e532830f2903597c5ebc80c' data-spans='[{"id":"r","parent":null,"service":"shop","name":"GET /api/orders","start":0,"dur":39,"status":"ok","attrs":{"http.route":"/api/orders","http.status_code":200}},{"id":"g","parent":"r","service":"shop","name":"GET","start":1,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"c","parent":"r","service":"shop","name":"db.pool.getconn","start":3,"dur":1,"status":"ok"},{"id":"q0","parent":"r","service":"shop","name":"SELECT","start":5,"dur":3,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q1","parent":"r","service":"shop","name":"SELECT","start":8,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q2","parent":"r","service":"shop","name":"SELECT","start":11,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q3","parent":"r","service":"shop","name":"SELECT","start":13,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q4","parent":"r","service":"shop","name":"SELECT","start":16,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q5","parent":"r","service":"shop","name":"SELECT","start":18,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q6","parent":"r","service":"shop","name":"SELECT","start":21,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q7","parent":"r","service":"shop","name":"SELECT","start":24,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q8","parent":"r","service":"shop","name":"SELECT","start":26,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q9","parent":"r","service":"shop","name":"SELECT","start":29,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q10","parent":"r","service":"shop","name":"SELECT","start":31,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q11","parent":"r","service":"shop","name":"SELECT","start":34,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q12","parent":"r","service":"shop","name":"SELECT","start":37,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}}]' data-focus='q7' data-explain='Список из 12 заказов: после запроса списка идёт цепочка одинаковых коротких SELECT, по одному на заказ.'></div>
+
+Тринадцать одинаковых полосок подряд, лесенкой: каждая быстрая, но вместе они дают 39 мс. Лесенка из одинаковых коротких запросов это почерк N+1.
+
+<div class="viz" data-viz="mon-trace" data-title='Tempo: GET /api/orders после исправления' data-trace-id='f3dc9edc50ff558f34f049e8b30a9b79' data-spans='[{"id":"r","parent":null,"service":"shop","name":"GET /api/orders","start":0,"dur":10,"status":"ok","attrs":{"http.route":"/api/orders","http.status_code":200}},{"id":"g","parent":"r","service":"shop","name":"GET","start":1,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"c","parent":"r","service":"shop","name":"db.pool.getconn","start":3,"dur":1,"status":"ok"},{"id":"q0","parent":"r","service":"shop","name":"SELECT","start":5,"dur":3,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q1","parent":"r","service":"shop","name":"SELECT","start":8,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}}]' data-focus='q1' data-explain='Тот же список: один SELECT списка и один SELECT позиций сразу для всех заказов.'></div>
+
+Теперь два SELECT, и весь запрос занял 10 мс вместо 39. В статистике это те же 2400 против 200 вызовов.
+
+
+Теперь устроим то, что видела панель выше: пачку входов. Вход проверяет пароль через bcrypt, это намеренно дорогая операция (на стенде `BCRYPT_ROUNDS=12`), а процесс магазина один (`WEB_CONCURRENCY=1`) с лимитом в одно ядро:
+
+```bash
+seq 1 100 | xargs -P 20 -I{} curl -s -o /dev/null localhost:8000/api/login \
+  -H 'Content-Type: application/json' -d '{"email":"user0001@shop.lab","password":"password"}'
+```
+
+`seq 1 100` печатает числа, `xargs -P 20` запускает команду для каждого, держа 20 запросов одновременно. Пока цикл идёт, повтори запросы USE из этой практики.
+
+Метрики покажут нагрузку, а лог и трейс покажут, что именно стало медленным:
+<div class="viz" data-viz="mon-logs" data-title='Explore: Loki' data-query='{service="shop"} |= "/api/login"' data-lines='[{"ts":"2026-10-04 15:11:42.310","level":"warning","labels":{"service":"shop","container":"shop-shop-1","level":"WARNING"},"line":"{\"ts\": \"2026-10-04T15:11:42.310000+00:00\", \"level\": \"WARNING\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/login\", \"path\": \"/api/login\", \"status\": 200, \"duration_ms\": 5128.4, \"request_id\": \"9b7aab5abee0be0b64e0e46cbb303634\", \"trace_id\": \"7d519a807bbf7861fb73d7461ad365b4\", \"user_id\": 1}"},{"ts":"2026-10-04 15:11:41.874","level":"warning","labels":{"service":"shop","container":"shop-shop-1","level":"WARNING"},"line":"{\"ts\": \"2026-10-04T15:11:41.874000+00:00\", \"level\": \"WARNING\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/login\", \"path\": \"/api/login\", \"status\": 200, \"duration_ms\": 4766.9, \"request_id\": \"b5b5d1c27a63a7721225611e37470514\", \"trace_id\": \"5f8db1e93e86e1b5b95ccd333be7bea3\", \"user_id\": 1}"},{"ts":"2026-10-04 15:11:40.402","level":"warning","labels":{"service":"shop","container":"shop-shop-1","level":"WARNING"},"line":"{\"ts\": \"2026-10-04T15:11:40.402000+00:00\", \"level\": \"WARNING\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/login\", \"path\": \"/api/login\", \"status\": 200, \"duration_ms\": 4392.1, \"request_id\": \"54b6c9401d301ed12bedf8d9f48a2d7d\", \"trace_id\": \"e453fb634e53898873b125dd97b32f52\", \"user_id\": 1}"},{"ts":"2026-10-04 15:11:39.951","level":"warning","labels":{"service":"shop","container":"shop-shop-1","level":"WARNING"},"line":"{\"ts\": \"2026-10-04T15:11:39.951000+00:00\", \"level\": \"WARNING\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/login\", \"path\": \"/api/login\", \"status\": 200, \"duration_ms\": 4107.6, \"request_id\": \"eb06145b93a17d9453d31e925061283c\", \"trace_id\": \"d4ead09ee6c677070694835770eb0108\", \"user_id\": 1}"},{"ts":"2026-10-04 15:07:55.120","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T15:07:55.120000+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/login\", \"path\": \"/api/login\", \"status\": 200, \"duration_ms\": 252.7, \"request_id\": \"4898af9b1dc3ae73098463d81c9997b5\", \"trace_id\": \"32f1b4ac405c0a27ec4ccd042506f672\", \"user_id\": 1}"}]' data-highlight='duration_ms' data-explain='Вход до пачки (последняя строка) и во время пачки: один и тот же запрос, а время выросло с четверти секунды до четырёх-пяти.'></div>
+
+Ниже, в самом конце, обычный вход: 252 мс. Выше четыре входа во время пачки по 4 секунды и дольше, магазин пометил их `WARNING`, потому что запрос шёл дольше секунды. Статус везде 200: ошибок нет, есть только медленно.
+
+<div class="viz" data-viz="mon-trace" data-title='Tempo: POST /api/login во время пачки' data-trace-id='7a158f4cbc438444e56de0fd705b91bb' data-spans='[{"id":"l","parent":null,"service":"shop","name":"POST /api/login","start":0,"dur":4770,"status":"ok","attrs":{"http.route":"/api/login","http.status_code":200}},{"id":"c","parent":"l","service":"shop","name":"db.pool.getconn","start":2,"dur":1,"status":"ok"},{"id":"q","parent":"l","service":"shop","name":"SELECT","start":4,"dur":3,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"s","parent":"l","service":"shop","name":"SETEX","start":4764,"dur":4,"status":"ok","attrs":{"db.system":"redis"}}]' data-focus='l' data-explain='Запрос проводит почти всё время между SELECT и записью сессии: там идёт проверка пароля, и в самом процессе она не помечена отдельным отрезком.'></div>
+
+Корневая полоска длинная, а дочерние короткие и стоят по краям: между SELECT и SETEX зияет пустота в 4,7 секунды. Пустота внутри процесса, без обращений к базе и Redis, и есть время процессора: сначала проверь `container_cpu_usage_seconds_total`, а не базу.
 
 **Типичные ошибки:**
 
@@ -606,7 +661,14 @@ sleep 20
 
 **Что получится:** `up{job="cadvisor"}` вернёт `0`, а метрика памяти контейнера пуста: ни нуля, ни числа.
 
-**Как читать вывод:** «нет данных» и «ноль» разные вещи. Ряды пропали, потому что цель не отвечает. График зияет дырой, а не падает в ноль.
+**Как читать вывод:** «нет данных» и «ноль» разные вещи. Ряды пропали, потому что цель не отвечает: после неудачного скрейпа Prometheus помечает их устаревшими сразу (staleness marker), а не через пять минут. График зияет дырой, а не падает в ноль.
+
+На странице Targets это выглядит так:
+
+<div class="viz" data-viz="mon-targets" data-title='Prometheus: Status, Targets (cAdvisor остановлен)' data-targets='[{"job":"shop","endpoint":"http://shop:8000/metrics","state":"up","labels":{"instance":"shop:8000","job":"shop"},"last":"2.1s ago","duration":"9ms","error":""},{"job":"payment","endpoint":"http://payment:8001/metrics","state":"up","labels":{"instance":"payment:8001","job":"payment"},"last":"3.4s ago","duration":"4ms","error":""},{"job":"node","endpoint":"http://node-exporter:9100/metrics","state":"up","labels":{"instance":"node-exporter:9100","job":"node"},"last":"1.2s ago","duration":"21ms","error":""},{"job":"cadvisor","endpoint":"http://cadvisor:8080/metrics","state":"down","labels":{"instance":"cadvisor:8080","job":"cadvisor"},"last":"1.9s ago","duration":"2ms","error":"Get \"http://cadvisor:8080/metrics\": dial tcp: lookup cadvisor on 127.0.0.11:53: no such host"},{"job":"postgres","endpoint":"http://postgres-exporter:9187/metrics","state":"up","labels":{"instance":"postgres-exporter:9187","job":"postgres"},"last":"0.8s ago","duration":"14ms","error":""},{"job":"prometheus","endpoint":"http://prometheus:9090/metrics","state":"up","labels":{"instance":"prometheus:9090","job":"prometheus"},"last":"2.6s ago","duration":"5ms","error":""},{"job":"alertmanager","endpoint":"http://alertmanager:9093/metrics","state":"up","labels":{"instance":"alertmanager:9093","job":"alertmanager"},"last":"3.1s ago","duration":"3ms","error":""},{"job":"alloy","endpoint":"http://alloy:12345/metrics","state":"up","labels":{"instance":"alloy:12345","job":"alloy"},"last":"1.7s ago","duration":"8ms","error":""}]' data-explain='Та же страница после docker compose stop cadvisor: у одной цели красное состояние и текст ошибки.'></div>
+
+Счётчик у группы `cadvisor` показывает 0/1, остальные группы зелёные, а причина написана красным: имя контейнера больше не находится в сети Docker. Читай `Error` первым: он отличает остановленный экспортёр от закрытого порта.
+
 
 ### Гипотезы
 

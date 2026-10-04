@@ -4,7 +4,7 @@
 
 - [DevOps](https://distinguished-sre.github.io/learning/devops/): от Linux до Kubernetes и GitOps со сквозным проектом (`devops/`).
 - [Нагрузочное тестирование](https://distinguished-sre.github.io/learning/load-tester/): Linux, Python, автотесты API, Locust, k6 и поиск узких мест (`load-tester/`).
-- [Мониторинг: основы](https://distinguished-sre.github.io/learning/monitoring/): метрики, логи, трейсы, SLO, Prometheus, Grafana и алерты на учебном «Магазине» (`monitoring/`).
+- [Мониторинг и SRE](https://distinguished-sre.github.io/learning/monitoring/): метрики, логи, трейсы, SLO, Prometheus, Grafana, алерты, инциденты, постмортемы и паттерны надёжности на учебном «Магазине» (`monitoring/`).
 
 ## Собрать сайт локально
 

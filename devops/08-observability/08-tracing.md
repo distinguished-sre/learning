@@ -21,7 +21,7 @@ time: "4 ч"
 - [Урок 8.2: Prometheus](02-prometheus-basics.md) - как выглядит стек `monitoring/compose.yml`, гистограмма задержек
 - [Урок 8.6: Grafana как код](06-grafana-dashboards.md) - provisioning источников данных
 - [Урок 8.7: Логи, Loki и Alloy](07-logs-loki-alloy.md) - JSON-логи и конфиг Alloy, который мы расширяем, кардинальность (число разных значений у лейбла: чем их больше, тем дороже хранение)
-- Если хочешь разобрать основы на другом стенде, см. [Трейсы](../../monitoring/04-logs-traces/02-traces.md) в курсе «Мониторинг: основы».
+- Если хочешь разобрать основы на другом стенде, см. [Трейсы](../../monitoring/04-logs-traces/02-traces.md) в курсе «Мониторинг и SRE».
 
 ## Картина целиком
 
@@ -214,10 +214,10 @@ Grafana Tempo хранит трейсы блоками на диске или в
 
 ```text
 { resource.service.name = "notes" && duration > 500ms }
-{ span.http.status_code >= 500 }
+{ span.http.response.status_code >= 500 }
 ```
 
-Разбор: в фигурных скобках условие на спан; `resource.service.name` атрибут ресурса (того, что породило спан: имя сервиса), `span.http.status_code` атрибут самого спана, `duration` длительность; `&&` значит «и».
+Разбор: в фигурных скобках условие на спан; `resource.service.name` атрибут ресурса (того, что породило спан: имя сервиса), `span.http.response.status_code` атрибут самого спана, `duration` длительность; `&&` значит «и».
 
 Разберём на примере. Запрос `{ resource.service.name = "notes" && duration > 900ms }` вернёт трейсы, у которых есть спан сервиса `notes` длиннее 900 мс. Если сделать `sleep` длиной 1 секунда в обработчике `/slow`, спан `HTTP GET /slow` попадёт в выборку, а обычные быстрые запросы нет. Из найденного трейса видно структуру: где именно ушла секунда.
 
@@ -301,9 +301,9 @@ Tempo и Grafana показывают трейс как диаграмму, и �
 
 Ярлык на посылке: отправитель (кто) и содержимое, вес, срочность (что именно). Ярлык отправителя один на всю партию, содержимое у каждой посылки своё.
 
-Данные о том, кто породил спан, называются ресурсом (resource): имя сервиса `service.name`, версия, узел. Ресурс один на приложение и прикрепляется ко всем его спанам. Данные о конкретном шаге называются атрибутами спана (span attributes): `http.method`, `http.status_code`. В TraceQL их различают префиксами `resource.` и `span.`. В OpenTelemetry есть соглашения об именах (semantic conventions), например `http.status_code`, чтобы разные программы называли одно и то же одинаково, и запросы работали у всех.
+Данные о том, кто породил спан, называются ресурсом (resource): имя сервиса `service.name`, версия, узел. Ресурс один на приложение и прикрепляется ко всем его спанам. Данные о конкретном шаге называются атрибутами спана (span attributes): `http.request.method`, `http.response.status_code`. В TraceQL их различают префиксами `resource.` и `span.`. В OpenTelemetry есть соглашения об именах (semantic conventions), например `http.response.status_code`, чтобы разные программы называли одно и то же одинаково, и запросы работали у всех.
 
-Разберём на примере. Наш `request_span` ставит атрибуты `http.method` и `http.status_code`, а если код 500 или больше, статус спана `ERROR`. Ресурс создаётся один раз в `setup_tracing()` и содержит `service.name = "notes"` из переменной `OTEL_SERVICE_NAME`. Поэтому запрос `{ resource.service.name = "notes" && span.http.status_code >= 500 }` найдёт ошибочные запросы именно этого сервиса.
+Разберём на примере. Наш `request_span` ставит атрибуты `http.request.method` и `http.response.status_code`, а если код 500 или больше, статус спана `ERROR`. Ресурс создаётся один раз в `setup_tracing()` и содержит `service.name = "notes"` из переменной `OTEL_SERVICE_NAME`. Поэтому запрос `{ resource.service.name = "notes" && span.http.response.status_code >= 500 }` найдёт ошибочные запросы именно этого сервиса.
 
 > **Прикинь сам:** в Tempo сервис назван `unknown_service:python`. Что забыли?
 {: .predict}
@@ -325,7 +325,7 @@ Tempo и Grafana показывают трейс как диаграмму, и �
 
 Звенья: приложение (создаёт и экспортирует спаны), сеть и порт (доходит ли до Alloy), Alloy (принимает и передаёт в Tempo), Tempo (хранит и отдаёт). Проверка идёт от источника: включён ли экспорт (`OTEL_EXPORTER_OTLP_ENDPOINT` не пуст), что пишет экспортёр в лог приложения (ошибки соединения, коды ответа), отвечает ли приёмник на спан, посланный вручную (задание 2), что пишет Alloy при отправке в Tempo, готов ли Tempo (`/ready`) и находится ли трейс по `trace_id` после паузы. Ручной спан из задания 2 сразу делит цепочку пополам: если он дошёл, сломано между приложением и Alloy, если нет, между Alloy и Tempo.
 
-Разберём на примере. Трейсов нет. В логе приложения: `Failed to export batch ... Connection refused`. Значит, звено «приложение - Alloy» сломано: экспортёр не достучался. Проверяем адрес: `http://alloy:4317`, порт gRPC, а экспортёр HTTP, ему нужен 4318. Исправили адрес, перезапустили приложение, трейсы пошли.
+Разберём на примере. Трейсов нет. В логе приложения: `Failed to export batch ... Connection reset by peer` (или `unexpected EOF`). Значит, звено «приложение - Alloy» сломано: порт отвечает, но не тем протоколом. Проверяем адрес: `http://alloy:4317`, порт gRPC, а экспортёр HTTP, ему нужен 4318. Исправили адрес, перезапустили приложение, трейсы пошли.
 
 Осторожно, тут часто путают. Что «нет ошибок» значит «всё хорошо». Экспорт в фоне может тихо терять спаны. Ещё путают «трейса нет» с «трейс не успел»: между отправкой и появлением в Tempo проходят секунды.
 
@@ -373,7 +373,7 @@ HTTP (порт 4318) ты уже знаешь из [урока 2.4](../02-networ
 
 У каждого спана есть статус: `UNSET` (по умолчанию: ничего не сказано), `OK` или `ERROR`. Спан со статусом `ERROR` Grafana подсвечивает красным. Статус ставит приложение: у нас `request_span` помечает спан ошибкой, если код ответа 500 или больше. Тогда в TraceQL можно искать не по числу, а по статусу: `{ status = error }`, все спаны с ошибкой. Важное свойство: ошибка одного спана не делает ошибочным весь трейс автоматически. Если `db` упал, а приложение поймало ошибку и вернуло 200, корень будет без ошибки, а `db` красным.
 
-Разберём на примере. Запрос `/error` у «Заметок» отвечает кодом 500. Трейс: корневой спан `HTTP GET /error` со статусом `ERROR` и атрибутом `http.status_code=500`. В логе того же запроса лежит тот же `trace_id`. Идёшь из трейса в лог и читаешь текст ошибки. Если бы статус не ставился, такой трейс ничем не отличался бы от обычного, и его пришлось бы искать по коду в атрибутах.
+Разберём на примере. Запрос `/error` у «Заметок» отвечает кодом 500. Трейс: корневой спан `HTTP GET /error` со статусом `ERROR` и атрибутом `http.response.status_code=500`. В логе того же запроса лежит тот же `trace_id`. Идёшь из трейса в лог и читаешь текст ошибки. Если бы статус не ставился, такой трейс ничем не отличался бы от обычного, и его пришлось бы искать по коду в атрибутах.
 
 Осторожно, тут часто путают. Что красный спан это всегда авария. Иногда ошибка ожидаема (например, «заметка не найдена» при проверке несуществующего id), и тогда это нормальная работа. Ещё путают статус спана и HTTP-код: код это данные об ответе, статус это оценка «плохо или нет», которую ставит программа.
 
@@ -702,12 +702,12 @@ def request_span(handler):
     path = route_label(urlparse(handler.path).path)  # шаблон пути, а не настоящий URL
     with tracer.start_as_current_span(
             f"HTTP {handler.command} {path}", context=ctx, kind=trace.SpanKind.SERVER) as span:
-        span.set_attribute("http.method", handler.command)
+        span.set_attribute("http.request.method", handler.command)
         try:
             yield
         finally:
             status = handler._status or 500
-            span.set_attribute("http.status_code", status)
+            span.set_attribute("http.response.status_code", status)
             if status >= 500:
                 span.set_status(trace.StatusCode.ERROR)
 ```
@@ -753,9 +753,9 @@ def db_span():
 ```bash
 docker compose up -d --build notes
 TP_TRACE=$(openssl rand -hex 16)
-curl -s -H "traceparent: 00-${TP_TRACE}-00f067aa0ba902b7-01" \
-  -X POST -d '{"text":"проверка трейсинга"}' http://localhost:8080/notes
-curl -s -H "traceparent: 00-${TP_TRACE}-00f067aa0ba902b7-01" http://localhost:8080/notes > /dev/null
+curl -sk -H "traceparent: 00-${TP_TRACE}-00f067aa0ba902b7-01" \
+  -X POST -d '{"text":"проверка трейсинга"}' https://notes.lab/notes
+curl -sk -H "traceparent: 00-${TP_TRACE}-00f067aa0ba902b7-01" https://notes.lab/notes > /dev/null
 sleep 10
 # в логе приложения тот же trace_id, что мы передали
 docker compose logs notes | grep "$TP_TRACE" | head -2
@@ -850,8 +850,8 @@ datasources:
 ```bash
 docker compose -f monitoring/compose.yml restart grafana
 # медленный запрос: его будет видно в трейсе
-curl -s "http://localhost:8080/slow?sec=1"
-for i in 1 2 3; do curl -s -X POST -d '{"text":"note"}' http://localhost:8080/notes > /dev/null; done
+curl -sk "https://notes.lab/slow?sec=1"
+for i in 1 2 3; do curl -sk -X POST -d '{"text":"note"}' https://notes.lab/notes > /dev/null; done
 ```
 
 4. Открой Grafana (`http://localhost:3000`), Explore, источник Tempo, режим TraceQL. Выполни запрос:
@@ -880,7 +880,7 @@ for i in 1 2 3; do curl -s -X POST -d '{"text":"note"}' http://localhost:8080/no
 
 **Цель:** зафиксировать состояние проекта после урока.
 
-**Предскажи:** что покажет `curl localhost:8080/` после пересборки, если в `compose.yml` остался тег 0.6.0?
+**Предскажи:** что покажет `curl -k https://notes.lab/` после пересборки, если в `compose.yml` остался тег 0.6.0?
 
 <details markdown="1">
 <summary>Ответ</summary>
@@ -897,7 +897,7 @@ cd ~/notes
 sed -i 's/0\.6\.0/0.7.0/g' compose.yml
 docker build -t notes:0.7.0 .
 docker compose up -d
-curl -s http://localhost:8080/
+curl -sk https://notes.lab/
 # проверка, что в репозитории есть всё нужное для урока
 ls monitoring/tempo/tempo.yml monitoring/alloy/config.alloy
 git add -A
@@ -939,7 +939,7 @@ curl -fsSL -o /tmp/break-8.8.sh https://raw.githubusercontent.com/distinguished-
 bash /tmp/break-8.8.sh 1
 ```
 
-Сценарии `1`, `2`, `3`, `4`. Скрипт правит `~/notes/compose.yml`, `config.alloy` или источник Loki в `~/notes/monitoring` и перезапускает нужный сервис. После каждого сценария запускай `bash /tmp/break-8.8.sh fix`: он возвращает исходное состояние и его можно запускать сколько угодно раз. После запуска сценария сделай несколько запросов (`curl -s http://localhost:8080/notes`) и открой Grafana. Цель: найти причину по симптомам, не читая скрипт.
+Сценарии `1`, `2`, `3`, `4`. Скрипт правит `~/notes/compose.yml`, `config.alloy` или источник Loki в `~/notes/monitoring` и перезапускает нужный сервис. После каждого сценария запускай `bash /tmp/break-8.8.sh fix`: он возвращает исходное состояние и его можно запускать сколько угодно раз. После запуска сценария сделай несколько запросов (`curl -sk https://notes.lab/notes`) и открой Grafana. Цель: найти причину по симптомам, не читая скрипт.
 
 ### Симптом
 
@@ -974,7 +974,7 @@ curl -s http://localhost:3200/ready                                             
 
 **4. Сломано производное поле в Loki-источнике.** Регулярка ищет `"traceid"`, а в логе ключ `trace_id`: трейсы и логи есть, но ссылки из лога в трейс нет. Ошибок нигде нет. Починка: вернуть регулярку `"trace_id":"(\w+)"`, перезапустить Grafana. Урок: часть поломок молчит, о них узнаёшь только по тому, что удобной функции нет.
 
-Отдельно про самый частый обрыв трейса в реальной жизни: потерянный `traceparent`. Если прокси между клиентом и приложением не передаёт заголовок, вместо одного трейса будет два. Проверка: `curl -H 'traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01' http://localhost:8080/headers | jq .` покажет, дошёл ли заголовок до приложения.
+Отдельно про самый частый обрыв трейса в реальной жизни: потерянный `traceparent`. Если прокси между клиентом и приложением не передаёт заголовок, вместо одного трейса будет два. Проверка: `curl -H 'traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01' https://notes.lab/headers | jq .` покажет, дошёл ли заголовок до приложения.
 
 После разбора верни рабочее состояние:
 
@@ -1000,7 +1000,7 @@ bash /tmp/break-8.8.sh fix
 **Задача:** найти, где оборвался трейс.
 
 ```text
-Приложение настроено слать спаны на http://alloy:4317 по OTLP/HTTP, в логе: Failed to export batch, Connection refused. Назови звенья цепочки и порядок проверки.
+Приложение настроено слать спаны на http://alloy:4317 по OTLP/HTTP, в логе: Failed to export batch, Connection reset by peer. Назови звенья цепочки и порядок проверки.
 ```
 {: .wrap}
 

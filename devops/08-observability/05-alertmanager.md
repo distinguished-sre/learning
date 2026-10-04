@@ -22,7 +22,7 @@ time: "4 ч"
 - [Урок 8.4: blackbox и exporters](04-blackbox-exporters.md): проверка снаружи, `node_exporter` и метрики диска.
 - [Урок 4.6: Compose, nginx и TLS](../04-docker/06-compose-nginx-tls.md): файл `compose.yml`, сервисы и сеть `notes-net`, в которой контейнеры видят друг друга по имени.
 - [Урок 1.4: процессы и сигналы](../01-linux/04-processes-signals.md): перечитывание конфигурации по сигналу SIGHUP.
-- Если хочешь разобрать основы на другом стенде, см. [Алерты](../../monitoring/03-dashboards-alerts/02-alerts.md) в курсе «Мониторинг: основы».
+- Если хочешь разобрать основы на другом стенде, см. [Алерты](../../monitoring/03-dashboards-alerts/02-alerts.md) в курсе «Мониторинг и SRE».
 
 ## Картина целиком
 
@@ -241,21 +241,21 @@ predict_linear(node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay
 
 ### Alertmanager: что он делает и чего не делает
 
-Prometheus умеет проверять условия, но не умеет обращаться с людьми. Если бы он сам слал сообщения, то каждый цикл (каждые 15 секунд) отправлял бы одно и то же, а при падении узла с десятью подами слал бы десять сообщений. Нужна отдельная программа, которая думает о получателях. Это Alertmanager.
+Prometheus умеет проверять условия, но не умеет обращаться с людьми. Если бы он сам слал сообщения, то при каждом вычислении правил (каждые 15 секунд) отправлял бы одно и то же, а при падении узла с десятью подами слал бы десять сообщений. Нужна отдельная программа, которая думает о получателях. Это Alertmanager.
 
 Пульт охраны из «Картины целиком». Датчики (Prometheus) только сообщают «дымно». Пульт (Alertmanager) решает: позвонить охраннику или написать в чат, склеить ли пять сигналов в один, промолчать ли, потому что охранник уже в курсе. Аналогия неточна: у пульта есть оператор-человек, а у Alertmanager правила настроены заранее в файле.
 
-Alertmanager ничего не измеряет и не проверяет. Он получает от Prometheus уже сработавшие (`firing`) алерты по HTTP и применяет к ним шаги по порядку: дедупликация, подавление, группировка, маршрутизация, отправка получателю, повторная отправка по расписанию. Ниже каждый из шагов по отдельности.
+Alertmanager ничего не измеряет и не проверяет. Он получает от Prometheus уже сработавшие (`firing`) алерты по HTTP и применяет к ним шаги: дедупликация (один набор меток это один алерт), маршрутизация (выбор получателя), группировка, ожидание таймеров, затем подавление (inhibit) и silence, отправка получателю, повторная отправка по расписанию. Ниже каждый из шагов по отдельности.
 
 ```mermaid
 flowchart TD
-    P["Prometheus<br>каждые 15 с шлёт все firing-алерты"] --> D["Дедупликация<br>тот же набор labels = один алерт"]
-    D --> I["Подавление inhibit<br>зависимый молчит, пока горит главный"]
-    I --> R["Маршрут<br>по labels выбираем получателя"]
+    P["Prometheus<br>повторно шлёт firing-алерты<br>раз в минуту (resend_delay)"] --> D["Дедупликация<br>тот же набор labels = один алерт"]
+    D --> R["Маршрут<br>по labels выбираем получателя"]
     R --> G["Группировка<br>одинаковые group_by = одно сообщение"]
     G --> T["Тайминги<br>group_wait, group_interval, repeat_interval"]
-    T --> PG["receiver page<br>webhook, Telegram"]
-    T --> TK["receiver ticket<br>webhook, почта"]
+    T --> I["Подавление inhibit и silence<br>зависимый или заглушённый молчит"]
+    I --> PG["receiver page<br>webhook, Telegram"]
+    I --> TK["receiver ticket<br>webhook, почта"]
 ```
 
 Осторожно, тут часто путают. «Alertmanager решает, что сломалось». Нет, решает Prometheus. Alertmanager решает только, как и кому об этом сказать. Поэтому, если алерта нет в Alertmanager, ищи причину в Prometheus (правило, `for`, связь), а не в настройках маршрутов.
@@ -282,7 +282,7 @@ flowchart TD
 
 Дедупликация это когда ты уже знаешь, что звонят в дверь, и второй звонок того же человека не считаешь новым событием. Группировка похожа на курьера, который не носит по одной посылке каждому жильцу дома, а собирает их и приносит одной пачкой. Аналогия неточна: курьер сам решает, что «похоже», а Alertmanager смотрит только на перечисленные метки.
 
-Алерт в Alertmanager определяется набором его меток (labels). Prometheus каждый цикл шлёт один и тот же `firing`-алерт заново, но набор меток тот же, поэтому Alertmanager считает его одним и тем же алертом (дедупликация): второе сообщение получателю не уходит.
+Алерт в Alertmanager определяется набором его меток (labels). Prometheus повторно шлёт один и тот же `firing`-алерт примерно раз в минуту (параметр `resend_delay`, по умолчанию 1 минута; при смене состояния сразу), но набор меток тот же, поэтому Alertmanager считает его одним и тем же алертом (дедупликация): второе сообщение получателю не уходит.
 
 Группировка управляется параметром `group_by`: список меток, по которым алерты склеиваются. У алертов с одинаковыми значениями этих меток образуется одна группа и одно уведомление. Остальные метки внутри уведомления перечисляются списком.
 
@@ -636,9 +636,25 @@ tests:
       - series: 'notes:http_errors:ratio5m'
         values: '0.10x8 0x60'
     alert_rule_test:
+      - eval_time: 2m
+        alertname: NotesHighErrorRate
+        exp_alerts: []          # условие уже 2 минуты истинно, но for: 5m не вышел
+
+  # Контроль: те же 10% держатся постоянно, после for алерт обязан загореться
+  - interval: 15s
+    input_series:
+      - series: 'notes:http_errors:ratio5m'
+        values: '0.10x40'
+    alert_rule_test:
       - eval_time: 6m
         alertname: NotesHighErrorRate
-        exp_alerts: []
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: notes
+            exp_annotations:
+              summary: "Доля ошибок 5xx выше 5%"
+              runbook_url: "https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/docs/runbooks/NotesHighErrorRate.md"
 YAML
 docker run --rm --entrypoint promtool \
   -v "$PWD/prometheus:/p:ro" prom/prometheus:v3.15.0 \
@@ -659,7 +675,7 @@ Checking /p/rules/alerts.yml
 **Объясни себе:**
 
 - Почему в тесте `eval_time: 30s` ждёт пустой список `exp_alerts`, хотя ряд `up` уже ноль?
-- Что второй тест (всплеск на 2 минуты) доказывает про поле `for`?
+- Что второй тест (всплеск на 2 минуты) доказывает про поле `for`, и зачем третий тест с постоянными 10%?
 
 **Типичные ошибки:**
 
@@ -717,13 +733,13 @@ inhibit_rules:
 YAML
 ```
 
-2. Добавь в `monitoring/compose.yml` два сервиса в секцию `services:` (сеть `notes-net` уже описана в конце файла с урока 8.2). `image` это образ (готовый пакет с программой), `ports: "9093:9093"` открывает порт 9093 контейнера на порту 9093 твоей машины, `volumes` подключает каталог с конфигом только для чтения, `command` передаёт программе путь к конфигу, `restart: unless-stopped` перезапускает контейнер после сбоя.
+2. Добавь в `monitoring/compose.yml` два сервиса в секцию `services:` (сеть `notes-net` уже описана в конце файла с урока 8.2). `image` это образ (готовый пакет с программой), `ports: "127.0.0.1:9093:9093"` открывает порт 9093 контейнера на порту 9093 только для самой машины (у Alertmanager нет аутентификации, на всех интерфейсах любой в сети смог бы ставить silence), `volumes` подключает каталог с конфигом только для чтения, `command` передаёт программе путь к конфигу, `restart: unless-stopped` перезапускает контейнер после сбоя.
 
 ```yaml
   alertmanager:
     image: prom/alertmanager:v0.34.1
     ports:
-      - "9093:9093"
+      - "127.0.0.1:9093:9093"
     volumes:
       - ./alertmanager:/etc/alertmanager:ro
     command:
@@ -798,7 +814,7 @@ page
 
 - `err="yaml: unmarshal errors: line 3: field group_by_ not found"` или `unknown fields in route`: опечатка в имени ключа. Alertmanager строго проверяет схему и не стартует.
 - `level=ERROR msg="Error on notify" ... dial tcp: lookup webhook on 127.0.0.11:53: no such host`: приёмник в другой сети или не запущен. Оба сервиса должны быть в одном `compose.yml` и сети `notes-net`.
-- В Prometheus на странице Status - Runtime нет Alertmanager: не выполнена перезагрузка. `docker compose kill -s HUP prometheus` перечитывает конфиг, перезапуск не нужен.
+- В Prometheus на странице Status - Alertmanager Discovery (или в `curl localhost:9090/api/v1/alertmanagers`) нет Alertmanager: не выполнена перезагрузка. `docker compose kill -s HUP prometheus` перечитывает конфиг, перезапуск не нужен.
 
 ### Задание 3. Уроним сервис и проследим алерт до webhook
 
@@ -809,7 +825,7 @@ page
 <details markdown="1">
 <summary>Ответ</summary>
 
-Около двух минут: до 15 секунд на обнаружение (`up` стал 0), минута `for` в состоянии `pending`, плюс до 15 секунд на цикл вычисления правил и 30 секунд `group_wait` в Alertmanager. Итого от 1 минуты 45 секунд до 2 минут 15 секунд.
+Около двух минут: до 15 секунд на обнаружение (`up` стал 0), минута `for` в состоянии `pending`, плюс до 15 секунд на цикл вычисления правил и 30 секунд `group_wait` в Alertmanager. Итого от 1,5 до 2 минут.
 
 </details>
 
@@ -834,13 +850,15 @@ docker compose -f monitoring/compose.yml logs webhook --tail 5
 
 3. Верни сервис командой `docker compose start notes`: через минуту-две алерт снимется и придёт уведомление `resolved`.
 
-4. Заглуши алерт на 10 минут (silence) и убедись, что он виден как заглушенный. `--network host` даёт контейнеру сеть твоей машины, чтобы `amtool` достучался до `localhost:9093`; `silence add alertname=NotesDown` создаёт заглушку на алерты с такой меткой; `--duration=10m` срок; `--author` и `--comment` кто и зачем поставил (всегда пиши комментарий, через неделю никто не вспомнит).
+4. Заглуши алерт на 10 минут (silence) и убедись, что он виден как заглушенный. `--network host` даёт контейнеру сеть твоей машины, чтобы `amtool` достучался до `localhost:9093`; `silence add alertname=NotesDown` создаёт заглушку на алерты с такой меткой; `--duration=10m` срок; `sleep 150` ждёт, пока пройдут `for` и `group_wait` и алерт реально загорится (сервис нельзя поднимать раньше, иначе заглушать будет нечего); `--author` и `--comment` кто и зачем поставил (всегда пиши комментарий, через неделю никто не вспомнит).
 
 ```bash
 docker compose stop notes
 docker run --rm --network host --entrypoint amtool prom/alertmanager:v0.34.1 \
   --alertmanager.url=http://localhost:9093 silence add alertname=NotesDown \
   --duration=10m --author=me --comment="плановые работы"
+sleep 150
+curl -s localhost:9093/api/v2/alerts | jq -r '.[] | [.labels.alertname, .status.state] | @tsv'
 docker compose start notes
 ```
 
@@ -851,7 +869,7 @@ NotesDown	pending
 NotesDown	firing
 ```
 
-Затем в Alertmanager `NotesDown	critical	active`, а в логах приёмника строка с `POST /anything/page`. `silence add` печатает id заглушки (длинная строка из букв и цифр), а при остановленном сервисе алерт в интерфейсе Alertmanager помечен suppressed и в приёмник не идёт.
+Затем в Alertmanager `NotesDown	critical	active`, а в логах приёмника строка с `POST /anything/page`. `silence add` печатает id заглушки (длинная строка из букв и цифр), а после паузы последняя команда печатает `NotesDown	suppressed`: при остановленном сервисе алерт помечен suppressed и в приёмник не идёт.
 
 **Как читать вывод:** `pending` значит, что условие уже истинно, но минута `for` не вышла; `firing` значит, что алерт ушёл в Alertmanager. `active` во втором запросе это состояние алерта в Alertmanager: он принят и не заглушен. После `silence add` статус меняется на `suppressed`: алерт жив, но уведомления не идут.
 
@@ -893,7 +911,7 @@ cat > ~/notes/docs/runbooks/NotesDown.md <<'MD'
 ## Проверки
 1. `docker compose ps` в `~/notes`: жив ли `notes`, нет ли `Restarting`.
 2. `docker compose logs notes --tail 50`: причина падения.
-3. `curl -i http://127.0.0.1:8080/healthz`: отвечает ли приложение изнутри.
+3. `curl -ik https://notes.lab/healthz`: отвечает ли приложение через прокси (порт 8080 после урока 4.6 наружу не опубликован).
 4. `docker compose ps db`: жива ли и `healthy` ли PostgreSQL.
 ## Действия
 - Контейнер остановлен: `docker compose up -d notes`.
@@ -912,7 +930,7 @@ cat > ~/notes/docs/runbooks/NotesHighErrorRate.md <<'MD'
 1. Какие пути: `sum by (path, status) (rate(notes_http_requests_total{status=~"5.."}[5m]))`.
 2. Была ли выкатка или правка `.env` перед началом ошибок.
 3. `docker compose logs notes --since 15m | grep -i error`.
-4. `curl -s http://127.0.0.1:8080/readyz`: отвечает ли БД.
+4. `curl -sk https://notes.lab/readyz`: отвечает ли БД.
 ## Действия
 - Ошибки после выкатки: откатить на прошлый тег образа, `docker compose up -d notes`.
 - Причина в БД: проверить `db`, место на диске, число соединений.
@@ -1002,7 +1020,7 @@ bash /tmp/break-8.5.sh 1
 ### Симптом
 
 - **Сценарий 1.** Ты остановил `notes` (`docker compose stop notes`), ждёшь 10 минут, а `NotesDown` не приходит.
-- **Сценарий 2.** Ты запускаешь `curl -s localhost:8080/error` (или включаешь `FAIL_RATE`) и получаешь уведомления пачками «сработал, снялся, сработал» каждые несколько минут.
+- **Сценарий 2.** Ты запускаешь `curl -sk https://notes.lab/error` (или включаешь `FAIL_RATE`) и получаешь уведомления пачками «сработал, снялся, сработал» каждые несколько минут.
 - **Сценарий 3.** Один и тот же алерт приходит в приёмник заново каждую минуту, хотя ничего не изменилось.
 - **Сценарий 4.** В Alertmanager пусто (`curl -s localhost:9093/api/v2/alerts` возвращает `[]`) при том, что в Prometheus алерт `firing`.
 

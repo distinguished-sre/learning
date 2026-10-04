@@ -617,12 +617,12 @@
    "skill": "Default deny",
    "kind": "применение",
    "type": "single",
-   "text": "Какая политика запрещает весь трафик к подам namespace?",
+   "text": "Какая политика запрещает весь входящий и исходящий трафик подов namespace?",
    "options": [
     {
      "id": "a",
      "text": "Пустой `podSelector` без `policyTypes` и без правил",
-     "why": "Нужно указать направление."
+     "why": "Без policyTypes закроется только входящий трафик, исходящий останется открытым."
     },
     {
      "id": "b",
@@ -636,7 +636,7 @@
     },
     {
      "id": "d",
-     "text": "`podSelector: {}` и типы политики без правил"
+     "text": "`podSelector: {}` и `policyTypes: [Ingress, Egress]` без правил"
     }
    ],
    "correct": [

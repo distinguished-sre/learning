@@ -20,7 +20,7 @@
         "часто"
       ],
       "q": "Через минуту после `kubectl scale` число реплик вернулось. Что происходит и что делать?",
-      "answer": "Это reconcile: Flux сравнил кластер с git и вернул записанное. Значит, число реплик задаётся в git. Я меняю `replicaCount` в values через PR. Если нужна временная ручная правка на время инцидента, приостанавливаю `Kustomization` и обязательно возвращаю.\n\n**Что хотят услышать:** drift detection, `flux suspend/resume`, источник правды в git, HPA (автоскейлер, сам меняющий число реплик) как исключение.\n\n**Красный флаг:** «отключу Flux совсем» или «буду править быстрее, чем он откатывает»."
+      "answer": "Это reconcile: Flux сравнил кластер с git и вернул записанное. Значит, число реплик задаётся в git. Я меняю `replicaCount` в values через PR. Если нужна временная ручная правка на время инцидента, приостанавливаю `HelmRelease` (`flux suspend helmrelease`, ведь replicaCount откатывает helm-controller через driftDetection) и `Kustomization`, и обязательно возвращаю оба (`flux resume`).\n\n**Что хотят услышать:** drift detection, `flux suspend/resume`, источник правды в git, HPA (автоскейлер, сам меняющий число реплик) как исключение.\n\n**Красный флаг:** «отключу Flux совсем» или «буду править быстрее, чем он откатывает»."
     },
     {
       "id": "o09-03-03",
@@ -111,7 +111,7 @@
         "middle"
       ],
       "q": "Что делают `flux reconcile`, `flux get` и `flux suspend` и когда ими пользуешься?",
-      "answer": "`flux get kustomizations` и `flux get helmreleases` показывают состояние и причину, если не Ready. `flux reconcile source git flux-system` сразу тянет git, а `flux reconcile kustomization <имя>` сразу применяет, не дожидаясь интервала. `flux suspend kustomization <имя>` останавливает применение, например пока я руками отлаживаю в кластере. После этого обязательно `flux resume`, иначе изменения из git перестанут доезжать. О приостановке предупреждаю команду.\n\n**Что хотят услышать:** get для статуса, reconcile для ускорения, suspend на время ручной отладки и resume после.\n\n**Красный флаг:** оставляет suspend «на потом» и забывает."
+      "answer": "`flux get kustomizations` и `flux get helmreleases` показывают состояние и причину, если не Ready. `flux reconcile source git flux-system` сразу тянет git, а `flux reconcile kustomization <имя>` сразу применяет, не дожидаясь интервала. `flux suspend kustomization <имя>` останавливает применение, например пока я руками отлаживаю в кластере (ресурсы релиза откатывает ещё и helm-controller, поэтому для `HelmRelease` паузу ставлю отдельно: `flux suspend helmrelease`). После этого обязательно `flux resume`, иначе изменения из git перестанут доезжать. О приостановке предупреждаю команду.\n\n**Что хотят услышать:** get для статуса, reconcile для ускорения, suspend на время ручной отладки и resume после.\n\n**Красный флаг:** оставляет suspend «на потом» и забывает."
     },
     {
       "id": "o09-03-13",

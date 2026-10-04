@@ -277,7 +277,7 @@
       "skill": "исключение",
       "kind": "диагностика",
       "type": "single",
-      "text": "В `.trivyignore.yaml` добавили CVE без записи в `docs/security.md`. В чём проблема?",
+      "text": "В `.trivyignore.yaml` (подключён флагом `--ignorefile`) добавили CVE без записи в `docs/security.md`. В чём проблема?",
       "options": [
         {
           "id": "a",
@@ -291,7 +291,7 @@
         {
           "id": "c",
           "text": "Файл `.trivyignore.yaml` не читается сканером и ничего не скрывает",
-          "why": "Trivy читает его автоматически."
+          "why": "С флагом `--ignorefile` Trivy читает его."
         },
         {
           "id": "d",

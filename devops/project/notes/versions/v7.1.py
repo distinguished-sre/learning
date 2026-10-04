@@ -280,12 +280,12 @@ def request_span(handler):
     path = route_label(urlparse(handler.path).path)
     with tracer.start_as_current_span(
             f"HTTP {handler.command} {path}", context=ctx, kind=trace.SpanKind.SERVER) as span:
-        span.set_attribute("http.method", handler.command)
+        span.set_attribute("http.request.method", handler.command)
         try:
             yield
         finally:
             status = handler._status or 500
-            span.set_attribute("http.status_code", status)
+            span.set_attribute("http.response.status_code", status)
             if status >= 500:
                 span.set_status(trace.StatusCode.ERROR)
 

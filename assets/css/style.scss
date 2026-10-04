@@ -405,6 +405,10 @@ li.checked .todo-text { color: var(--muted); text-decoration: line-through; text
 .layout-lesson .footer { margin-top: 0; }
 
 /* ---------- мобильная вёрстка ---------- */
+@media (max-width: 440px) {
+  .hub-link { font-size: 0; padding: 5px 9px; }
+  .hub-link::before { content: "←"; font-size: 13px; }
+}
 @media (max-width: 900px) {
   body { font-size: 16px; }
   .shell { display: block; }

@@ -467,7 +467,7 @@ export default function (data) {
 
 Проверь синтаксис без запуска: `k6 inspect ~/perf-lab/11-bottlenecks/bn.js`; пустой вывод ошибок и JSON настроек значат, что файл в порядке.
 
-Если k6 у тебя в Docker (как в README стенда), запускай `docker run --rm -i --network host -v ~/perf-lab/11-bottlenecks:/s grafana/k6:2.3.0 run -e SCENARIO=mix -e RATE=10 /s/bn.js`; `--network host` позволяет контейнеру достучаться до `localhost:8000` стенда.
+Если k6 у тебя в Docker (как в README стенда), запускай `docker run --rm -i --network host -v ~/perf-lab/11-bottlenecks:/s grafana/k6:2.3.0 run -e SCENARIO=mix -e RATE=10 /s/bn.js`; `--network host` позволяет контейнеру достучаться до `localhost:8000` стенда. Это Linux. На Docker Desktop для Mac и Windows `localhost` внутри контейнера это сама виртуальная машина, поэтому либо включи host-сеть в настройках Docker Desktop, либо замени адрес стенда на `host.docker.internal` (`-e BASE_URL=http://host.docker.internal:8000`, `bn.js` читает эту переменную).
 
 ### 3. Скрипты `set-env.sh` и `run.sh`
 
@@ -478,12 +478,12 @@ cat > ~/perf-lab/11-bottlenecks/set-env.sh <<'EOF'
 #!/usr/bin/env bash
 # set-env.sh KEY=VALUE ...: меняет переменные в .env стенда, пересоздаёт shop, пишет строку в журнал опытов
 set -euo pipefail
-SHOP_DIR=${SHOP_DIR:-$HOME/load-tester/project/shop}
+SHOP_DIR=${SHOP_DIR:-$HOME/learning/load-tester/project/shop}
 LOG=$HOME/perf-lab/11-bottlenecks/experiments.log
 cd "$SHOP_DIR"
 for kv in "$@"; do
   key=${kv%%=*}; val=${kv#*=}
-  if grep -q "^${key}=" .env; then sed -i "s|^${key}=.*|${key}=${val}|" .env; else echo "${key}=${val}" >> .env; fi
+  if grep -q "^${key}=" .env; then sed -i.bak "s|^${key}=.*|${key}=${val}|" .env && rm -f .env.bak; else echo "${key}=${val}" >> .env; fi
   printf '%s  %s=%s\n' "$(date '+%F %T')" "$key" "$val" >> "$LOG"
 done
 docker compose up -d --force-recreate --wait shop
@@ -491,7 +491,7 @@ EOF
 chmod +x ~/perf-lab/11-bottlenecks/set-env.sh
 ```
 
-Разбор: `key=${kv%%=*}` отрезает от `BCRYPT_ROUNDS=4` всё, начиная с первого `=`, получается ключ; `val=${kv#*=}` отрезает всё до первого `=`, получается значение. `sed -i "s|...|...|"` заменяет строку в файле на месте (разделитель `|` выбран, чтобы не мешали косые черты в значениях). Если ключа в `.env` не было, он дописывается. `printf` добавляет строку «время  ключ=значение» в журнал. Последняя команда пересоздаёт только `shop` (`--force-recreate` заставляет Docker подхватить новый `.env`, `--wait` ждёт готовности). Метрики `shop` при этом начинаются с нуля, и это нормально.
+Разбор: `key=${kv%%=*}` отрезает от `BCRYPT_ROUNDS=4` всё, начиная с первого `=`, получается ключ; `val=${kv#*=}` отрезает всё до первого `=`, получается значение. `sed -i.bak "s|...|...|"` заменяет строку в файле на месте (суффикс `.bak` нужен, чтобы команда одинаково работала в GNU sed на Linux и в BSD sed на macOS, где у `-i` суффикс обязателен; копию `.env.bak` следом удаляет `rm`; разделитель `|` выбран, чтобы не мешали косые черты в значениях). Если ключа в `.env` не было, он дописывается. `printf` добавляет строку «время  ключ=значение» в журнал. Последняя команда пересоздаёт только `shop` (`--force-recreate` заставляет Docker подхватить новый `.env`, `--wait` ждёт готовности). Метрики `shop` при этом начинаются с нуля, и это нормально.
 
 Второй запускает k6 и сохраняет результат:
 
@@ -505,7 +505,7 @@ label=$1; shift
 args=(); for kv in "$@"; do args+=(-e "$kv"); done
 mkdir -p ~/perf-lab/results
 out=~/perf-lab/results/11-"$label".txt
-k6 run "${args[@]}" ~/perf-lab/11-bottlenecks/bn.js 2>&1 | tee "$out" \
+k6 run ${args[@]+"${args[@]}"} ~/perf-lab/11-bottlenecks/bn.js 2>&1 | tee "$out" \
   | grep -E 'name:|p\(50\)|p\(95\)|http_req_failed|dropped_iterations|^ +iterations'
 code=${PIPESTATUS[0]}
 if [ "$code" -eq 99 ]; then
@@ -517,7 +517,7 @@ EOF
 chmod +x ~/perf-lab/11-bottlenecks/run.sh
 ```
 
-Разбор: `shift` убирает первый аргумент (метку), остальные пары `KEY=VALUE` превращаются в флаги `-e KEY=VALUE` для k6. `tee` сохраняет **весь** вывод в файл, а `grep -E` печатает на экран только нужные строки. Код выхода k6 в конвейере из трёх команд теряется, поэтому его берёт `${PIPESTATUS[0]}` (статус первой команды конвейера). Код 99 значит «тест дошёл до конца, но порог нарушен»: при перегрузке это ожидаемый результат, скрипт завершается с 0. Любой другой ненулевой код (скрипт не открылся, `setup()` упал, k6 не найден) это авария: скрипт печатает последние строки вывода и возвращает тот же код. Фильтр `grep` иначе спрятал бы текст ошибки.
+Разбор: `${args[@]+"${args[@]}"}` подставляет массив, только если он не пуст: в bash 3.2 из macOS обычный `"${args[@]}"` при `set -u` и пустом массиве падает с `unbound variable`. `shift` убирает первый аргумент (метку), остальные пары `KEY=VALUE` превращаются в флаги `-e KEY=VALUE` для k6. `tee` сохраняет **весь** вывод в файл, а `grep -E` печатает на экран только нужные строки. Код выхода k6 в конвейере из трёх команд теряется, поэтому его берёт `${PIPESTATUS[0]}` (статус первой команды конвейера). Код 99 значит «тест дошёл до конца, но порог нарушен»: при перегрузке это ожидаемый результат, скрипт завершается с 0. Любой другой ненулевой код (скрипт не открылся, `setup()` упал, k6 не найден) это авария: скрипт печатает последние строки вывода и возвращает тот же код. Фильтр `grep` иначе спрятал бы текст ошибки.
 
 ### 4. Базовая линия: четыре нагрузки
 

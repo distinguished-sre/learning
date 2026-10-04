@@ -342,7 +342,7 @@ jobs:
   quickstart:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
       - run: make quickstart
       - run: make down
 ```
@@ -742,7 +742,7 @@ real    2m41.350s
 **Типичные ошибки**
 
 - `Makefile:12: *** missing separator.  Stop.`: в начале команды пробелы вместо табуляции. Замени отступ на символ табуляции.
-- `Bind for 0.0.0.0:443 failed: port is already allocated`: порт занят (nginx хоста или другой контейнер). Останови его (`sudo systemctl disable --now nginx`, см. [урок 4.1](../04-docker/01-containers-idea.md)).
+- `... address already in use` (для процесса хоста, например nginx) или `Bind for 0.0.0.0:443 failed: port is already allocated` (для другого контейнера): порт занят. Останови занявшего (`sudo systemctl disable --now nginx`, см. [урок 4.1](../04-docker/01-containers-idea.md)).
 - `curl: (60) SSL certificate problem: self-signed certificate`: не передан `--cacert deploy/tls/notes.crt`, а сертификат самоподписанный.
 - `error while interpolating: required variable POSTGRES_PASSWORD is missing a value`: `.env` пуст или создан не из шаблона. Удали `.env` и запусти цель снова.
 
@@ -795,7 +795,7 @@ git ls-files scripts deploy | head -20
 |---|---|---|
 | `make: command not found` | пакета нет в образе ВМ | добавить `make` в «Требования» в README |
 | `permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock` | пользователь не в группе `docker` | в README: `sudo usermod -aG docker $USER`, перелогиниться |
-| `Bind for 0.0.0.0:80 failed: port is already allocated` | на ВМ работает apache2 или nginx | проверка порта в начале `quickstart` с понятным сообщением |
+| `... address already in use` на порту 80 (у другого контейнера было бы `port is already allocated`) | на ВМ работает apache2 или nginx | проверка порта в начале `quickstart` с понятным сообщением |
 | `bash: ./scripts/gen-tls.sh: Permission denied` | у файла нет бита исполнения в git | `chmod +x scripts/gen-tls.sh`, `git add` и коммит (git запоминает этот бит) |
 
 Когда на чистой ВМ `make quickstart` проходит без единого твоего вмешательства, поменяй в README время на реально измеренное. После проверки удали ВМ: `multipass delete cleanvm && multipass purge`.

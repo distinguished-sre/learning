@@ -437,7 +437,7 @@
    "skill": "Агрегации: sum by, without, avg, topk",
    "kind": "понимание",
    "type": "single",
-   "text": "Почему верно `sum(rate(x[5m]))`, а `rate(sum(x)[5m])` нет?",
+   "text": "Почему верно `sum(rate(x[5m]))`, а `rate(sum(x)[5m:])` нет?",
    "options": [
     {
      "id": "a",
@@ -978,7 +978,7 @@
     },
     {
      "id": "c",
-     "text": "`rate(sum(x)[5m])`",
+     "text": "`rate(sum(x)[5m:])`",
      "why": "Сумма счётчиков до `rate` прячет сбросы отдельных рядов."
     },
     {

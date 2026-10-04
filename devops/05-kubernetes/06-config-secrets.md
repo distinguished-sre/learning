@@ -1088,7 +1088,7 @@ Error: couldn't find key DATABASE_URL in Secret notes/notes-db
 
 Не прогонялось в кластере kind, вывод команд `kubectl` взят из предыдущей редакции урока и сверен по знанию формата (значения `AGE`, `uid`, время в `created_at` и `id` у тебя будут другими):
 
-- kind: v0.33.0, Kubernetes: 1.36.x (образ узла `kindest/node` из `kind/kind.yaml`), kubectl: 1.37.1;
+- kind: v0.33.0, Kubernetes: 1.37.1 (образ узла `kindest/node` из `kind/kind.yaml`), kubectl: 1.37.1;
 - PostgreSQL: 18 (образ `postgres:18`), Python: 3.13 (образ `python:3.13-slim`);
 - приложение «Заметки»: v4, образ `notes:0.4.0`.
 

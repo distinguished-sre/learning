@@ -234,7 +234,7 @@ flowchart LR
 Два тонких момента:
 
 - `dependsOn` ждёт статуса `Ready=True` у зависимости, а не просто «применено».
-- `wait: true` у зависимого слоя заставляет Flux считать его готовым только когда **ресурсы реально готовы** (поды запущены, релизы установлены). Без `wait` слой готов сразу после применения манифестов, а поды ещё стартуют.
+- `wait: true` у зависимого слоя заставляет Flux считать его готовым только когда **ресурсы реально готовы** (поды запущены, релизы установлены). Без `wait` слой готов сразу после применения манифестов, а поды ещё стартуют. Ресурс, который сам по себе не станет готовым (запечатанный Vault, ниже в практике), надо исключить из ожидания, иначе слой не станет `Ready` и `dependsOn` зависнет.
 
 Разберём на примере. На чистом кластере `infrastructure` начинает ставить Envoy Gateway (это несколько минут). Слой `infrastructure-config` ждёт: его статус `dependency 'flux-system/infrastructure' is not ready`. Когда установка закончится и у `infrastructure` появится `Ready=True`, Flux применит `Gateway`, потому что CRD уже есть. А после него запустится `apps`.
 
@@ -266,7 +266,7 @@ flowchart LR
 - `interval` как часто сверять релиз;
 - `chart.spec.version` версия чарта закреплена явно: без этого Flux при выходе новой версии сам обновит релиз;
 - `install.remediation.retries: 3` и `upgrade.remediation.retries: 3` сколько раз повторять при неудаче. После исчерпания повторов Flux **сам больше не пробует**, пока ты не запустишь `flux reconcile helmrelease ... --reset`;
-- `driftDetection: {mode: enabled}` откатывать ручные правки ресурсов релиза;
+- `driftDetection: {mode: enabled}` откатывать ручные правки ресурсов релиза (поля, которые меняет другой контроллер, исключают через `driftDetection.ignore`, пример в [уроке 9.6](06-progressive-delivery.md));
 - `values` то же самое, что `--set` или `-f values.yaml` в Helm.
 
 Осторожно: «HelmRelease это та же команда `helm install`». Различие в том, что это **описание**, за которым следит контроллер: если релиз сломается или его кто-то тронет, контроллер вернёт его к описанному.
@@ -362,9 +362,9 @@ flowchart TD
 
 Аналогия: режим «не беспокоить» на телефоне: звонки не пропали, их просто не пропускают, пока ты сам не включишь обратно.
 
-`flux suspend kustomization apps` ставит у слоя `apps` флаг `suspend: true`: контроллер перестаёт сверять его и возвращать дрейф. Твои ручные правки живут. `flux resume kustomization apps` снимает паузу, и Flux сразу сверяет кластер с git, то есть **затирает всё, что ты сделал руками и не отразил в git**.
+`flux suspend kustomization apps` ставит у слоя `apps` флаг `suspend: true`: kustomize-controller перестаёт сверять его и возвращать дрейф. Но ресурсы релиза откатывает ещё и helm-controller (`driftDetection`), поэтому для `HelmRelease` паузу ставят отдельно: `flux suspend helmrelease notes -n notes`. Пока обе паузы стоят, твои ручные правки живут. `flux resume kustomization apps` и `flux resume helmrelease notes -n notes` снимают паузу, и Flux сразу сверяет кластер с git, то есть **затирает всё, что ты сделал руками и не отразил в git**.
 
-Разберём на примере. Ночью надо срочно поднять `replicas` до 10, не дожидаясь ревью. Шаги: `flux suspend kustomization apps`, `kubectl scale ... --replicas=10`, работаешь. Утром: те же 10 вписываешь в git через PR (или решаешь вернуть 4), и только после этого `flux resume kustomization apps`. Если забыть вписать в git, resume вернёт 4, и сервис снова просядет.
+Разберём на примере. Ночью надо срочно поднять `replicas` до 10, не дожидаясь ревью. Шаги: `flux suspend kustomization apps` и `flux suspend helmrelease notes -n notes`, `kubectl scale ... --replicas=10`, работаешь. Утром: те же 10 вписываешь в git через PR (или решаешь вернуть 4), и только после этого `flux resume` обоих. Если забыть вписать в git, resume вернёт 4, и сервис снова просядет.
 
 Осторожно: «Suspended это нормальное постоянное состояние». Нет, приостановленный слой это временное исключение. Забытая пауза самая частая причина вопроса «почему мой коммит не доезжает»: смотри колонку `SUSPENDED` в `flux get`.
 
@@ -742,7 +742,8 @@ metadata: {name: vault, namespace: flux-system}
 spec:
   interval: 10m
   targetNamespace: vault
-  install: {createNamespace: true}
+  install: {createNamespace: true, disableWait: true}   # запечатанный Vault не Ready, не ждём его под
+  upgrade: {disableWait: true}
   chart:
     spec: {chart: vault, version: "0.32.0", sourceRef: {kind: HelmRepository, name: hashicorp}}
   values:
@@ -1018,7 +1019,7 @@ notes  notes      1         deployed  notes-0.4.0  0.7.0
 **Типичные ошибки:**
 
 - `rsync: command not found`: установи (`sudo apt install rsync`) или скопируй каталог через `cp -r`, исключив `.git` вручную.
-- `flux get all -A` показывает `False` у `HelmRelease vault`: чарт Vault ставится, но под запечатан. Проверь `kubectl -n vault get pods` (`0/1` до `seed-vault.sh` нормально, проба готовности не пройдёт).
+- `flux get all -A` показывает `False` у `HelmRelease vault` и слой `infrastructure` не становится Ready: релиз ждёт готовности пода, а запечатанный Vault не готов (`kubectl -n vault get pods` покажет `0/1` до `seed-vault.sh`). Проверь, что в `HelmRelease vault` есть `install: {disableWait: true}` и `upgrade: {disableWait: true}`.
 
 ### Дополнительно: Argo CD (необязательно, вне цепочки проекта)
 
@@ -1059,11 +1060,11 @@ kubectl describe helmrelease notes -n notes
 
 **1. GitRepository не читается.** `flux get sources git` показывает `False` и текст вроде `authentication required` или `repository not found`. Причина: отозван deploy key или токен, репозиторий стал приватным без секрета, либо в `spec.url` неверный адрес (в учебном сценарии адрес испорчен). Исправление: восстановить адрес или доступ (`flux create secret git ...`, повторный `flux bootstrap github` идемпотентный и пересоздаст ключ), затем `flux reconcile source git flux-system`.
 
-**2. HelmRelease: install retries exhausted.** `Helm upgrade failed ... retries exhausted`, `Ready=False`. Причина в этом сценарии: неверный тег образа в values, новые поды не становятся готовыми (`ImagePullBackOff`), а старые продолжают работать. Проверка: `flux logs --kind=HelmRelease --name=notes -n notes`, `kubectl describe pod`. Исправление: правка values в git (в сценарии ещё приостановлен слой `apps`, `flux resume kustomization apps`), затем `flux reconcile helmrelease notes -n notes --reset`, чтобы сбросить счётчик ретраев (после исчерпания он сам не пробует заново).
+**2. HelmRelease: install retries exhausted.** `Helm upgrade failed ... retries exhausted`, `Ready=False`. Причина в этом сценарии: неверный тег образа в values, новые поды не становятся готовыми (`ImagePullBackOff`), а старые продолжают работать. Проверка: `flux logs --kind=HelmRelease --name=notes -n notes`, `kubectl describe pod`. Исправление: правка values в git (если в сценарии приостановлены слой `apps` и HelmRelease, сними обе паузы: `flux resume kustomization apps` и `flux resume helmrelease notes -n notes`), затем `flux reconcile helmrelease notes -n notes --reset`, чтобы сбросить счётчик ретраев (после исчерпания он сам не пробует заново).
 
 **3. Kustomization path not found.** `kustomization path not found: stat .../apps/notes-typo: no such file or directory`. Причина: каталог переименован или `spec.path` указывает на несуществующий. Проверка: `git ls-tree -r main --name-only` и `kubectl get kustomization apps -n flux-system -o yaml`. Исправление: привести путь и каталог в соответствие (в git, затем `flux resume`). Зависимые Kustomization при этом остаются в `not ready`.
 
-**4. Ручной kubectl scale затирается.** Ты увеличил реплики руками, и через минуты они вернулись. Это не поломка, а штатное поведение: git главнее. Проверка: `flux events --for HelmRelease/notes -n notes` покажет обнаруженный дрейф. Исправление: вносить правку в git; если нужна временная ручная работа, `flux suspend kustomization apps`, а после `flux resume kustomization apps`.
+**4. Ручной kubectl scale затирается.** Ты увеличил реплики руками, и через минуты они вернулись. Это не поломка, а штатное поведение: git главнее. Проверка: `flux events --for HelmRelease/notes -n notes` покажет обнаруженный дрейф. Исправление: вносить правку в git; если нужна временная ручная работа, `flux suspend kustomization apps` и `flux suspend helmrelease notes -n notes`, а после `flux resume` обоих.
 
 </details>
 

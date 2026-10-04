@@ -514,11 +514,11 @@ git push
 
 ```bash
 cd ~/learning/load-tester/project/shop
-sed -i 's/^DB_POOL_MAX=.*/DB_POOL_MAX=20/' .env
+sed -i.bak 's/^DB_POOL_MAX=.*/DB_POOL_MAX=20/' .env && rm -f .env.bak
 docker compose up -d shop
 ```
 
-`sed -i 's/.../.../'` заменяет строку в файле на месте. `docker compose up -d shop` пересоздаёт только контейнер магазина с новой настройкой. Подожди две минуты и посмотри на дашборд.
+`sed -i.bak 's/.../.../'` заменяет строку в файле на месте (суффикс `.bak` делает команду одинаковой для GNU sed и BSD sed на macOS, `rm` убирает копию). `docker compose up -d shop` пересоздаёт только контейнер магазина с новой настройкой. Подожди две минуты и посмотри на дашборд.
 
 Что ты увидишь: очередь пула и 503 исчезли, 5xx стало 0%. Но p95 остался около 2,6 с, потому что каждый заказ по-прежнему ждёт медленную оплату. Ты вылечил симптом (отказы), но не пользовательский опыт (задержку), и вдобавок теперь до двадцати соединений с PostgreSQL могут часами висеть в открытых транзакциях с блокировкой строк товаров (`FOR UPDATE`). Проверь:
 
@@ -531,7 +531,7 @@ docker compose exec -T postgres psql -U shop -d shop -c "SELECT state, count(*) 
 Верни всё как было:
 
 ```bash
-sed -i 's/^DB_POOL_MAX=.*/DB_POOL_MAX=5/' .env
+sed -i.bak 's/^DB_POOL_MAX=.*/DB_POOL_MAX=5/' .env && rm -f .env.bak
 docker compose up -d shop
 ~/perf-lab/13-final/incident/reset.sh
 ```

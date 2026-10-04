@@ -515,7 +515,7 @@ ssh-keygen -t ed25519 -f ~/.ssh/notes_ed25519 -C "notes-course" -N ""
 
 Команда создаст файлы `~/.ssh/notes_ed25519` (закрытый) и `~/.ssh/notes_ed25519.pub` (открытый) и напечатает отпечаток ключа. Если файл уже есть, `ssh-keygen` спросит про перезапись: не перезаписывай, ключ уже готов.
 
-2. Создай ВМ: 2 vCPU с гарантированной долей 20%, 2 ГБ RAM, загрузочный диск 20 ГБ. Разбор флагов: `--platform standard-v3` поколение процессоров; `--cores 2 --core-fraction 20 --memory 2` ресурсы; `--network-interface` подсеть, включение публичного адреса (`nat-ip-version=ipv4`) и группа безопасности (`security-group-ids` требует идентификатор, а не имя, поэтому сначала достаём его в переменную `SG_ID`); `--create-boot-disk` создаёт диск из семейства образов, размер 20 ГБ; `--ssh-key` передаёт **открытый** ключ.
+2. Создай ВМ: 2 vCPU с гарантированной долей 20%, 2 ГБ RAM, загрузочный диск 20 ГБ. Разбор флагов: `--platform standard-v3` поколение процессоров; `--cores 2 --core-fraction 20 --memory 2` ресурсы; `--network-interface` подсеть, включение публичного адреса (`nat-ip-version=ipv4`) и группа безопасности (`security-group-ids` требует идентификатор, а не имя, поэтому сначала достаём его в переменную `SG_ID`); `--create-boot-disk` создаёт диск из семейства образов, размер 20 ГБ, тип `network-ssd` (без `type=` по умолчанию будет `network-hdd`); `--ssh-key` передаёт **открытый** ключ.
 
 ```bash
 SG_ID=$(yc vpc security-group get notes-sg --format json | jq -r .id)
@@ -525,7 +525,7 @@ yc compute instance create \
   --platform standard-v3 \
   --cores 2 --core-fraction 20 --memory 2 \
   --network-interface "subnet-name=notes-subnet-a,nat-ip-version=ipv4,security-group-ids=${SG_ID}" \
-  --create-boot-disk image-family=ubuntu-2404-lts,image-folder-id=standard-images,size=20 \
+  --create-boot-disk image-family=ubuntu-2404-lts,image-folder-id=standard-images,size=20,type=network-ssd \
   --ssh-key ~/.ssh/notes_ed25519.pub
 ```
 
@@ -821,7 +821,7 @@ ensure "compute instance" notes-vm \
   yc compute instance create --name notes-vm --zone "$ZONE" \
     --platform standard-v3 --cores 2 --core-fraction 20 --memory 2 \
     --network-interface "subnet-name=notes-subnet-a,nat-ip-version=ipv4,security-group-ids=${SG_ID}" \
-    --create-boot-disk image-family=ubuntu-2404-lts,image-folder-id=standard-images,size=20 \
+    --create-boot-disk image-family=ubuntu-2404-lts,image-folder-id=standard-images,size=20,type=network-ssd \
     --attach-disk disk-name=notes-data,device-name=notes-data \
     --ssh-key "$SSH_PUB"
 
@@ -1003,7 +1003,7 @@ yc compute instance get notes-vm, yc vpc security-group get notes-sg, мой в�
 
 - Проверено на стенде (Docker, образ `devops-lab:24.04-ubuntu`, Ubuntu 24.04.5 LTS): `truncate`, `mkfs.ext4`, `fstab` с `loop`, `mount -a`, `findmnt`, `blkid`, `chown`, `chmod`, `ls -ld`, `df -h`, поведение `umount` и затенения каталога (вывод в теории и в задании 3, трек без облака).
 - Проверено `shellcheck` (Mac): текст `create-vm.sh` без замечаний.
-- Не прогонялось (нет доступа к облаку): все команды `yc`, `aws s3`, `ssh` к ВМ, ожидаемый вывод `yc` и внутри облачной ВМ (`vda`, `vdb`, `eth0`). Синтаксис и форматы взяты из документации Yandex Cloud CLI. Версии `yc` и AWS CLI v2 не закреплены: проверь `yc version` и `aws --version`.
+- Не прогонялось (нет доступа к облаку): все команды `yc`, `aws s3`, `ssh` к ВМ, ожидаемый вывод `yc` и внутри облачной ВМ (`vda`, `vdb`, `eth0`). Синтаксис и форматы взяты из документации Yandex Cloud CLI. Версия `yc` не закреплена, а `pipx install awscli` ставит AWS CLI v1 (v2 в PyPI нет; команды `aws s3` у них совпадают): проверь `yc version` и `aws --version`.
 - Образ облака: `ubuntu-2404-lts` (Ubuntu 24.04 LTS).
 - Multipass и MinIO: не прогонялись, версии не закреплены (тег MinIO бери на релизной странице).
 - Проект «Заметки»: 0.4.1 (не менялся).

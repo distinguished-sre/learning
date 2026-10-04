@@ -68,13 +68,25 @@ sequenceDiagram
 
 **Экземпляр** это конкретный адрес внутри задачи. В интерфейсе они называются по-английски `target`, `job` и `instance`. Prometheus добавляет `job` и `instance` к каждому числу как метки, чтобы потом было видно, откуда оно пришло.
 
-Разберём на цифрах. В 12:00:00 Prometheus спросил `shop:8000/metrics` и получил ответ 200. В базу легли `up{job="shop",instance="shop:8000"} = 1` и все метрики магазина. В 12:00:05 магазин завис и не ответил за 10 секунд (это `scrape_timeout`, предел ожидания).
+Разберём на цифрах. В 12:00:00 Prometheus спросил `shop:8000/metrics` и получил ответ 200. В базу легли `up{job="shop",instance="shop:8000"} = 1` и все метрики магазина. В 12:00:05 магазин завис и не ответил за 5 секунд (это `scrape_timeout`, предел ожидания: на стенде он равен интервалу).
 
 В базу ляжет только `up{...} = 0`. Больше от магазина не придёт ничего, и на графике `up` это видно сразу. Если же упал сам Prometheus, дырка будет в тетради, а не в магазине: пока он не работал, никто не записывал числа. Приложению не пришлось учиться «слать пульс»: молчание само стало сигналом.
 
 <div class="viz" data-viz="obs-scrape" data-interval="5"></div>
 
 На виджете видно главное отличие чисел разных видов: счётчик не теряет события между снимками, а датчик (gauge) теряет короткие всплески, если они случились между двумя обходами.
+
+Доказательство «приходят за данными» лежит прямо в логе магазина.
+
+<div class="viz" data-viz="mon-logs" data-title='Кто приходит на /metrics' data-query='{service="shop"} | json | route="/metrics"' data-lines='[{"ts":"2026-10-04 14:02:55.100","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T14:02:55.100318+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"GET\", \"route\": \"/metrics\", \"path\": \"/metrics\", \"status\": 200, \"duration_ms\": 9.21, \"request_id\": \"78f5afe929d9f1d8a731a962b3a78a0b\"}"},{"ts":"2026-10-04 14:02:50.101","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T14:02:50.101318+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"GET\", \"route\": \"/metrics\", \"path\": \"/metrics\", \"status\": 200, \"duration_ms\": 9.07, \"request_id\": \"9cc531b32423a01d8b66cefbe9f20fcc\"}"},{"ts":"2026-10-04 14:02:45.102","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T14:02:45.102318+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"GET\", \"route\": \"/metrics\", \"path\": \"/metrics\", \"status\": 200, \"duration_ms\": 9.77, \"request_id\": \"b370ea5ff129e8dd8ffc0caa535a95bd\"}"},{"ts":"2026-10-04 14:02:40.103","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T14:02:40.103318+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"GET\", \"route\": \"/metrics\", \"path\": \"/metrics\", \"status\": 200, \"duration_ms\": 8.8, \"request_id\": \"ab107f2823666220db04d024e10673ab\"}"},{"ts":"2026-10-04 14:02:35.104","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T14:02:35.104318+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"GET\", \"route\": \"/metrics\", \"path\": \"/metrics\", \"status\": 200, \"duration_ms\": 7.77, \"request_id\": \"f9000f9aa4a3acfe86264835d44feea7\"}"},{"ts":"2026-10-04 14:02:30.105","level":"info","labels":{"service":"shop","container":"shop-shop-1","level":"INFO"},"line":"{\"ts\": \"2026-10-04T14:02:30.105318+00:00\", \"level\": \"INFO\", \"msg\": \"Запрос завершён\", \"method\": \"GET\", \"route\": \"/metrics\", \"path\": \"/metrics\", \"status\": 200, \"duration_ms\": 7.52, \"request_id\": \"024a5b8790fec987195c0b236ca7c174\"}"}]' data-highlight='/metrics' data-explain='Лог самого магазина: каждые пять секунд к нему приходит запрос на /metrics. Магазин ничего не отправляет, его опрашивает Prometheus.' data-try='Посмотри на время соседних строк: интервал ровно пять секунд, как scrape_interval в настройках Prometheus.'></div>
+
+Смотри на метки времени: интервал между строками одинаковый, и это не покупатели, а Prometheus. Каждый такой приход становится одной точкой на графике.
+
+А вот результат самого простого запроса к Prometheus, `up`, во вкладке Table.
+
+<div class="viz" data-viz="mon-table" data-title='Prometheus, вкладка Table' data-query='up' data-columns='["instance","job","Value"]' data-rows='[["shop:8000","shop","1"],["payment:8001","payment","1"],["node-exporter:9100","node","1"],["cadvisor:8080","cadvisor","1"],["postgres-exporter:9187","postgres","1"],["localhost:9090","prometheus","1"],["alertmanager:9093","alertmanager","1"],["alloy:12345","alloy","1"]]' data-explain='Результат запроса up: по строке на каждую цель. Единица значит, что последний сбор прошёл успешно.' data-try='Сначала посчитай строки (их 8, по числу job в конфиге), потом проверь, что везде 1.'></div>
+
+Сначала посмотри, сколько строк: по одной на каждый источник из конфига. Единица в колонке `Value` значит «последний сбор удался».
 
 > **Прикинь сам:** сервис перестал отвечать. Что в Prometheus покажет это быстрее всего и почему это не надо программировать в самом сервисе?
 {: .predict}
@@ -135,11 +147,27 @@ http_requests_total{method="POST",route="/api/orders",status="502"} 3.0
 
 `http_requests_total` это counter: запросов стало больше и меньше не станет. `http_requests_in_progress` это gauge: запросов в работе сейчас, их то три, то ноль. `shop_db_pool_waiting` тоже gauge: сколько запросов прямо сейчас ждут соединения с базой. `shop_orders_created_total` counter: заказов всего.
 
+Вот два датчика магазина на графике, во время сбоя оплаты.
+
+<div class="viz" data-viz="mon-panel" data-title='Датчики: запросы в работе и ожидающие пула' data-query='http_requests_in_progress и shop_db_pool_waiting' data-x='["14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13","14:14","14:15"]' data-series='[{"name":"http_requests_in_progress","values":[2,3,2,3,8,6,7,7,8,6,3,3,3,3,2,3],"color":"blue"},{"name":"shop_db_pool_waiting","values":[0,0,0,0,2,2,2,2,1,3,0,0,0,0,0,0],"color":"red"}]' data-unit='' data-annotations='[{"at":"14:04","text":"оплата: delay 300 мс, fail_rate 0.6"},{"at":"14:10","text":"оплата возвращена"}]' data-explain='Это gauge: значение растёт и падает. Синяя линия это запросы, которые идут прямо сейчас, красная это ожидающие соединения с базой.' data-try='Сравни линии до 14:04 и после: gauge возвращается в норму сам, это разница с счётчиком, который только растёт.'></div>
+
+Смотри на то, как значения поднимаются и опускаются: gauge показывает «сейчас», а не «всего». Красная линия на нуле значит, что очереди за соединением нет.
+
 Теперь главное про counter. Само число почти бесполезно: «запросов всего 1 000 000» непонятно, за день это или за год. Интересна **скорость роста**: «сейчас 12 запросов в секунду».
 
 Если в 12:00:00 счётчик показывал 1000, а в 12:01:00 стал 1720, скорость это (1720 − 1000) / 60 = 12 запросов в секунду. Эту разницу за время Prometheus считает функцией `rate()`, её разберём в уроке 2.2. А пока запомни, что она умеет обращаться и со сбросом: если счётчик упал с 1720 до 15 после перезапуска магазина, `rate` поймёт, что процесс стартовал заново, и не запишет «минус 1705 запросов».
 
 Поэтому график «запросов всего» на аварию не реагирует: он показывает накопленное, а не происходящее сейчас. Коллега смотрел на правильное число не тем способом.
+
+Вот как это выглядит на одном и том же счётчике, сначала сырым.
+
+<div class="viz" data-viz="mon-panel" data-title='Счётчик: http_requests_total' data-query='sum(http_requests_total)' data-x='["14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13","14:14","14:15"]' data-series='[{"name":"всего запросов","values":[1743,2434,3131,3812,4504,5214,5932,6625,793,1535,2221,2910,3632,4386,5141,5867],"color":"blue"}]' data-unit='' data-annotations='[{"at":"14:08","text":"перезапуск shop: счётчик обнулился"},{"at":"14:04","text":"оплата: delay 300 мс, fail_rate 0.6"}]' data-explain='Счётчик только растёт. Единственное место, где линия падает, это перезапуск контейнера: счёт начался заново с нуля.' data-try='Найди точку 14:08: падение не значит, что запросов стало меньше, это просто сброс.'></div>
+
+Смотри на то, как линия идёт вверх лесенкой и один раз обрывается: это перезапуск, а не пропавшие запросы. Теперь тот же счётчик, пропущенный через `rate()`.
+
+<div class="viz" data-viz="mon-panel" data-title='Скорость: rate(http_requests_total[1m])' data-query='sum(rate(http_requests_total[1m]))' data-x='["14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13","14:14","14:15"]' data-series='[{"name":"запросов в секунду","values":[12.4,11.5,11.6,11.3,11.5,11.8,12.0,11.6,11.9,12.4,11.4,11.5,12.0,12.6,12.6,12.1],"color":"green"}]' data-unit='req/s' data-explain='Тот же счётчик, но через rate(): видна скорость, а не накопленное. Сброс счётчика rate() учитывает, поэтому провала нет.' data-try='Сравни с графиком выше: на месте падения здесь ровная линия около 12 запросов в секунду.'></div>
+
+Здесь нет ни роста, ни обрыва: `rate()` сам вычитает сброс и показывает скорость. Именно такой график годится для алертов.
 
 > **Прикинь сам:** метрика `shop_orders_created_total` была 340, а через минуту стала 5. Что произошло: заказы отменили или что-то другое?
 {: .predict}
@@ -186,6 +214,12 @@ flowchart TD
 
 Один ответ увеличивает сразу несколько счётчиков: все корзины, в которые он «помещается», а также общий счёт и сумму. Поэтому из гистограммы потом можно оценить любой процентиль, о чём пойдёт речь в 2.2.
 
+Вот как выглядят корзины одной гистограммы.
+
+<div class="viz" data-viz="mon-table" data-title='Prometheus, вкладка Table' data-query='http_request_duration_seconds_bucket{route="/api/products"}' data-columns='["route","le","Value"]' data-rows='[["/api/products","0.005","0"],["/api/products","0.01","2"],["/api/products","0.025","9"],["/api/products","0.05","10"],["/api/products","0.1","10"],["/api/products","0.25","10"],["/api/products","0.5","10"],["/api/products","1","10"],["/api/products","5","10"],["/api/products","+Inf","10"]]' data-highlight-col='Value' data-explain='Корзины гистограммы для 10 запросов каталога. Каждая корзина считает запросы не дольше своего le, поэтому числа только растут вниз по таблице.' data-try='Найди первую корзину, где набралось все 10: так видно, что все запросы уложились в 25 мс.'></div>
+
+Смотри на колонку `le` сверху вниз: значение растёт, пока не доходит до 10, и дальше стоит. Последняя корзина `+Inf` всегда равна общему числу запросов.
+
 > **Прикинь сам:** в гистограмме `_bucket{le="0.5"} 30`, `_bucket{le="1"} 30`, `_count 34`. Что можно сказать о четырёх запросах?
 {: .predict}
 
@@ -222,6 +256,12 @@ flowchart TD
 {: .predict}
 
 Нельзя. Каждый покупатель умножит число рядов: если сейчас их 35, при 200 активных пользователях станет до 7000, а при росте магазина до 100 000 пользователей получится взрыв. Самых активных покупателей ищут в логах (там `user_id` уже есть), а метрика остаётся с небольшим конечным набором меток.
+
+Вот что произошло бы, если бы мы всё-таки добавили эту метку. Это воображаемый сценарий, на стенде так не сделано.
+
+<div class="viz" data-viz="mon-panel" data-title='Что было бы: метка user_id' data-query='scrape_samples_scraped{job="shop"}' data-x='["10","50","100","150","200"]' data-series='[{"name":"ряды без user_id","values":[192,192,192,192,192],"color":"green"},{"name":"ряды с user_id (гипотеза)","values":[960,3500,5200,6300,7000],"color":"red"}]' data-unit='' data-annotations='[{"at":"100","text":"число активных покупателей: 100"}]' data-explain='Подпись по горизонтали: сколько покупателей онлайн. Зелёная линия это как есть сейчас, красная показывает, что было бы, если бы мы добавили метку user_id. Так на стенде не бывает: график иллюстративный.' data-try='Сравни высоту красной и зелёной линий на 200 покупателях: рядов стало в десятки раз больше.'></div>
+
+Смотри на то, как красная линия уходит вверх вместе с покупателями, а зелёная остаётся на месте. Число рядов определяет память и скорость Prometheus, и поэтому метки с уникальными значениями запрещены.
 
 Осторожно: метки метрик должны быть скучными. Для логов и трейсов подробности полезны, для метрик вредны. Хорошая метка принимает десяток значений и не растёт со временем: метод, шаблон маршрута, код ответа, результат оплаты (`ok`, `error`, `timeout`).
 
@@ -275,6 +315,12 @@ Prometheus пишет данные в каталог, который задаё�
 
 Prometheus сжимает их до 1 или 2 байт на значение, так что сутки занимают порядка 50 МБ. Для стенда пустяк, для боевой системы с миллионом рядов уже нет, и интервал сбора там делают не 5 секунд, а 15 или 30.
 
+Вот как это выглядит на стенде, в самом Prometheus.
+
+<div class="viz" data-viz="mon-stat" data-title='Prometheus: TSDB на стенде' data-stats='[{"title":"Активных рядов","value":2140,"color":"green","sub":"prometheus_tsdb_head_series"},{"title":"Сэмплов в секунду","value":430,"unit":"samples/s","color":"green","sub":"8 целей, шаг 5 с"},{"title":"Размер на диске","value":42,"unit":"MB","color":"blue","sub":"prometheus_tsdb_storage_blocks_bytes"},{"title":"Срок хранения","value":15,"unit":"d","color":"purple","sub":"retention по умолчанию"}]' data-explain='Четыре числа о самом Prometheus: сколько рядов в памяти, сколько точек в секунду он принимает, сколько места занимает и как долго хранит.'></div>
+
+Начни с первой карточки: рядов около двух тысяч, это то, что держится в памяти. Остальные числа из неё и вытекают: больше рядов, больше точек в секунду, больше диск.
+
 Что будет, если Prometheus упадёт или его пересоздадут? Пока диск цел, история на месте, а за время простоя в ней просто дырка. Но это не долговременное хранилище и не кластер: данные лежат на одном узле, и если он потерял диск, история потеряна. Для хранения годами и для нескольких кластеров есть надстройки (Thanos, Mimir, VictoriaMetrics), но до них нужно дорасти.
 
 > **Главное:** Prometheus хранит ряды в своей базе на диске, держит ограниченный срок (по умолчанию 15 дней) и требует тома, чтобы переживать пересоздание контейнера.
@@ -304,7 +350,7 @@ scrape_configs:             # список задач сбора
 
 Интервал 5 секунд выбран для учебных графиков, на проде чаще 15 или 30 секунд. У чрезмерно частых скрейпов цена: больше записей, больше места, больше нагрузки на цель.
 
-Рядом лежит `scrape_timeout`: сколько Prometheus ждёт ответа. По умолчанию он 10 секунд, и если интервал меньше, значение приходится уменьшать: таймаут не бывает больше интервала.
+Рядом лежит `scrape_timeout`: сколько Prometheus ждёт ответа. По умолчанию он 10 секунд, но не больше интервала: на стенде интервал 5 секунд, и таймаут сам становится 5 секундами. Явно заданный таймаут больше интервала Prometheus отвергает.
 
 Ещё одна деталь для практики: Prometheus читает конфиг при старте и по сигналу перезагрузки. На нашем стенде перезагрузка по сети не включена (нет флага `--web.enable-lifecycle`), а сам файл смонтирован только для чтения, поэтому свой конфиг ты будешь проверять на отдельном Prometheus. Об этом в уроке 2.3.
 
@@ -330,6 +376,12 @@ scrape_configs:             # список задач сбора
 
 **Последняя ошибка** (`lastError`): текст, который Prometheus получил при неудаче. Состояние говорит, что плохо, а текст ошибки почти всегда подсказывает, где искать.
 
+Вот как это выглядит на странице Targets, когда стенд работает как задумано.
+
+<div class="viz" data-viz="mon-targets" data-title='Status → Targets: всё в порядке' data-targets='[{"job":"shop","endpoint":"http://shop:8000/metrics","state":"up","labels":{"instance":"shop:8000","job":"shop"},"last":"3.2s","duration":"9 ms"},{"job":"payment","endpoint":"http://payment:8001/metrics","state":"up","labels":{"instance":"payment:8001","job":"payment"},"last":"1.8s","duration":"4 ms"},{"job":"node","endpoint":"http://node-exporter:9100/metrics","state":"up","labels":{"instance":"node-exporter:9100","job":"node"},"last":"4.1s","duration":"95 ms"},{"job":"cadvisor","endpoint":"http://cadvisor:8080/metrics","state":"up","labels":{"instance":"cadvisor:8080","job":"cadvisor"},"last":"2.4s","duration":"61 ms"},{"job":"postgres","endpoint":"http://postgres-exporter:9187/metrics","state":"up","labels":{"instance":"postgres-exporter:9187","job":"postgres"},"last":"0.9s","duration":"22 ms"},{"job":"prometheus","endpoint":"http://localhost:9090/metrics","state":"up","labels":{"instance":"localhost:9090","job":"prometheus"},"last":"3.7s","duration":"6 ms"},{"job":"alertmanager","endpoint":"http://alertmanager:9093/metrics","state":"up","labels":{"instance":"alertmanager:9093","job":"alertmanager"},"last":"4.5s","duration":"3 ms"},{"job":"alloy","endpoint":"http://alloy:12345/metrics","state":"up","labels":{"instance":"alloy:12345","job":"alloy"},"last":"1.1s","duration":"11 ms"}]' data-explain='Все восемь целей зелёные (UP), последний сбор был несколько секунд назад. Колонка Duration показывает, сколько ответ строился.' data-try='Начни с состояния, потом посмотри на Last scrape: она должна быть меньше scrape_interval, то есть 5 секунд.'></div>
+
+Здесь важны две колонки: состояние `UP` и время с последнего сбора. Восемь зелёных строк значат, что собираются все источники.
+
 Четыре самых частых текста ошибки:
 
 | Что в `lastError` | Что значит | Что проверить |
@@ -342,6 +394,12 @@ scrape_configs:             # список задач сбора
 Разберём строку: «`shop` down, `Get "http://shop:8001/metrics": dial tcp 172.18.0.5:8001: connect: connection refused`». Читаем слева направо. `Get` и адрес: Prometheus сделал обычный запрос. Порт 8001, хотя магазин слушает 8000.
 
 `172.18.0.5` это адрес контейнера: имя `shop` нашлось, значит, проблема не в имени. `connection refused`: на этом адресе порт закрыт. Вывод: опечатка в порту.
+
+Вот как выглядит такая поломка на странице Targets.
+
+<div class="viz" data-viz="mon-targets" data-title='Status → Targets: неверный порт у shop' data-targets='[{"job":"shop","endpoint":"http://shop:8001/metrics","state":"down","labels":{"instance":"shop:8001","job":"shop"},"last":"2.9s","duration":"3 ms","error":"Get \"http://shop:8001/metrics\": dial tcp 172.18.0.5:8001: connect: connection refused"},{"job":"payment","endpoint":"http://payment:8001/metrics","state":"up","labels":{"instance":"payment:8001","job":"payment"},"last":"1.8s","duration":"4 ms"},{"job":"node","endpoint":"http://node-exporter:9100/metrics","state":"up","labels":{"instance":"node-exporter:9100","job":"node"},"last":"4.1s","duration":"95 ms"},{"job":"cadvisor","endpoint":"http://cadvisor:8080/metrics","state":"up","labels":{"instance":"cadvisor:8080","job":"cadvisor"},"last":"2.4s","duration":"61 ms"},{"job":"postgres","endpoint":"http://postgres-exporter:9187/metrics","state":"up","labels":{"instance":"postgres-exporter:9187","job":"postgres"},"last":"0.9s","duration":"22 ms"},{"job":"prometheus","endpoint":"http://localhost:9090/metrics","state":"up","labels":{"instance":"localhost:9090","job":"prometheus"},"last":"3.7s","duration":"6 ms"},{"job":"alertmanager","endpoint":"http://alertmanager:9093/metrics","state":"up","labels":{"instance":"alertmanager:9093","job":"alertmanager"},"last":"4.5s","duration":"3 ms"},{"job":"alloy","endpoint":"http://alloy:12345/metrics","state":"up","labels":{"instance":"alloy:12345","job":"alloy"},"last":"1.1s","duration":"11 ms"}]' data-explain='Для shop указан порт 8001 вместо 8000. Состояние DOWN, а в поле error текст причины: имя нашлось, но по этому порту никто не слушает.' data-try='Сначала прочитай поле error: connection refused говорит больше, чем красный DOWN.'></div>
+
+Смотри на красную строку и текст ошибки под ней. Остальные семь целей зелёные, значит, проблема не в Prometheus, а в одной цели.
 
 Кроме метрик приложения, Prometheus сам добавляет к каждой цели несколько служебных рядов:
 
@@ -493,6 +551,12 @@ shop_payment_requests_total{result="ok"} 1.0
 
 **Как читать вывод:** `201` значит, что заказ создан. Одна и та же оплата видна двумя способами: с точки зрения оплаты (`payment_requests_total{status="200"}`, ответ сервиса) и с точки зрения магазина (`shop_payment_requests_total{result="ok"}`, результат вызова). Когда в 1.1 мы ломали оплату, эти числа расходились: у магазина `error` появлялись раньше, потому что он повторял попытки. Если в выводе оплаты появятся ещё и строки `payment_requests_created` или `..._created`, это служебное время создания ряда: оно нужно библиотеке, смотреть на него не надо.
 
+Вот как этот заказ выглядит в виде трейса.
+
+<div class="viz" data-viz="mon-trace" data-title='Трейс заказа: оплата прошла с первой попытки' data-trace-id='c5f2a8d1e7b34c9a8e1d0f6b2a4c7e93' data-spans='[{"id":"a1","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":92,"status":"ok","attrs":{"http.method":"POST","http.route":"/api/orders","http.status_code":201}},{"id":"a2","parent":"a1","service":"shop","name":"GET","start":1,"dur":1.4,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a3","parent":"a1","service":"shop","name":"HGETALL","start":2.8,"dur":1.1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a4","parent":"a1","service":"shop","name":"db.pool.getconn","start":5,"dur":0.4,"status":"ok","attrs":{}},{"id":"a5","parent":"a1","service":"shop","name":"SELECT","start":5.7,"dur":3.9,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"a6","parent":"a1","service":"shop","name":"INSERT","start":10,"dur":2.1,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"a7","parent":"a1","service":"shop","name":"UPDATE","start":12.5,"dur":1.5,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"c1","parent":"a1","service":"shop","name":"POST","start":15,"dur":71,"status":"ok","attrs":{"http.url":"http://payment:8001/pay","http.status_code":200}},{"id":"p1","parent":"c1","service":"payment","name":"POST /pay","start":16.5,"dur":67,"status":"ok","attrs":{"http.status_code":200}},{"id":"a8","parent":"a1","service":"shop","name":"DEL","start":87,"dur":0.9,"status":"ok","attrs":{"db.system":"redis"}}]' data-focus='c1' data-explain='Один вызов оплаты занимает почти всё время заказа, остальные шаги короткие. Ошибок и повторов нет.' data-try='Посмотри, как вложена полоса payment в полосу вызова POST: так видно границу между сервисами.'></div>
+
+Сначала найди самую широкую дочернюю полосу: это оплата, около 70 мс из 92. Красного нет, попытка одна, это эталон «нормально» для сравнения с поломкой.
+
 Теперь запиши то, что узнал. Создай `~/monitoring-lab/02-metrics/metrics-catalog.md` в любом редакторе: таблица из шести строк «метрика | вид | метки | вопрос, на который отвечает» для `http_requests_total`, `http_request_duration_seconds`, `http_requests_in_progress`, `shop_db_pool_waiting`, `shop_orders_created_total` и `shop_payment_requests_total`. Под таблицей напиши две строки: чем `up` отличается от доли ошибок и почему в метку `route` кладут шаблон, а не путь.
 
 **Что должно получиться** (образец одной строки, свои пояснения допустимы):
@@ -555,6 +619,12 @@ http_requests_total{route="other"}           {method="GET",route="other",status=
 
 **Как читать вывод:** пятьдесят разных адресов дали **один** ряд `other` со значением 50, а не пятьдесят рядов. Число рядов магазина не изменилось (или выросло на 1-2 ряда: первый 404 создаёт ряд маршрута `other` и корзины гистограммы). Именно так шаблон маршрута защищает Prometheus.
 
+В Prometheus это выглядит одной строкой.
+
+<div class="viz" data-viz="mon-table" data-title='Prometheus, вкладка Table' data-query='http_requests_total{route="other"}' data-columns='["method","route","status","Value"]' data-rows='[["GET","other","404","50"]]' data-highlight-row='0' data-explain='Пятьдесят запросов на разные несуществующие адреса сложились в один ряд со значением 50.' data-try='Обрати внимание, что рядов один, а не пятьдесят: адрес не попал в метку.'></div>
+
+Смотри на число рядов, а не на значение. Метка `route` не принимает произвольный путь, поэтому память не растёт.
+
 **Типичные ошибки:**
 
 - На странице Targets `Failed to connect`: Prometheus не запущен, `docker compose --profile monitoring ps` покажет статус.
@@ -588,6 +658,16 @@ curl -s localhost:9090/api/v1/targets | jq -r '.data.activeTargets[] | select(.l
 
 **Как читать вывод:** цель упала, и причина в тексте ошибки. Остановленный контейнер пропал из внутреннего DNS Docker, поэтому имя `payment` не находится.
 
+Вот как это видно на странице Targets.
+
+<div class="viz" data-viz="mon-targets" data-title='Status → Targets: payment остановлен' data-targets='[{"job":"shop","endpoint":"http://shop:8000/metrics","state":"up","labels":{"instance":"shop:8000","job":"shop"},"last":"3.2s","duration":"9 ms"},{"job":"payment","endpoint":"http://payment:8001/metrics","state":"down","labels":{"instance":"payment:8001","job":"payment"},"last":"3.0s","duration":"2 ms","error":"Get \"http://payment:8001/metrics\": dial tcp: lookup payment on 127.0.0.11:53: no such host"},{"job":"node","endpoint":"http://node-exporter:9100/metrics","state":"up","labels":{"instance":"node-exporter:9100","job":"node"},"last":"4.1s","duration":"95 ms"},{"job":"cadvisor","endpoint":"http://cadvisor:8080/metrics","state":"up","labels":{"instance":"cadvisor:8080","job":"cadvisor"},"last":"2.4s","duration":"61 ms"},{"job":"postgres","endpoint":"http://postgres-exporter:9187/metrics","state":"up","labels":{"instance":"postgres-exporter:9187","job":"postgres"},"last":"0.9s","duration":"22 ms"},{"job":"prometheus","endpoint":"http://localhost:9090/metrics","state":"up","labels":{"instance":"localhost:9090","job":"prometheus"},"last":"3.7s","duration":"6 ms"},{"job":"alertmanager","endpoint":"http://alertmanager:9093/metrics","state":"up","labels":{"instance":"alertmanager:9093","job":"alertmanager"},"last":"4.5s","duration":"3 ms"},{"job":"alloy","endpoint":"http://alloy:12345/metrics","state":"up","labels":{"instance":"alloy:12345","job":"alloy"},"last":"1.1s","duration":"11 ms"}]' data-explain='Контейнер payment остановлен, Docker убрал его имя из внутреннего DNS. Prometheus сообщает это текстом ошибки.' data-try='Найди красную строку payment и прочитай error: no such host значит, что имя не находится, а не что порт закрыт.'></div>
+
+Читай сначала `error`: имя `payment` не находится, значит, контейнера нет. А вот та же история на графике `up`.
+
+<div class="viz" data-viz="mon-panel" data-title='Доступность сбора: up{job="payment"}' data-query='up{job="payment"}' data-x='["14:00","14:01","14:02","14:03","14:04","14:05","14:06","14:07","14:08","14:09","14:10","14:11","14:12","14:13"]' data-series='[{"name":"up{job=\"payment\"}","values":[1,1,1,1,1,1,0,0,0,0,1,1,1,1],"color":"red"}]' data-unit='' data-annotations='[{"at":"14:06","text":"docker compose stop payment"},{"at":"14:10","text":"docker compose start payment"}]' data-explain='Единица значит, что сбор успешен, ноль значит, что цель недоступна. График ступенькой уходит в ноль на время остановки.' data-try='Найди отметку остановки: ступенька вниз начинается именно с неё, без плавного спада.'></div>
+
+Здесь ноль это не «плохие данные», а факт «сбор не удался». Эта линия и есть сигнал для алерта `ExporterDown`.
+
 ### Гипотезы
 
 1. В оплате опечатка в метриках.
@@ -607,6 +687,12 @@ shop_payment_requests_total
 **Что получится:** первый запрос даёт 0, второй пуст (ряды помечены устаревшими), а третий продолжает показывать значения: магазин считает оплату у себя, независимо от Prometheus.
 
 **Как читать вывод:** `up{job="payment"} = 0` ответ на вопрос «жив ли сбор». Пустой `payment_requests_total` не нули: рядов нет совсем, и разница между «нет данных» и «ноль» важна для алертов. Магазин свои метрики отдаёт, поэтому `shop_payment_requests_total` не пропал.
+
+Что видит покупатель при остановленной оплате, показывает трейс.
+
+<div class="viz" data-viz="mon-trace" data-title='Трейс заказа при остановленной оплате' data-trace-id='d1b7e4a9c2f84e6a9b3c5d0e8f7a1264' data-spans='[{"id":"a1","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":36,"status":"error","attrs":{"http.method":"POST","http.route":"/api/orders","http.status_code":502}},{"id":"a2","parent":"a1","service":"shop","name":"GET","start":1,"dur":1.4,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a3","parent":"a1","service":"shop","name":"HGETALL","start":2.8,"dur":1.1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"a4","parent":"a1","service":"shop","name":"db.pool.getconn","start":5,"dur":0.4,"status":"ok","attrs":{}},{"id":"a5","parent":"a1","service":"shop","name":"SELECT","start":5.7,"dur":3.9,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"a6","parent":"a1","service":"shop","name":"INSERT","start":10,"dur":2.1,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"a7","parent":"a1","service":"shop","name":"UPDATE","start":12.5,"dur":1.5,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"c1","parent":"a1","service":"shop","name":"POST","start":15,"dur":3,"status":"error","attrs":{"http.url":"http://payment:8001/pay","error":"no such host","попытка":1}},{"id":"c2","parent":"a1","service":"shop","name":"POST","start":19,"dur":3,"status":"error","attrs":{"http.url":"http://payment:8001/pay","error":"no such host","попытка":2}},{"id":"c3","parent":"a1","service":"shop","name":"POST","start":23,"dur":3,"status":"error","attrs":{"http.url":"http://payment:8001/pay","error":"no such host","попытка":3}},{"id":"c4","parent":"a1","service":"shop","name":"POST","start":27,"dur":3,"status":"error","attrs":{"http.url":"http://payment:8001/pay","error":"no such host","попытка":4}},{"id":"a8","parent":"a1","service":"shop","name":"HINCRBY","start":32,"dur":1.5,"status":"ok","attrs":{"db.system":"redis"}}]' data-focus='c1' data-explain='Четыре попытки оплаты закончились за миллисекунды: до сервиса payment запрос не дошёл, у вызовов нет дочерних полос. Заказ отвечает 502 за 36 мс.' data-try='Сравни с нормальным трейсом: там под вызовом POST была вложенная полоса payment, здесь её нет совсем.'></div>
+
+Первым делом смотри на вложенность: красные вызовы короткие и пустые, под ними нет полосы сервиса `payment`. Значит, ответа не было вовсе, и причина не в медленной оплате, а в её отсутствии.
 
 ### Исправление
 

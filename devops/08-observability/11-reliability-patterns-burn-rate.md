@@ -664,7 +664,7 @@ notes-burnrate-alerts
 **Типичные ошибки:**
 
 - `parse error: unexpected identifier "and"`: `and` поставлен после запятой или в конце строки без второго операнда: оба выражения должны быть полными, `and` стоит между ними.
-- `many-to-many matching not allowed`: на левой и правой стороне разные наборы лейблов. Здесь после `sum(...)` лейблов нет, поэтому `and` работает. Если убрал `sum`, верни.
+- `many-to-many matching not allowed` или пустой результат: на левой и правой стороне разные наборы лейблов (разные наборы дают пусто, ошибка бывает при дублях по совпадающим лейблам). Здесь после `sum(...)` лейблов нет, поэтому `and` работает. Если убрал `sum`, верни.
 - `Error: no such file or directory` на `/rules/burnrate.yml`: неверный путь в `-v`, запускай из `~/notes`.
 
 ### Задание 4. Шаг проекта: политика бюджета ошибок
@@ -755,7 +755,7 @@ bash /tmp/break-8.11.sh 1
 
 - Симптом 1: посмотри `backoff` и вызов `time.sleep`. Печатай метки времени попыток, как в задании 1.
 - Симптом 2: печатай `b.fails` и `b.state` после каждого вызова, сравни `max_fail` с реальным числом подряд идущих ошибок. Не стирает ли что-то счётчик?
-- Симптом 3: выполни в Prometheus `notes:http_errors:ratio_rate5m` и `notes:http_errors:ratio_rate1h`. Пусты ли ряды, совпадают ли лейблы `status` и `path` с реальными (`curl -s localhost:8080/metrics | grep notes_http_requests_total`). Какое окно указано в алерте?
+- Симптом 3: выполни в Prometheus `notes:http_errors:ratio_rate5m` и `notes:http_errors:ratio_rate1h`. Пусты ли ряды, совпадают ли лейблы `status` и `path` с реальными (`curl -sk https://notes.lab/metrics | grep notes_http_requests_total`). Какое окно указано в алерте?
 
 ### Исправление
 

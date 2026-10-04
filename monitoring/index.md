@@ -1,5 +1,5 @@
 ---
 layout: home-monitoring
 permalink: /monitoring/
-title: "Мониторинг: основы"
+title: "Мониторинг и SRE"
 ---

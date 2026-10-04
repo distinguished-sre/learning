@@ -57,7 +57,7 @@
     "middle"
    ],
    "q": "Ты применил HTTPRoute, apply прошёл без ошибок, а сайт отдаёт 404. Где искать?",
-   "answer": "Ошибки Gateway API живут в статусе. Смотрю `describe httproute`: `Accepted` и `ResolvedRefs`. Типичные причины: неверное имя в `parentRefs`, `hostname` не пересекается с listener, маршрут из чужого namespace не разрешён в `allowedRoutes`. Проверяю и заголовок `Host` в запросе.\n\n**Что хотят услышать:** conditions, `parentRefs`, `allowedRoutes`, `hostnames`, заголовок Host.\n\n**Красный флаг:** «в логах apply ошибок нет, значит проблема в приложении»."
+   "answer": "Ошибки Gateway API живут в статусе. Смотрю `describe httproute`: `Accepted` и `ResolvedRefs`. Типичные причины: неверное имя в `parentRefs` (тогда в статусе маршрута нет `parents`), `hostname` не пересекается с listener, маршрут из чужого namespace не разрешён в `allowedRoutes`. Проверяю и заголовок `Host` в запросе.\n\n**Что хотят услышать:** conditions, `parentRefs`, `allowedRoutes`, `hostnames`, заголовок Host.\n\n**Красный флаг:** «в логах apply ошибок нет, значит проблема в приложении»."
   },
   {
    "id": "o05-04-07",

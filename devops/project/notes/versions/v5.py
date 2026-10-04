@@ -364,7 +364,7 @@ class Handler(BaseHTTPRequestHandler):
         super().log_request(code, size)
 
     def log_message(self, fmt, *args):
-        if urlparse(self.path).path not in ("/healthz", "/readyz"):
+        if urlparse(getattr(self, "path", "")).path not in ("/healthz", "/readyz"):
             log.info("%s %s", self.address_string(), fmt % args)
 
 
