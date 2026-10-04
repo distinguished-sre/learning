@@ -923,7 +923,7 @@ debug
 
 **Как читать вывод:** `81 bytes` это длина строки подключения (пароль 48 символов плюс `postgresql://notes:` и `@db:5432/notes`), а `POSTGRES_PASSWORD` остался прежним. `printenv` печатает значения: `postgres` и `info`. Заметка получила `id` 2, потому что заметка с `id` 1 («первая заметка в кластере») осталась в базе с [урока 5.5](05-storage-statefulset-postgres.md), а это подтверждает, что данные лежат в PostgreSQL и пережили пересоздание подов. Время `created_at` и значения `id` у тебя могут отличаться. Строка `info` сразу после `patch` показывает, что переменная не обновилась; `debug` появилась только после `rollout restart`.
 
-Эталон: [`project/notes/k8s/base/`](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/base). После этого шага долг проекта: Secret хранится в кластере как base64 и вне git, закроется в [уроке 9.2](../09-secrets-gitops/02-vault-k8s-eso.md).
+Манифесты лежат в твоём репозитории `~/notes/k8s/base/`. После этого шага долг проекта: Secret хранится в кластере как base64 и вне git, закроется в [уроке 9.2](../09-secrets-gitops/02-vault-k8s-eso.md).
 
 **Объясни себе:**
 

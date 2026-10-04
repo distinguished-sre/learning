@@ -849,7 +849,7 @@ notes   Active   2s    app.kubernetes.io/part-of=notes,kubernetes.io/metadata.na
 
 **Как читать вывод:** `created` и `unchanged` это ответ кластера на `apply` (третий вариант, `configured`, значит «отличалось и обновлено»). `Active` значит, что namespace готов принимать объекты. В `LABELS` кроме твоей метки есть `kubernetes.io/metadata.name`, её добавил кластер сам. Последняя строка подтверждает, что namespace по умолчанию теперь `notes`.
 
-Эталон файлов: [project/notes на GitHub](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/kind).
+Файлы остаются в твоём репозитории `~/notes/kind`.
 
 **Объясни себе:**
 

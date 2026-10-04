@@ -797,7 +797,7 @@ Accepted ResolvedRefs
 
 4. Если в 8 ГБ-режиме ты уменьшал реплики, верни три: `kubectl scale deploy/notes -n notes --replicas=3`.
 
-Эталон файлов: [project/notes/k8s/base](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/base).
+Манифесты остаются в твоём репозитории `~/notes/k8s/base`.
 
 **Что должно получиться:**
 

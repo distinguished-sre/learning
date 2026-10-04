@@ -523,7 +523,7 @@ Runbook (раннбук) это документ на один алерт, сс�
 
 ## Практика
 
-Перед началом основной стек «Заметок» запущен (`docker compose up -d` в `~/notes`), мониторинг из уроков 8.2-8.4 работает (`docker compose -f ~/notes/monitoring/compose.yml ps`). Все файлы ниже лежат в `~/notes/monitoring/` и `~/notes/docs/`, эталон: [project/notes/monitoring](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/monitoring).
+Перед началом основной стек «Заметок» запущен (`docker compose up -d` в `~/notes`), мониторинг из уроков 8.2-8.4 работает (`docker compose -f ~/notes/monitoring/compose.yml ps`). Все файлы ниже лежат в `~/notes/monitoring/` и `~/notes/docs/`. Адреса `runbook_url` в правилах это пример: так выглядит адрес runbook в твоём репозитории на GitHub, подставь свой.
 
 ### Задание 1. Четыре алерта и проверка правил
 

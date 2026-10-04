@@ -717,7 +717,7 @@ notes   6s
 
 **Шаги.**
 
-1. Добавь в `values.yaml` под `metrics:` ключ для правил (правила включаются тем же `metrics.enabled`, отдельного ключа не заводим) и создай `helm/notes/templates/prometheusrule.yaml`. Шаблон Prometheus с `$labels` экранируем, чтобы Helm его не разворачивал:
+1. Добавь в `values.yaml` под `metrics:` ключ для правил (правила включаются тем же `metrics.enabled`, отдельного ключа не заводим) и создай `helm/notes/templates/prometheusrule.yaml`. Шаблон Prometheus с `$labels` экранируем, чтобы Helm его не разворачивал. Адрес `runbook_url` это пример: так выглядит адрес runbook в твоём репозитории, подставь свой:
 
 {% raw %}
 ```yaml
@@ -843,7 +843,7 @@ NAME                                        AGE
 prometheusrule.monitoring.coreos.com/notes  20s
 ```
 
-Эталон: [project/notes/helm/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/helm/notes) и [values-kps.yaml](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/monitoring/k8s).
+Сверяй чарт и `values-kps.yaml` с кодом из этого урока и с выводом `helm template` и `kubectl get prometheusrule` выше.
 
 **Объясни себе.**
 - Почему метрики выключены в `values.yaml` и включены в `values-dev.yaml`?

@@ -845,7 +845,7 @@ statefulset rolling update complete 1 pods at revision postgres-6c9d5b7f8...
 
 **Как читать вывод:** `statefulset rolling update complete 1 pods` значит, что под `postgres-0` пересоздан с новым шаблоном и снова готов. Последняя строка это ресурсы, которые теперь стоят в кластере: dev-значения из патча. Данные Postgres остались, потому что лежат в PVC, а не в поде.
 
-Эталон файлов: [k8s/base и k8s/overlays](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s).
+Файлы лежат в твоём репозитории `~/notes/k8s/base` и `~/notes/k8s/overlays`.
 
 **Объясни себе:**
 - Почему prod мы не применяем в тот же namespace `notes` на этом же кластере?

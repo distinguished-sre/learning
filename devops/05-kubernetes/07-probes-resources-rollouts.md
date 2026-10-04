@@ -1046,7 +1046,7 @@ ready
 
 **Как читать вывод:** `код: 0` значит, что `kubectl diff` не нашёл различий. `3/3` значит, что три реплики из трёх готовы. Ответ `Notes service v4.1` подтверждает, что вход отдаёт новую версию, а `ready` это ответ `/readyz`.
 
-Состояние проекта: `app.py` v4.1, образ `0.4.1`, git-тег `v0.4.1`, Deployment с `startupProbe`, `livenessProbe /healthz`, `readinessProbe /readyz`, requests 50m/64Mi, limits 200m/128Mi, RollingUpdate 1/0 и `preStop`. Эталон: [project/notes/k8s/base](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/base).
+Состояние проекта: `app.py` v4.1, образ `0.4.1`, git-тег `v0.4.1`, Deployment с `startupProbe`, `livenessProbe /healthz`, `readinessProbe /readyz`, requests 50m/64Mi, limits 200m/128Mi, RollingUpdate 1/0 и `preStop`.
 
 **Объясни себе:**
 - Почему в git попал файл манифеста, а не команды `set env`, которые мы выполняли?

@@ -752,7 +752,7 @@ flux get helmreleases -A
 
 2. Тег состояния проекта после урока: `v0.7.0` (`git -C ~/notes tag -a v0.7.0 -m "9.4: cert-manager"`).
 
-Эталон: [project/notes/gitops](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/gitops).
+Конфигурация лежит в твоём репозитории `~/notes-gitops`.
 
 **Что должно получиться.**
 

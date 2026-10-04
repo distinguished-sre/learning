@@ -1009,7 +1009,7 @@ stat -c '%a %n' ~/.notes-secrets/vault-init.json    # на macOS: stat -f '%Lp %
 git add scripts/seed-vault.sh && git commit -m "Vault в кластере и seed-vault.sh"
 ```
 
-Эталон: [scripts/seed-vault.sh](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/scripts/seed-vault.sh).
+Скрипт лежит в твоём репозитории: `~/notes/scripts/seed-vault.sh`.
 
 **Что должно получиться:**
 

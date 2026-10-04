@@ -568,7 +568,7 @@ flowchart TD
 
 ## Практика
 
-Предполагается кластер `kind-notes` и репозитории `~/notes` (приложение) и `~/notes-gitops` (конфигурация) из уроков 9.1-9.6. Эталон конфигурации лежит в [project/notes/gitops](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/gitops).
+Предполагается кластер `kind-notes` и репозитории `~/notes` (приложение) и `~/notes-gitops` (конфигурация) из уроков 9.1-9.6. Сверяйся с кодом из уроков 9.1-9.6.
 
 ### Задание 1. Нарисуй платформу и найди точки отказа
 

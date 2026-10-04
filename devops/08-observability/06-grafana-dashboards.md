@@ -546,7 +546,7 @@ curl -s -u admin:CHANGE_ME http://127.0.0.1:3000/api/datasources | jq '.[] | {na
 
 **Шаги**
 
-1. Сохрани дашборд целиком. Запросы используют метрики контракта `notes_http_requests_total{method,path,status}` и `notes_http_request_duration_seconds` из [урока 8.2](02-prometheus-basics.md). Строение файла разобрано в теории: пять панелей (две `stat`, два `timeseries`, одна `heatmap`), переменная `path`, ссылка на runbook. Кавычки внутри `expr` экранированы обратной косой чертой `\"`, потому что весь запрос сам лежит в JSON-строке.
+1. Сохрани дашборд целиком. Запросы используют метрики контракта `notes_http_requests_total{method,path,status}` и `notes_http_request_duration_seconds` из [урока 8.2](02-prometheus-basics.md). Строение файла разобрано в теории: пять панелей (две `stat`, два `timeseries`, одна `heatmap`), переменная `path`, ссылка на runbook (адрес в `links` это пример, подставь адрес runbook из своего репозитория). Кавычки внутри `expr` экранированы обратной косой чертой `\"`, потому что весь запрос сам лежит в JSON-строке.
 
 {% raw %}
 ```json
@@ -798,7 +798,7 @@ git add monitoring/
 git commit -m "Grafana 13.2.2: provisioning и дашборды Notes RED, Node USE"
 ```
 
-3. Пароль `CHANGE_ME` замени на свой и не коммить его: перенеси в `monitoring/.env` (файл в `.gitignore`), а в compose укажи `GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}`. Эталон: [project/notes/monitoring/](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/monitoring).
+3. Пароль `CHANGE_ME` замени на свой и не коммить его: перенеси в `monitoring/.env` (файл в `.gitignore`), а в compose укажи `GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}`.
 
 **Что должно получиться**
 

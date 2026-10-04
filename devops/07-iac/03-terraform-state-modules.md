@@ -1125,7 +1125,7 @@ No changes. Your infrastructure matches the configuration.
 код выхода: 0
 ```
 
-Эталон: [infra/terraform в репозитории курса](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/infra/terraform).
+Код лежит в твоём репозитории `~/notes/infra/terraform`.
 
 **Как читать вывод:** в списке должны быть оба каталога, `envs/dev` и `modules/notes-vm`, а в корне `infra/terraform` никаких `.tf` не осталось. `No changes` и код `0` значат, что переезд в модуль ничего не поменял в облаке: так и должно быть при рефакторинге. Код `2` значит, что `plan` хочет что-то поменять: читай план, не игнорируй. В `git status --short` строки начинаются с `R` (перенос) или `A` (новый файл); `??` напротив `terraform.tfvars` или `tfstate` означает, что `.gitignore` их не закрыл.
 

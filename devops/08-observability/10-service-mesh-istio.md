@@ -850,7 +850,7 @@ notes-7d9f8b6c5-x2k4p    1/1     Running   0          2h
 
 **Как читать вывод:** в JSON `"status":"success"` и `"job":"notes"` значит, что Prometheus по-прежнему видит приложение. После удаления mesh в `notes` те же поды, без перезапусков (`AGE` не сбросился).
 
-Проект: `k8s/mesh/authz-policy.yaml` и `k8s/mesh/waypoint.yaml`, приложение v7, образ 0.7.0. Эталон: [k8s/mesh](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/mesh).
+Проект: `k8s/mesh/authz-policy.yaml` и `k8s/mesh/waypoint.yaml`, приложение v7, образ 0.7.0.
 
 **Объясни себе:**
 
