@@ -147,7 +147,7 @@
 .hr-list-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 3px 0 0 2.1em; }
 .hr-list-x { font: 400 12px/1.4 var(--mono); color: var(--muted); }
 .hr-list-link {
-  display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; max-width: 100%; box-sizing: border-box;
   font: 400 11.5px/1.5 var(--mono); color: var(--muted); text-decoration: none;
   border: 1px solid var(--line); border-radius: 999px; background: var(--bg-2);
 }

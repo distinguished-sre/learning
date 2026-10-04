@@ -107,7 +107,6 @@
 /* две колонки: четыре входа складываются в ровный квадрат, без сироты в третьем ряду */
 .aud { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .aud-item { position: relative; margin: 0; padding: 26px 26px 24px 26px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); }
-.aud-n { display: block; font: 500 15px/1 var(--mono); color: var(--accent-ink); margin-bottom: 18px; letter-spacing: .04em; }
 .aud-item h3 { font: 500 23px/1.2 var(--serif); margin: 0 0 8px; letter-spacing: -.01em; }
 .aud-item { display: flex; flex-direction: column; }
 .aud-item p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
@@ -204,9 +203,8 @@
 .route-notes p { margin: 0; color: var(--muted); font-size: 15.5px; line-height: 1.6; }
 
 /* ---------- как устроен урок ---------- */
-.steps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; counter-reset: none; }
+.steps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; counter-reset: none; }
 .step { position: relative; margin: 0; padding: 26px 26px 24px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); }
-.step-n { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; margin-bottom: 16px; background: var(--soft); color: var(--accent-ink); font: 500 19px/1 var(--serif); font-variant-numeric: tabular-nums; }
 .step h3 { font: 500 22px/1.2 var(--serif); margin: 0 0 8px; letter-spacing: -.01em; }
 .step p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
 

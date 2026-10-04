@@ -81,7 +81,6 @@ layout: default
         {%- assign as_text = a.start.text | default: '' -%}
         {%- assign as_href = a.start.href | default: '' -%}
         <li class="aud-item">
-          <span class="aud-n" aria-hidden="true">{{ forloop.index | prepend: '0' | slice: -2, 2 }}</span>
           {%- if at != '' %}
           <h3>{{ at }}</h3>
           {%- if ax != '' %}<p>{{ ax }}</p>{% endif %}
@@ -216,12 +215,11 @@ layout: default
       <p class="lead2">{{ lesson_lead }}</p>
       {%- endif %}
       {%- if hub.lesson.items.size > 0 %}
-      <ol class="steps">
+      <ul class="steps">
         {%- for s in hub.lesson.items %}
         {%- assign st = s.title | default: s.name | default: '' -%}
         {%- assign sx = s.text | default: s.lead | default: '' -%}
         <li class="step">
-          <span class="step-n" aria-hidden="true">{{ forloop.index }}</span>
           {%- if st != '' %}
           <h3>{{ st }}</h3>
           {%- if sx != '' %}<p>{{ sx }}</p>{% endif %}
@@ -230,7 +228,7 @@ layout: default
           {%- endif %}
         </li>
         {%- endfor %}
-      </ol>
+      </ul>
       {%- endif %}
     </div>
   </section>
