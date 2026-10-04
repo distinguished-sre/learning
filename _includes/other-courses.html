@@ -1,0 +1,18 @@
+{%- comment -%} Блок «Другие курсы» внизу главной страницы курса. {%- endcomment -%}
+<section class="other-courses" aria-labelledby="other-h">
+  <div class="oc-wrap">
+    <h2 id="other-h">Другие курсы</h2>
+    <ul class="oc-list">
+      {%- for c in site.data.hub.courses.items %}
+      {%- if c.key != page.course %}
+      {%- assign oc_course = site.data.courses[c.key] -%}
+      {%- assign oc_n = 0 -%}
+      {%- for t in oc_course.topics %}{% assign oc_n = oc_n | plus: t.lessons.size %}{% endfor -%}
+      {%- capture oc_href %}/{{ c.key }}/{% endcapture %}
+      <li><a class="oc-card" href="{{ oc_href | relative_url }}"><b>{{ c.name }}</b><span>{{ c.tagline }}</span><em>{{ oc_course.topics.size }} тем · {{ oc_n }} уроков <span aria-hidden="true">→</span></em></a></li>
+      {%- endif %}
+      {%- endfor %}
+    </ul>
+    <p class="oc-all"><a href="{{ '/' | relative_url }}"><span aria-hidden="true">←</span> Все курсы и с чего начать</a></p>
+  </div>
+</section>

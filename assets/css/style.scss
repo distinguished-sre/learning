@@ -80,6 +80,27 @@ kbd {
 .hub-link::before { content: "← "; }
 .hub-link:hover { border-color: var(--accent); color: var(--accent-ink); }
 .topbar-sp { flex: 1; }
+
+/* переключатель курсов: главная и главные страницы курсов */
+.site-switch { display: flex; gap: 2px; padding: 3px; margin-left: 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-2); font-size: 13px; }
+.site-switch a { padding: 5px 12px; border-radius: 999px; color: var(--muted); text-decoration: none; white-space: nowrap; transition: background .15s, color .15s; }
+.site-switch a:hover { color: var(--accent-ink); }
+.site-switch a[aria-current="page"] { background: var(--bg); color: var(--text); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.site-switch .cn-short { display: none; }
+
+/* «Другие курсы» внизу главной страницы курса */
+.other-courses { padding: 56px clamp(16px, 4vw, 40px) 8px; border-top: 1px solid var(--line); }
+.oc-wrap { max-width: 1080px; margin: 0 auto; }
+.other-courses h2 { margin: 0 0 18px; font-size: 22px; }
+.oc-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.oc-card { display: flex; flex-direction: column; gap: 6px; height: 100%; box-sizing: border-box; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); color: var(--text); text-decoration: none; transition: border-color .15s, transform .15s; }
+.oc-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.oc-card b { font-size: 18px; }
+.oc-card span { color: var(--muted); font-size: 15px; line-height: 1.45; }
+.oc-card em { margin-top: auto; padding-top: 6px; font: normal 600 13px/1.4 var(--mono); color: var(--accent-ink); }
+.oc-all { margin: 18px 0 0; font: 14px/1.5 var(--mono); }
+.oc-all a { color: var(--accent-ink); }
+@media (prefers-reduced-motion: reduce) { .oc-card, .oc-card:hover { transition: none; transform: none; } }
 .icon-btn {
   width: 38px; height: 38px; display: inline-grid; place-items: center; cursor: pointer;
   background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 9px; font: 500 17px var(--mono);
@@ -405,6 +426,17 @@ li.checked .todo-text { color: var(--muted); text-decoration: line-through; text
 .layout-lesson .footer { margin-top: 0; }
 
 /* ---------- мобильная вёрстка ---------- */
+@media (max-width: 900px) {
+  .has-cnav { --bar-h: 96px; }
+  .has-cnav .topbar { padding-bottom: 40px; }
+  .site-switch { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; box-sizing: border-box; margin: 0; padding: 4px 12px; gap: 4px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; justify-content: center; }
+  .site-switch a { flex: 1 1 0; text-align: center; padding: 6px 4px; overflow: hidden; text-overflow: ellipsis; }
+  .site-switch a[aria-current="page"] { background: var(--bg-2); box-shadow: none; }
+}
+@media (max-width: 520px) {
+  .site-switch .cn-full { display: none; }
+  .site-switch .cn-short { display: inline; }
+}
 @media (max-width: 440px) {
   .hub-link { font-size: 0; padding: 5px 9px; }
   .hub-link::before { content: "←"; font-size: 13px; }

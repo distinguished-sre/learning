@@ -275,3 +275,7 @@
   .hbtn:hover, .hbtn-ghost:hover { transform: none; }
   .hbtn-primary::after { display: none; }
 }
+
+/* название курса в карточке ведёт на главную страницу курса */
+.hub-card-title { color: inherit; text-decoration: none; }
+.hub-card-title:hover { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 4px; }

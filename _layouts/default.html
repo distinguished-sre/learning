@@ -49,7 +49,7 @@
   <link rel="stylesheet" href="{{ '/assets/css/hub.css' | relative_url }}">
   {%- endif %}
 </head>
-<body class="layout-{{ page.layout }}{% if page.layout contains 'home-' %} layout-home{% endif %}" data-course="{{ page.course }}">
+<body class="layout-{{ page.layout }}{% if page.layout contains 'home-' %} layout-home{% endif %}{% if page.layout == 'hub' or page.layout contains 'home-' %} has-cnav{% endif %}" data-course="{{ page.course }}">
   <a class="skip" href="#content">К содержимому</a>
   <header class="topbar">
     {%- if page.course %}
@@ -64,8 +64,10 @@
     {%- else %}
     <a class="brand" href="{{ '/' | relative_url }}"><span class="brand-mark" aria-hidden="true">✻</span><span class="brand-name">обучение</span></a>
     {%- endif %}
-    {%- if page.course %}
-    <a class="hub-link" href="{{ '/' | relative_url }}">Обучение</a>
+    {%- if page.layout == 'hub' or page.layout contains 'home-' %}
+    {% include site-switch.html %}
+    {%- elsif page.course %}
+    <a class="hub-link" href="{{ '/' | relative_url }}">Все курсы</a>
     {%- endif %}
     <span class="topbar-sp"></span>
     <span class="chip progress-chip" title="Пройдено уроков" hidden><span data-progress-text></span></span>

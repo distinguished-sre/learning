@@ -1,0 +1,8 @@
+{%- comment -%} Переключатель курсов (site-switch) в шапке главной и главных страниц курсов. {%- endcomment -%}
+<nav class="site-switch" aria-label="Курсы">
+  <a href="{{ '/' | relative_url }}"{% if page.layout == 'hub' %} aria-current="page"{% endif %}><span class="cn-full">Все курсы</span><span class="cn-short">Все</span></a>
+  {%- for c in site.data.hub.courses.items %}
+  {%- capture cn_href %}/{{ c.key }}/{% endcapture %}
+  <a href="{{ cn_href | relative_url }}"{% if page.course == c.key and page.layout contains 'home-' %} aria-current="page"{% endif %}>{% case c.key %}{% when 'devops' %}DevOps{% when 'load-tester' %}<span class="cn-full">Нагрузочное</span><span class="cn-short">Нагрузка</span>{% when 'monitoring' %}<span class="cn-full">Мониторинг и SRE</span><span class="cn-short">SRE</span>{% else %}{{ c.name }}{% endcase %}</a>
+  {%- endfor %}
+</nav>

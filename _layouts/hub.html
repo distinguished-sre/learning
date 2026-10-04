@@ -126,7 +126,7 @@ layout: default
         <li class="hub-card" data-course="{{ c.key }}" id="course-{{ c.key }}">
           <div class="hub-card-head">
             <p class="kick">{{ c.kick | default: 'Курс' }}</p>
-            <h3>{{ c.name | default: course.title }}</h3>
+            <h3><a class="hub-card-title" href="{{ cbase | relative_url }}">{{ c.name | default: course.title }}</a></h3>
             {%- if c_tagline != '' %}
             <p class="hub-tagline">{{ c_tagline }}</p>
             {%- endif %}
