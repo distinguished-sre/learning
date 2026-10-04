@@ -284,11 +284,13 @@
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
     var t = e.target, typing = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
     if (typing) return;
+    /* открыто окно или фокус в тесте: стрелки не листают уроки */
+    if ($('dialog[open]') || (t && t.closest && t.closest('.quiz, .prep'))) return;
     if (e.key === '/') {
       if (q) { e.preventDefault(); if (doc.body.classList.contains('nav-open') === false && (window.innerWidth <= 900 || doc.body.classList.contains('layout-home'))) setNav(true); q.focus(); }
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       var a = $('a[data-nav="' + (e.key === 'ArrowLeft' ? 'prev' : 'next') + '"]');
-      if (a) location.href = a.href;
+      if (a) a.click(); /* через click: quiz.js может предупредить о непройденном тесте */
     } else if (e.key === 'Escape') setNav(false);
   });
   /* ссылки внутри меню закрывают его на мобильном */

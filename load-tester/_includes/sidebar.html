@@ -11,6 +11,7 @@
     <a class="nav-home{% if page.url == '/' %} current{% endif %}" href="{{ '/' | relative_url }}">✻ Карта курса</a>
     <a class="nav-home{% if page.url == '/schedule.html' %} current{% endif %}" href="{{ '/schedule.html' | relative_url }}">Расписание</a>
     <a class="nav-home{% if page.url == '/ai.html' %} current{% endif %}" href="{{ '/ai.html' | relative_url }}">ИИ-помощник</a>
+    <a class="nav-home{% if page.url == '/interview.html' %} current{% endif %}" href="{{ '/interview.html' | relative_url }}">Подготовка к собеседованию</a>
     {%- for t in site.data.course.topics -%}
       {%- capture tpath %}/{{ t.dir }}/{% endcapture -%}
       {%- assign is_cur = false -%}

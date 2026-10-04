@@ -1,0 +1,28 @@
+{%- comment -%}
+  Вопросы с собеседований урока из единой базы _data/questions/open/NN-MM.json.
+  Подключается в Markdown урока тегом include interview.html: выводит Markdown,
+  поэтому kramdown и site.js оформляют карточки так же, как написанные вручную.
+  Ссылки на .md в ответах переводятся в .html здесь: jekyll-relative-links видит только текст страницы.
+{%- endcomment -%}
+{%- include qkey.html lesson=page.lesson -%}
+{%- assign iv = site.data.questions.open[qkey] -%}
+{%- assign iv_group = '' -%}
+{%- for q in iv.questions -%}
+{%- if q.group and q.group != iv_group -%}
+{%- assign iv_group = q.group -%}
+{%- for g in iv.groups -%}{%- if g.id == q.group %}
+### {{ g.title }}
+{% if g.intro %}
+{{ g.intro }}
+{% endif -%}
+{%- endif -%}{%- endfor -%}
+{%- endif %}
+### {{ q.n }}. {% for t in q.tags %}[{{ t }}] {% endfor %}{{ q.q }}
+
+<details markdown="1">
+<summary>Ответ</summary>
+
+{{ q.answer | replace: '.md)', '.html)' | replace: '.md#', '.html#' }}
+
+</details>
+{% endfor -%}
