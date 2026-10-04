@@ -3,11 +3,17 @@ layout: default
 ---
 {%- comment -%}
   Хаб: главная всего сайта со списком курсов. Числа курсов считаются из _data/courses/<курс>.yml.
-  Мониторинг пока без ссылки: курс появится в папке monitoring/ (данные _data/courses/monitoring.yml).
   Стили в assets/css/hub.css, подключаются только здесь.
 {%- endcomment -%}
 {%- assign dv = site.data.courses.devops -%}
 {%- assign lt = site.data.courses['load-tester'] -%}
+{%- assign mn = site.data.courses.monitoring -%}
+{%- assign mn_lessons = 0 -%}{%- assign mn_hours = 0 -%}
+{%- for t in mn.topics -%}
+  {%- assign mn_lessons = mn_lessons | plus: t.lessons.size -%}
+  {%- assign h = t.time | remove: ' ч' | plus: 0 -%}
+  {%- assign mn_hours = mn_hours | plus: h -%}
+{%- endfor -%}
 {%- assign dv_lessons = 0 -%}{%- assign dv_hours = 0 -%}
 {%- for t in dv.topics -%}
   {%- assign dv_lessons = dv_lessons | plus: t.lessons.size -%}
@@ -56,11 +62,16 @@ layout: default
           </dl>
           <a class="hbtn hbtn-primary" href="{{ '/load-tester/' | relative_url }}">Открыть курс <span class="arr" aria-hidden="true">→</span></a>
         </li>
-        <li class="hub-card hub-soon">
-          <p class="kick">Скоро</p>
+        <li class="hub-card">
+          <p class="kick">Курс</p>
           <h3>Мониторинг</h3>
           <p class="hub-text">Метрики, логи, трейсы и алерты: как понять, что с сервисом происходит, и узнать об этом раньше пользователей.</p>
-          <span class="hbtn hbtn-ghost is-off" aria-disabled="true">Курс готовится</span>
+          <dl class="hub-stats">
+            <div><dt>тем</dt><dd>{{ mn.topics.size }}</dd></div>
+            <div><dt>уроков</dt><dd>{{ mn_lessons }}</dd></div>
+            <div><dt>часов</dt><dd>≈{{ mn_hours | round }}</dd></div>
+          </dl>
+          <a class="hbtn hbtn-primary" href="{{ '/monitoring/' | relative_url }}">Открыть курс <span class="arr" aria-hidden="true">→</span></a>
         </li>
       </ul>
     </div>

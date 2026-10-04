@@ -90,7 +90,8 @@ test('битая запись завершённой попытки: урок о
   const url = origin + lessonPath();
   await page.goto(url); await page.locator('.qz-card').first().waitFor();
   await page.evaluate(() => {
-    const key = Object.keys(localStorage).find(k => k.startsWith('lt-quiz:v1:') && k !== 'lt-quiz:v1:prep');
+    const pre = window.LTQuiz.storageKey(''), prep = window.LTQuiz.storageKey('prep');
+    const key = Object.keys(localStorage).find(k => k.startsWith(pre) && k !== prep);
     const s = JSON.parse(localStorage.getItem(key));
     s.current.finished = true;
     s.current.result = { correct: 1, total: 5, pass: false, per: {} };
@@ -108,7 +109,7 @@ test('подготовка: битая завершённая проверка �
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.goto(origin + BASE + '/' + COURSE + '/interview.html');
-  await page.evaluate(v => localStorage.setItem('lt-quiz:v1:prep', JSON.stringify({ v, mode: 'check', topic: '1', lesson: '', size: 5,
+  await page.evaluate(v => localStorage.setItem(window.LTQuiz.storageKey('prep'), JSON.stringify({ v, mode: 'check', topic: '1', lesson: '', size: 5,
     cur: { topic: '1', lesson: '', qids: ['q01-01-01'], order: {}, answers: {}, finished: true, result: { correct: 1, total: 5, per: [null] } } })),
     await page.evaluate(() => window.LTQuiz.VERSION));
   const errors = [];
@@ -125,7 +126,7 @@ for (const how of ['кнопкой', 'клавишей Enter']) {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     await page.goto(origin + BASE + '/' + COURSE + '/interview.html');
-    await page.evaluate(v => localStorage.setItem('lt-quiz:v1:prep', JSON.stringify({ v, mode: 'check', topic: '1', lesson: '', size: 5 })),
+    await page.evaluate(v => localStorage.setItem(window.LTQuiz.storageKey('prep'), JSON.stringify({ v, mode: 'check', topic: '1', lesson: '', size: 5 })),
       await page.evaluate(() => window.LTQuiz.VERSION));
     await page.reload();
     await page.getByRole('button', { name: 'Начать проверку' }).click();

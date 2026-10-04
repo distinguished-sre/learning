@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'load-tester/[0-9][0-9]-*/*.md'
+      - 'monitoring/[0-9][0-9]-*/*.md'
       # Уроки devops выключены: check_snippets находит в них 17 ошибок (плейсхолдеры вида <имя> в bash-блоках).
       # Когда уроки исправят, раскомментируй строку ниже и строку devops в шаге проверки.
       # - 'devops/[0-9][0-9]-*/*.md'
@@ -30,4 +31,5 @@ jobs:
       - name: bash -n, py_compile и node --check для блоков кода
         run: |
           python tools/check_snippets.py --course load-tester
+          python tools/check_snippets.py --course monitoring
           # python tools/check_snippets.py --course devops

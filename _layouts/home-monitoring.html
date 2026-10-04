@@ -1,0 +1,166 @@
+---
+layout: default
+---
+{%- comment -%}
+  Главная курса «Мониторинг: основы». Порядок, время тем и уроков берутся из _data/courses/monitoring.yml.
+  Стили и скрипт общие с load-tester (assets/css/home-load-tester.css, assets/js/home-load-tester.js, см. _layouts/default.html),
+  прогресс 'mon:done' выбирается по data-course.
+{%- endcomment -%}
+{%- assign course = site.data.courses[page.course] -%}
+{%- assign cbase = '/' | append: page.course -%}
+{%- assign total = 0 -%}
+{%- assign hours = 0 -%}
+{%- for t in course.topics -%}
+  {%- assign total = total | plus: t.lessons.size -%}
+  {%- assign h = t.time | remove: ' ч' | plus: 0 -%}
+  {%- assign hours = hours | plus: h -%}
+{%- endfor -%}
+{%- assign hours_round = hours | round -%}
+{%- assign first_topic = course.topics | first -%}
+{%- assign first_lesson = first_topic.lessons | first -%}
+{%- capture first_url %}{{ cbase }}/{{ first_topic.dir }}/{{ first_lesson.slug }}.html{% endcapture -%}
+<script>
+  /* Прячем блоки до появления на экране, только если JS работает и анимации не отключены. */
+  (function () {
+    var d = document.documentElement;
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    d.classList.add('home-anim');
+    setTimeout(function () { if (!window.__homeReady) d.classList.remove('home-anim'); }, 2500);
+  })();
+</script>
+<div class="home" data-hours="{{ hours }}">
+
+  <!-- ============ Первый экран ============ -->
+  <section class="hero" aria-labelledby="hero-h">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="hero-copy">
+        <p class="eyebrow in" style="--i:0"><span class="spark" aria-hidden="true">✻</span> Курс основ мониторинга и наблюдаемости</p>
+        <h1 id="hero-h" class="display in" style="--i:1">Узнай, что с сервисом, <em>раньше пользователей</em></h1>
+        <p class="hero-lead in" style="--i:2">Метрики, логи, трейсы, SLO, Prometheus, Grafana и алерты: общая база для курсов DevOps и нагрузочного тестирования. Всё на учебном интернет-магазине, который ты поднимаешь у себя и сам наблюдаешь за ним.</p>
+        <div class="hero-cta in" style="--i:3">
+          <a class="hbtn hbtn-primary" href="{{ first_url | relative_url }}" data-continue>
+            <span data-continue-text>Начать с урока {{ first_lesson.id }}</span> <span class="arr" aria-hidden="true">→</span>
+          </a>
+          <a class="hbtn hbtn-ghost" href="#path">Программа <span class="arr" aria-hidden="true">↓</span></a>
+        </div>
+        <p class="hero-progress in" style="--i:4" data-home-progress hidden></p>
+        <ul class="facts in" style="--i:4">
+          <li><b>{{ course.topics.size }} темы</b><span>от сигналов до трейсов</span></li>
+          <li><b>{{ total }} уроков</b><span>≈{{ hours_round }} часов практики</span></li>
+          <li><b>Бесплатно</b><span>без регистрации</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ О чём курс ============ -->
+  <section class="band" id="about" aria-labelledby="about-h">
+    <div class="wrap">
+      <p class="kick reveal">О чём курс</p>
+      <h2 id="about-h" class="h2 reveal">База, на которой стоят два других курса</h2>
+      <p class="lead2 reveal">Без метрик и логов непонятно ни как живёт сервис, ни что показал нагрузочный тест. Здесь только основы, которые не зависят от Kubernetes и нагрузочных инструментов. Прикладное остаётся в курсах DevOps и нагрузочного тестирования, а уроки ссылаются на него в конце.</p>
+      <ol class="steps">
+        <li class="step reveal" style="--d:0">
+          <span class="step-n">1</span>
+          <h3>Что и зачем мерить</h3>
+          <p>Метрики, логи и трейсы, методы RED и USE, SLI и SLO: как договориться, что сервис работает хорошо.</p>
+        </li>
+        <li class="step reveal" style="--d:1">
+          <span class="step-n">2</span>
+          <h3>Собирать и спрашивать</h3>
+          <p>Prometheus, PromQL и экспортёры: как числа попадают из сервиса в хранилище и как задавать им вопросы.</p>
+        </li>
+        <li class="step reveal" style="--d:2">
+          <span class="step-n">3</span>
+          <h3>Показывать и звать</h3>
+          <p>Дашборды Grafana и алерты: что видно с первого взгляда и когда будить человека.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ Для кого ============ -->
+  <section class="band band-alt" id="fit" aria-labelledby="fit-h">
+    <div class="wrap">
+      <p class="kick reveal">Для кого</p>
+      <h2 id="fit-h" class="h2 reveal">Для новичка после Linux и Docker</h2>
+      <p class="lead2 reveal">Терминал, <code>curl</code> и <code>docker compose</code> ты уже знаешь, остальное объясняется в уроках. Если этого пока нет, пройди эти темы в любом из курсов.</p>
+      <div class="fit">
+        <div class="fit-col fit-yes reveal">
+          <h3>Курс нагрузочного тестирования</h3>
+          <ul>
+            <li><a href="{{ '/load-tester/01-linux/' | relative_url }}">Тема 1: Linux и терминал</a></li>
+            <li><a href="{{ '/load-tester/05-docker/' | relative_url }}">Тема 5: Docker и Compose</a></li>
+          </ul>
+        </div>
+        <div class="fit-col fit-yes reveal" style="--d:1">
+          <h3>Курс DevOps</h3>
+          <ul>
+            <li><a href="{{ '/devops/01-linux/' | relative_url }}">Тема 1: Linux, Bash и systemd</a></li>
+            <li><a href="{{ '/devops/04-docker/' | relative_url }}">Тема 4: Docker и Compose</a></li>
+          </ul>
+        </div>
+      </div>
+      <p class="fit-pro reveal"><b>Что дальше.</b> Прикладной мониторинг: <a href="{{ '/devops/08-observability/' | relative_url }}">тема 8 курса DevOps</a> (проект «Заметки», Kubernetes, burn rate) и <a href="{{ '/load-tester/07-observability/' | relative_url }}">тема 7 курса нагрузочного тестирования</a> (мониторинг под нагрузкой и разбор инцидента).</p>
+    </div>
+  </section>
+
+  <!-- ============ Стенд «Магазин» ============ -->
+  <section class="band" id="shop" aria-labelledby="shop-h">
+    <div class="wrap">
+      <p class="kick reveal">Стенд</p>
+      <h2 id="shop-h" class="h2 reveal">Учебный магазин «Магазин»</h2>
+      <p class="lead2 reveal">Своего стенда у курса нет: практика идёт на магазине из курса нагрузочного тестирования. В нём уже есть Prometheus, Grafana, Alertmanager, Loki и Tempo, а внутри заложены поломки, которые надо заметить по приборам. Нагрузку и проверки давай только на свой локальный стенд.</p>
+      <p class="reveal">Поднять стенд:</p>
+      <pre class="reveal"><code>git clone https://github.com/distinguished-sre/learning.git ~/learning
+cd ~/learning/load-tester/project/shop
+cp .env.example .env
+docker compose --profile monitoring up -d --build --wait</code></pre>
+      <p class="reveal">Prometheus откроется на <code>localhost:9090</code>, Grafana на <code>localhost:3000</code>, магазин на <code>localhost:8000/docs</code>. Свои запросы, дашборды и правила ты складываешь в репозиторий <code>~/monitoring-lab</code>, его заводит урок 1.1.</p>
+    </div>
+  </section>
+
+  <!-- ============ Программа ============ -->
+  <section class="band band-alt" id="path" aria-labelledby="path-h">
+    <div class="wrap">
+      <p class="kick reveal">Программа</p>
+      <h2 id="path-h" class="h2 reveal">{{ course.topics.size }} темы, {{ total }} уроков</h2>
+      <p class="lead2 reveal">Каждый урок опирается только на пройденное, поэтому идти лучше по порядку. Открой тему, чтобы увидеть уроки.</p>
+      <ol class="stages">
+        {%- for t in course.topics -%}
+          {%- assign sids = "" -%}
+          {%- for l in t.lessons -%}{%- capture sids %}{{ sids }}{{ l.id }} {% endcapture -%}{%- endfor %}
+        <li class="stage reveal" style="--d:{{ forloop.index0 }}">
+          <details>
+            <summary>
+              <span class="st-n">{{ t.n }}</span>
+              <span class="st-main"><b>{{ t.title | escape }}</b><span>{{ t.subtitle | escape }}</span></span>
+              <span class="st-meta"><span>{{ t.lessons.size }} ур. · {{ t.time }}</span><span class="st-done" data-stage-ids="{{ sids | strip }}" hidden></span></span>
+              <span class="st-chev" aria-hidden="true"></span>
+            </summary>
+            <ul class="st-topics">
+              {%- for l in t.lessons %}
+              <li><a href="{{ cbase | append: '/' | append: t.dir | append: '/' | append: l.slug | append: '.html' | relative_url }}"><span class="tn">Урок {{ l.id }}</span><b>{{ l.title | escape }}</b><span class="tm">{{ l.time }}</span></a></li>
+              {%- endfor %}
+            </ul>
+          </details>
+        </li>
+        {%- endfor %}
+      </ol>
+      <p class="stack reveal"><span>Инструменты курса:</span> Prometheus, PromQL, экспортёры, blackbox, Grafana, Alertmanager, Loki, Tempo</p>
+      <p class="path-more reveal"><a href="{{ cbase | append: '/interview.html' | relative_url }}">Подготовка к собеседованию</a><span aria-hidden="true">·</span><button class="linkbtn" type="button" data-open-menu>Все уроки списком</button></p>
+    </div>
+  </section>
+
+  <!-- ============ Финал ============ -->
+  <section class="final" aria-labelledby="final-h">
+    <div class="final-glow" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="final-spark reveal" aria-hidden="true">✻</div>
+      <h2 id="final-h" class="display reveal">Начни с трёх сигналов</h2>
+      <p class="lead2 reveal">Первый урок объясняет, чем мониторинг отличается от наблюдаемости, и заводит рабочую папку. Дальше каждый урок добавляет по одному инструменту.</p>
+      <p class="reveal"><a class="hbtn hbtn-primary" href="{{ first_url | relative_url }}" data-continue><span data-continue-text>Начать с урока {{ first_lesson.id }}</span> <span class="arr" aria-hidden="true">→</span></a></p>
+    </div>
+  </section>
+</div>

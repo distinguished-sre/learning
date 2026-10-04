@@ -1,4 +1,4 @@
-/* Главная курса. Без библиотек. Подключается только в layout home-load-tester.
+/* Главная курса. Без библиотек. Подключается в layouts home-load-tester и home-monitoring.
    Если анимации отключены в системе (prefers-reduced-motion), всё показывается сразу в конечном виде. */
 (function () {
   'use strict';
@@ -29,7 +29,7 @@
 
   /* ---------- прогресс: продолжить с первого непройденного урока ---------- */
   var done = {};
-  try { (JSON.parse(localStorage.getItem('lt:done') || '[]') || []).forEach(function (i) { done[i] = 1; }); } catch (e) {}
+  try { (JSON.parse(localStorage.getItem(({ monitoring: 'mon:' }[body.getAttribute('data-course')] || 'lt:') + 'done') || '[]') || []).forEach(function (i) { done[i] = 1; }); } catch (e) {}
   var lessons = $$('.nav-lesson');
   var nDone = lessons.filter(function (a) { return done[a.getAttribute('data-id')]; }).length;
   if (nDone) {
