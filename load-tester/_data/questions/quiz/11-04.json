@@ -300,7 +300,7 @@
     "a",
     "b"
    ],
-   "explain": "Новый старт сбрасывает флаги состояния. Доказательства OOM искать надо в `docker events`, метрике `container_oom_events_total` и в `RestartCount`.",
+   "explain": "Поле описывает новый запуск и может не помнить прошлое убийство. Доказательства OOM искать надо в `docker events`, метрике `container_oom_events_total` и в `RestartCount`.",
    "section": "4. Что случилось: OOM"
   },
   {
