@@ -57,7 +57,7 @@ bc --version              # нужен для health-report.sh
 # ~/sre-bootstrap/monitoring/compose.yml
 services:
   prometheus:
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.15.0
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus/rules:/etc/prometheus/rules
@@ -69,13 +69,13 @@ services:
     ports: ["9090:9090"]
 
   alertmanager:
-    image: prom/alertmanager:v0.27.0
+    image: prom/alertmanager:v0.34.1
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     ports: ["9093:9093"]
 
   grafana:
-    image: grafana/grafana:11.4.0
+    image: grafana/grafana:13.2.3
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=sre_admin
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -373,12 +373,12 @@ inhibit_rules:
 2. Протестируй через `amtool`:
 
    ```bash
-   # Установка amtool
+   # amtool лежит в том же образе, что и Alertmanager
    docker run --rm --network monitoring_default \
-     prom/alertmanager:v0.27.0 amtool \
+     --entrypoint amtool prom/alertmanager:v0.34.1 \
      --alertmanager.url=http://alertmanager:9093 \
      alert add alertname=TestCritical severity=critical job=demo-app \
-     --annotation summary="Test alert"
+     --annotation=summary="Test alert"
    ```
 
 3. Убедись что `inhibit_rules` работают: создай critical + warning алерт с одинаковым `job` лейблом — warning должен быть suppressed
@@ -1206,7 +1206,7 @@ lint-dockerfile:
 
 lint-k8s-manifests:
   stage: validate
-  image: bitnami/kubectl:1.29
+  image: alpine/k8s:1.37.1
   script:
     - kubectl --dry-run=client apply -f k8s/ 2>&1
   rules:
@@ -1247,7 +1247,7 @@ secrets-scan:
 # ──────────────── DEPLOY STAGING ────────────────
 deploy-staging:
   stage: deploy-staging
-  image: bitnami/kubectl:1.29
+  image: alpine/k8s:1.37.1
   environment:
     name: staging
     url: https://staging.example.com
@@ -1274,7 +1274,7 @@ integration-tests:
 # ──────────────── DEPLOY PRODUCTION ────────────────
 deploy-production:
   stage: deploy-production
-  image: bitnami/kubectl:1.29
+  image: alpine/k8s:1.37.1
   environment:
     name: production
     url: https://app.example.com
@@ -1290,7 +1290,7 @@ deploy-production:
 
 rollback-production:
   stage: deploy-production
-  image: bitnami/kubectl:1.29
+  image: alpine/k8s:1.37.1
   before_script:
     - mkdir -p ~/.kube
     - echo "$KUBECONFIG_PROD" | base64 -d > ~/.kube/config
