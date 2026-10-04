@@ -2,7 +2,7 @@
 layout: topic
 title: "Сеть, HTTP, DNS, nginx и TLS"
 topic: 2
-time: "16 ч"
+time: "17 ч"
 redirect_from:
   - /devops/2-Сеть-Nginx-TLS-HTTP-DNS-TCP-IP.html
 ---

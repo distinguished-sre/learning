@@ -45,7 +45,7 @@ topics:
     dir: 02-network
     title: "Сеть, HTTP, DNS, nginx и TLS"
     subtitle: "Как запрос доходит до сервиса и как его безопасно опубликовать"
-    time: "16 ч"
+    time: "17 ч"
     layer: "nginx · HTTPS · DNS"
     project: "Ставим перед сервисом nginx, включаем HTTPS, разбираем путь запроса"
     lessons:
