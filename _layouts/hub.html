@@ -80,6 +80,10 @@ layout: default
         {%- assign ax = a.text | default: a.lead | default: a.what | default: '' -%}
         {%- assign as_text = a.start.text | default: '' -%}
         {%- assign as_href = a.start.href | default: '' -%}
+        {%- assign as2_text = a.start2.text | default: '' -%}
+        {%- assign as2_href = a.start2.href | default: '' -%}
+        {%- assign as3_text = a.start3.text | default: '' -%}
+        {%- assign as3_href = a.start3.href | default: '' -%}
         <li class="aud-item">
           {%- if at != '' %}
           <h3>{{ at }}</h3>
@@ -88,7 +92,15 @@ layout: default
           <p>{{ a }}</p>
           {%- endif %}
           {%- if as_text != '' and as_href != '' %}
-          <a class="aud-start" href="{{ as_href | relative_url }}">{{ as_text }} <span class="arr" aria-hidden="true">→</span></a>
+          <div class="aud-links">
+            <a class="aud-start" href="{{ as_href | relative_url }}">{{ as_text }} <span class="arr" aria-hidden="true">→</span></a>
+            {%- if as2_text != '' and as2_href != '' %}
+            <a class="aud-start" href="{{ as2_href | relative_url }}">{{ as2_text }} <span class="arr" aria-hidden="true">→</span></a>
+            {%- endif %}
+            {%- if as3_text != '' and as3_href != '' %}
+            <a class="aud-start" href="{{ as3_href | relative_url }}">{{ as3_text }} <span class="arr" aria-hidden="true">→</span></a>
+            {%- endif %}
+          </div>
           {%- endif %}
         </li>
         {%- endfor %}
@@ -123,54 +135,64 @@ layout: default
         {%- assign c_for = c.for_whom | default: '' -%}
         {%- assign c_hint = c.start_hint | default: '' -%}
         <li class="hub-card" data-course="{{ c.key }}" id="course-{{ c.key }}">
-          <div class="hub-card-head">
-            <p class="kick">{{ c.kick | default: 'Курс' }}</p>
-            <h3><a class="hub-card-title" href="{{ cbase | relative_url }}">{{ c.name | default: course.title }}</a></h3>
-            {%- if c_tagline != '' %}
-            <p class="hub-tagline">{{ c_tagline }}</p>
+          <div class="hub-card-intro">
+            <div class="hub-card-head">
+              <p class="kick">{{ c.kick | default: 'Курс' }}</p>
+              <h3><a class="hub-card-title" href="{{ cbase | relative_url }}">{{ c.name | default: course.title }}</a></h3>
+              {%- if c_tagline != '' %}
+              <p class="hub-tagline">{{ c_tagline }}</p>
+              {%- endif %}
+            </div>
+            {%- if c_text != '' %}
+            <p class="hub-text">{{ c_text }}</p>
+            {%- endif %}
+            {%- if c_for != '' %}
+            <p class="hub-for"><span class="hub-lbl">Для кого</span>{{ c_for }}</p>
             {%- endif %}
           </div>
-          {%- if c_text != '' %}
-          <p class="hub-text">{{ c_text }}</p>
-          {%- endif %}
-          {%- if c_for != '' %}
-          <p class="hub-for"><span class="hub-lbl">Для кого</span>{{ c_for }}</p>
-          {%- endif %}
-          {%- if c.outcomes.size > 0 %}
+          <dl class="hub-stats">
+            {%- if course.topics.size > 0 %}
+            <div><dt>тем</dt><dd>{{ course.topics.size }}</dd></div>
+            <div><dt>уроков</dt><dd>{{ n_lessons }}</dd></div>
+            <div><dt>часов</dt><dd>≈{{ n_hours | round }}</dd></div>
+            {%- endif %}
+          </dl>
+          <div class="hub-act">
+            <p class="hub-progress" data-hub-progress="{{ c.key }}" data-total="{{ n_lessons }}" hidden></p>
+            <div class="hub-card-cta">
+              <a class="hbtn hbtn-primary" href="{{ cbase | relative_url }}" data-hub-open><span>Открыть курс</span> <span class="arr" aria-hidden="true">→</span></a>
+              {%- if first_lesson %}
+              <a class="hbtn hbtn-ghost" href="{{ first_url | relative_url }}">Первый урок <span class="arr" aria-hidden="true">→</span></a>
+              {%- endif %}
+            </div>
+          </div>
+          <div class="hub-hint-box">
+            {%- if c_hint != '' %}
+            <p class="hub-hint">{{ c_hint }}</p>
+            {%- endif %}
+          </div>
           <div class="hub-out">
+            {%- if c.outcomes.size > 0 %}
             <p class="hub-lbl">{{ c.outcomes_title | default: 'После курса ты умеешь' }}</p>
             <ul class="hub-outcomes">
               {%- for o in c.outcomes %}
               <li>{{ o }}</li>
               {%- endfor %}
             </ul>
-          </div>
-          {%- endif %}
-          {%- if course.topics.size > 0 %}
-          <dl class="hub-stats">
-            <div><dt>тем</dt><dd>{{ course.topics.size }}</dd></div>
-            <div><dt>уроков</dt><dd>{{ n_lessons }}</dd></div>
-            <div><dt>часов</dt><dd>≈{{ n_hours | round }}</dd></div>
-          </dl>
-          <details class="hub-topics">
-            <summary><span>Программа курса</span><span class="hub-chev" aria-hidden="true"></span></summary>
-            <ol class="hub-topic-list">
-              {%- for t in course.topics %}
-              <li><a href="{{ cbase | append: t.dir | append: '/' | relative_url }}"><span class="hub-topic-n">{{ t.n | default: forloop.index }}</span><span class="hub-topic-t">{{ t.title }}</span><span class="hub-topic-m">{{ t.lessons.size }} ур. · {{ t.time | replace: '.', ',' }}</span></a></li>
-              {%- endfor %}
-            </ol>
-          </details>
-          {%- endif %}
-          <p class="hub-progress" data-hub-progress="{{ c.key }}" data-total="{{ n_lessons }}" hidden></p>
-          <div class="hub-card-cta">
-            <a class="hbtn hbtn-primary" href="{{ cbase | relative_url }}" data-hub-open><span>Открыть курс</span> <span class="arr" aria-hidden="true">→</span></a>
-            {%- if first_lesson %}
-            <a class="hbtn hbtn-ghost" href="{{ first_url | relative_url }}">Первый урок <span class="arr" aria-hidden="true">→</span></a>
             {%- endif %}
           </div>
-          {%- if c_hint != '' %}
-          <p class="hub-hint">{{ c_hint }}</p>
-          {%- endif %}
+          <div class="hub-prog">
+            {%- if course.topics.size > 0 %}
+            <details class="hub-topics">
+              <summary><span>Программа курса</span><span class="hub-chev" aria-hidden="true"></span></summary>
+              <ol class="hub-topic-list">
+                {%- for t in course.topics %}
+                <li><a href="{{ cbase | append: t.dir | append: '/' | relative_url }}"><span class="hub-topic-n">{{ t.n | default: forloop.index }}</span><span class="hub-topic-t">{{ t.title }}</span><span class="hub-topic-m">{{ t.lessons.size }} ур. · {{ t.time | replace: '.', ',' }}</span></a></li>
+                {%- endfor %}
+              </ol>
+            </details>
+            {%- endif %}
+          </div>
         </li>
         {%- endfor %}
       </ul>
@@ -206,13 +228,32 @@ layout: default
   {%- endif %}
 
   {%- comment -%} ============ Как устроен урок ============ {%- endcomment %}
-  {%- if hub.lesson.items.size > 0 or lesson_lead != '' %}
+  {%- if hub.lesson.items.size > 0 or lesson_lead != '' or hub.lesson.sample.steps.size > 0 %}
   <section class="band band-alt" id="lesson" aria-labelledby="lesson-h">
     <div class="wrap">
       <p class="kick">{{ hub.lesson.kick | default: 'Внутри урока' }}</p>
       <h2 id="lesson-h" class="h2">{{ hub.lesson.title | default: 'Как устроен урок' }}</h2>
       {%- if lesson_lead != '' %}
       <p class="lead2">{{ lesson_lead }}</p>
+      {%- endif %}
+      {%- assign smp = hub.lesson.sample -%}
+      {%- if smp.steps.size > 0 %}
+      <figure class="sample">
+        <figcaption class="sample-head">
+          <span class="sample-tag">{{ smp.kick | default: 'Так выглядит урок' }}</span>
+          <span class="sample-title">{{ smp.title }}</span>
+        </figcaption>
+        <div class="sample-body">
+          {%- for st in smp.steps %}
+          <div class="sample-step">
+            <p class="sample-lbl">{{ st.label }}</p>
+            {%- if st.text %}<div class="sample-text">{{ st.text | markdownify }}</div>{% endif %}
+            {%- if st.code %}<pre class="sample-code"><code>{{ st.code | escape }}</code></pre>{% endif %}
+          </div>
+          {%- endfor %}
+        </div>
+        <p class="sample-foot"><a class="aud-start" href="{{ smp.href | relative_url }}">{{ smp.link_text | default: 'Открыть урок целиком' }} <span class="arr" aria-hidden="true">→</span></a></p>
+      </figure>
       {%- endif %}
       {%- if hub.lesson.items.size > 0 %}
       <ul class="steps">
