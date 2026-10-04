@@ -82,7 +82,7 @@
       {{ content }}
       <footer class="footer">
         <span>✻ {{ site.data.courses[page.course].title | default: site.title | escape }}</span>
-        <span class="dim">Автор: Евгений Быков · <a href="{{ site.repo_url }}">исходники на GitHub</a> · клавиши ← → между уроками, / поиск</span>
+        <span class="dim">Автор: Евгений Быков · <a href="{{ site.repo_url }}">исходники на GitHub</a>{% if page.course %} · клавиши ← → между уроками, / поиск{% endif %}</span>
       </footer>
     </main>
   </div>
