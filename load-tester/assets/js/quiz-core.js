@@ -160,9 +160,11 @@
     if (s.last && s.last.total > 0) out.last = { no: s.last.no, correct: s.last.correct, total: s.last.total, pass: !!s.last.pass };
     var c = s.current;
     if (c && Array.isArray(c.qids)) {
-      if (c.finished && c.result) {
+      if (c.finished) {
+        /* битую завершённую попытку не восстанавливаем: current остаётся null, начнётся новая */
+        if (!validResult(c.result)) return out;
         /* завершённая попытка заморожена: счёт сохраняется, разбор показываем по оставшимся вопросам */
-        var per = (c.result.per || []).filter(function (p) { return qs[p.id]; });
+        var per = c.result.per.filter(function (p) { return qs[p.id]; });
         out.current = {
           no: c.no, qids: c.qids.filter(function (id) { return qs[id]; }), order: {}, answers: {},
           finished: true, ack: !!c.ack,
@@ -187,6 +189,16 @@
     }
     return out;
   }
+
+  /* Запись могла испортиться (ручная правка, старая версия скрипта): JSON целый, а структура нет. */
+  function validResult(r) {
+    return !!r && typeof r === 'object' && isCount(r.correct) && isCount(r.total) && r.correct <= r.total &&
+      Array.isArray(r.per) && r.per.every(function (p) {
+        return !!p && typeof p === 'object' && typeof p.id === 'string' && Array.isArray(p.chosen);
+      });
+  }
+
+  function isCount(n) { return typeof n === 'number' && n >= 0 && Math.floor(n) === n; }
 
   function fixOrder(order, q, rand) {
     var ids = q.options.map(function (o) { return o.id; });
@@ -215,9 +227,11 @@
         if (Object.prototype.hasOwnProperty.call(mem, k)) return mem[k];
         try { return localStorage.getItem(k); } catch (e) { return null; }
       },
+      /* копию в памяти держим, только пока localStorage не принимает запись: иначе get читал бы
+         свою старую копию поверх того, что записала другая вкладка */
       set: function (k, v) {
         mem[k] = v;
-        try { localStorage.setItem(k, v); } catch (e) {}
+        try { localStorage.setItem(k, v); delete mem[k]; } catch (e) {}
       }
     };
   }
@@ -225,6 +239,6 @@
   return {
     VERSION: VERSION, shuffle: shuffle, grade: grade, pct: pct, fmtPct: fmtPct, nextBlock: nextBlock,
     emptyState: emptyState, newAttempt: newAttempt, setAnswer: setAnswer, finish: finish, acknowledge: acknowledge,
-    navWarning: navWarning, restore: restore, slug: slug, storageKey: storageKey, makeStore: makeStore, sameSet: sameSet
+    navWarning: navWarning, restore: restore, validResult: validResult, slug: slug, storageKey: storageKey, makeStore: makeStore, sameSet: sameSet
   };
 });

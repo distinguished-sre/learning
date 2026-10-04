@@ -308,7 +308,7 @@
    "skill": "запасное значение в подстановке",
    "kind": "чтение",
    "type": "single",
-   "text": "В `compose.yaml` написано `WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}`. В `.env` строки `WEB_CONCURRENCY` нет вовсе. Сколько воркеров получит магазин?",
+   "text": "В `compose.yaml` написано `WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}`. В `.env` строки `WEB_CONCURRENCY` нет вовсе и в оболочке такая переменная не задана. Сколько воркеров получит магазин?",
    "options": [
     {
      "id": "a",
@@ -407,7 +407,7 @@
    "skill": "проверка применения настройки",
    "kind": "применение",
    "type": "multiple",
-   "text": "После правки `.env` и `docker compose up -d` ты хочешь доказать, что магазин получил `DB_POOL_MAX=20`. Какие проверки подойдут?",
+   "text": "После правки `.env` и `docker compose up -d` ты хочешь проверить, что значение `DB_POOL_MAX=20` подставилось и дошло до магазина. Какие проверки подойдут?",
    "options": [
     {
      "id": "a",
@@ -591,13 +591,13 @@
     {
      "id": "d",
      "text": "`compose.yaml` повреждён, и Compose пропустил часть сервисов",
-     "why": "Файл цел. `docker compose config --services` перечислит все сервисы, а `up` запустит выбранные профили."
+     "why": "Файл цел. `docker compose --profile monitoring config --services` перечислит и сервисы профиля, а `up` запустит выбранные профили."
     }
    ],
    "correct": [
     "a"
    ],
-   "explain": "Отключённый профиль не создаёт контейнеры. Для проверки есть `docker compose config --services`.",
+   "explain": "Отключённый профиль не создаёт контейнеры. Для проверки есть `docker compose --profile monitoring config --services`.",
    "section": "`profiles`: часть стенда, которая включается отдельно"
   },
   {
@@ -818,8 +818,8 @@
     },
     {
      "id": "c",
-     "text": "`docker compose ps -a`: он расскажет о неверном ключе `cpuz`",
-     "why": "Команда `ps` показывает контейнеры, а ошибка возникла до их создания."
+     "text": "`docker ps -a`: он расскажет о неверном ключе `cpuz`",
+     "why": "Команда `docker ps` показывает контейнеры и файл `compose.yaml` не читает, а ошибка возникла до их создания."
     },
     {
      "id": "d",

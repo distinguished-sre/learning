@@ -26,7 +26,7 @@
     var c = d.cur;
     if (c && (typeof c !== 'object' || !Array.isArray(c.qids) || !c.order || typeof c.order !== 'object' ||
         !c.answers || typeof c.answers !== 'object' || typeof c.topic !== 'string')) d.cur = null;
-    if (c && d.cur && c.finished && !(c.result && Array.isArray(c.result.per))) d.cur = null;
+    if (c && d.cur && c.finished && !Q.validResult(c.result)) d.cur = null;
     if (['open', 'study', 'check'].indexOf(d.mode) === -1) d.mode = 'open';
     if (['random', 'lesson'].indexOf(d.order) === -1) d.order = 'random';
     if (!(d.size >= 5 && d.size <= 10) || d.size % 1) d.size = 5;
@@ -399,6 +399,7 @@
     return m;
   }
 
+  /* focus: true ставит фокус на первый вариант, 'result' на итог проверки */
   function renderCheck(focus) {
     var my = ++token;
     list.textContent = '';
@@ -434,9 +435,8 @@
         cur.finished = true;
         cur.result = { correct: g.correct, total: g.total, pass: g.pass, per: g.per };
         save();
-        renderCheck();
-        var box = list.querySelector('.qz-result');
-        if (box) { box.scrollIntoView({ block: 'center' }); box.focus({ preventScroll: true }); }
+        /* отрисовка асинхронная: фокус на итог ставит сама renderCheck, когда итог уже в DOM */
+        renderCheck('result');
       });
       cur.qids.forEach(function (id, i) {
         var it = byId[id];
@@ -472,7 +472,10 @@
       foot.appendChild(again);
       form.appendChild(foot);
       list.appendChild(form);
-      if (focus) { var f = form.querySelector('input'); if (f) f.focus(); }
+      if (focus === 'result') {
+        var box = list.querySelector('.qz-result');
+        if (box) { box.scrollIntoView({ block: 'center' }); box.focus({ preventScroll: true }); }
+      } else if (focus) { var f = form.querySelector('input'); if (f) f.focus(); }
     }).catch(function () { count.textContent = 'Не удалось загрузить вопросы. Проверь соединение и обнови страницу.'; });
   }
 

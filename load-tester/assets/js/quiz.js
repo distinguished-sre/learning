@@ -52,11 +52,13 @@
     form.addEventListener('submit', function (e) { e.preventDefault(); check(); });
     c.qids.forEach(function (qid, i) {
       var per = c.finished ? (c.result.per.filter(function (p) { return p.id === qid; })[0] || { ok: false, chosen: c.answers[qid] || [] }) : null;
-      form.appendChild(UI.card(qs[qid], {
+      var card = UI.card(qs[qid], {
         n: i + 1, total: c.qids.length, order: c.order[qid], chosen: c.answers[qid] || [], per: per,
         refHref: '#' + Q.slug(qs[qid].section),
         onChange: c.finished ? null : function (ids) { onChange(qid, ids); }
-      }));
+      });
+      card.setAttribute('data-qid', qid);
+      form.appendChild(card);
     });
 
     var foot = el('div', 'qz-foot');
@@ -81,14 +83,41 @@
   }
 
   function onChange(qid, ids) {
+    pull();
     state = Q.setAnswer(state, qid, ids);
     save();
+    syncAnswers();
+  }
+
+  /* Та же попытка открыта в двух вкладках: перед записью берём ответы, которые сохранила другая,
+     иначе своя старая копия затрёт их. */
+  function pull() {
+    var fresh = Q.restore(store.get(KEY), bank);
+    if (sameAttempt(state, fresh)) state = fresh;
+  }
+
+  function sameAttempt(a, b) {
+    var x = a.current, y = b.current;
+    return !!x && !!y && x.no === y.no && !!x.finished === !!y.finished && x.qids.join() === y.qids.join();
+  }
+
+  /* Отметки и счётчик по state без перерисовки: фокус и прокрутка остаются на месте. */
+  function syncAnswers() {
+    var c = state.current;
+    if (c.finished) return;
+    Array.prototype.forEach.call(app.querySelectorAll('.qz-card[data-qid]'), function (fs) {
+      var chosen = c.answers[fs.getAttribute('data-qid')] || [];
+      Array.prototype.forEach.call(fs.querySelectorAll('input'), function (inp) {
+        inp.checked = chosen.indexOf(inp.value) !== -1;
+      });
+    });
     var cnt = app.querySelector('.qz-count');
-    if (cnt) cnt.textContent = UI.countText(answeredCount(state.current), state.current.qids.length);
+    if (cnt) cnt.textContent = UI.countText(answeredCount(c), c.qids.length);
   }
 
   function check() {
     if (state.current.finished) return;
+    pull();
     state = Q.finish(state, bank);
     save();
     render();
@@ -193,9 +222,8 @@
   window.addEventListener('storage', function (e) {
     if (e.key !== KEY || !e.newValue) return;
     var next = Q.restore(e.newValue, bank);
-    /* ответы в той же попытке не перерисовываем: иначе в этой вкладке теряется фокус */
-    var a = state.current, b = next.current;
-    if (a && b && a.no === b.no && !!a.finished === !!b.finished && !!a.ack === !!b.ack) return;
+    /* ответы в той же попытке переносим без перерисовки: иначе в этой вкладке теряется фокус */
+    if (sameAttempt(state, next)) { state = next; syncAnswers(); return; }
     state = next;
     if (!state.current) state = Q.newAttempt(state, bank);
     render();

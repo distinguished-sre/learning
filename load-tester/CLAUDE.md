@@ -17,6 +17,8 @@ python3 tools/audit.py [урок]
 cd project/shop && cp .env.example .env && docker compose --profile monitoring up -d --build --wait
 # база вопросов: структура, покрытие, дубли; логика тестов
 python3 tools/check_questions.py [--stats] [--only 05-03] && node --test tools/quiz.test.mjs
+# тесты в настоящем браузере по собранному сайту: две вкладки, битая запись, фокус (в CI quiz.yml)
+npm install --no-save playwright && npx playwright install chromium && SITE_DIR=_site node --test tools/browser.test.mjs
 ```
 
 Деплой: `.github/workflows/deploy.yml` собирает Jekyll и публикует при push в `main`. `stand.yml` поднимает стенд на ubuntu-latest и гоняет эталонные тесты из `project/shop/examples/` при изменениях в `project/shop/`. `quiz.yml` проверяет базу вопросов и логику тестов, собирает сайт, как Pages, и сверяет собранные страницы (`check_questions.py --site _site`: банк в уроке, якоря разделов, JSON тем, ссылки ответов); собранный сайт лежит артефактом `site`.

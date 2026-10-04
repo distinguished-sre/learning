@@ -39,7 +39,7 @@
     "junior"
    ],
    "q": "Как узнать, что контейнер упирается в лимит процессора?",
-   "answer": "Смотреть `docker stats` (близко к 100% от лимита) и метрику throttling: `rate(container_cpu_cfs_throttled_periods_total[30s]) / rate(container_cpu_cfs_periods_total[30s])`. Высокая доля значит, что контейнер упирался в квоту.\n\n**Что хотят услышать:** throttling, а не только средняя загрузка.\n\n**Красный флаг:** смотрят загрузку всей машины."
+   "answer": "Смотреть `docker stats` (близко к `cpus` × 100%: для одного ядра около 100%) и метрику throttling: `rate(container_cpu_cfs_throttled_periods_total[30s]) / rate(container_cpu_cfs_periods_total[30s])`. Высокая доля значит, что контейнер упирался в квоту.\n\n**Что хотят услышать:** throttling, а не только средняя загрузка.\n\n**Красный флаг:** смотрят загрузку всей машины."
   },
   {
    "id": "o11-02-05",

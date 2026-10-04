@@ -14,6 +14,7 @@ on:
       - 'assets/questions/**'
       - 'tools/check_questions.py'
       - 'tools/quiz.test.mjs'
+      - 'tools/browser.test.mjs'
       - '.github/workflows/quiz.yml'
   pull_request:
     paths:
@@ -28,6 +29,7 @@ on:
       - 'assets/questions/**'
       - 'tools/check_questions.py'
       - 'tools/quiz.test.mjs'
+      - 'tools/browser.test.mjs'
       - '.github/workflows/quiz.yml'
   workflow_dispatch:
 
@@ -62,6 +64,12 @@ jobs:
       - name: "Собранный сайт: банки в уроках, якоря, JSON тем, ссылки"
         if: ${{ !cancelled() }}
         run: python tools/check_questions.py --site _site
+      - name: "Браузер: две вкладки, битая запись, фокус на итоге"
+        if: ${{ !cancelled() }}
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+          SITE_DIR=_site node --test tools/browser.test.mjs
       - name: Собранный сайт для ручной проверки в браузере
         if: always()
         uses: actions/upload-artifact@v4

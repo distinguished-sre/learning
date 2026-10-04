@@ -174,6 +174,32 @@ test('завершённая попытка заморожена', () => {
   assert.equal(r.current.result.total, 5);
 });
 
+test('битая завершённая попытка: без падения, начинается новая, прогресс цел', () => {
+  const bank = makeBank(25);
+  let s = Q.newAttempt(Q.emptyState(), bank, rng(4));
+  s = Q.finish(s, bank);
+  s.passedEver = true;
+  const broken = [
+    { correct: 0, total: 5, pass: false, per: {} },
+    { correct: 0, total: 5, pass: false, per: [null] },
+    { correct: 0, total: 5, pass: false, per: [{ id: 'q01' }] },
+    { correct: '0', total: 5, pass: false, per: [] },
+    { correct: 7, total: 5, pass: true, per: [] },
+    null
+  ];
+  for (const result of broken) {
+    const raw = JSON.parse(JSON.stringify(s));
+    raw.current.result = result;
+    const r = Q.restore(JSON.stringify(raw), bank);
+    assert.equal(r.current, null, JSON.stringify(result));
+    assert.equal(r.passedEver, true);
+    assert.deepEqual(r.used, s.used);
+    const n = Q.newAttempt(r, bank, rng(5));
+    assert.equal(n.current.finished, false);
+    assert.equal(n.current.qids.length, 5);
+  }
+});
+
 test('обновление банка: удалённые ID не ломают загрузку, новые не сбрасывают прогресс', () => {
   const bank = makeBank(30);
   let s = Q.emptyState();
@@ -250,6 +276,25 @@ test('хранилище без localStorage работает в рамках в
   st.set('lt-quiz:v1:x', '1');
   assert.equal(st.get('lt-quiz:v1:x'), '1');
   assert.equal(st.get('lt-quiz:v1:y'), null);
+});
+
+test('хранилище: вкладка читает то, что записала другая, а не свою старую копию', () => {
+  const data = {};
+  const fake = { getItem: k => (k in data ? data[k] : null), setItem: (k, v) => { data[k] = String(v); } };
+  const had = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', { value: fake, configurable: true, writable: true });
+  try {
+    const tab1 = Q.makeStore(), tab2 = Q.makeStore();
+    tab1.set('lt-quiz:v1:x', 'старое');
+    tab2.set('lt-quiz:v1:x', 'новое');
+    assert.equal(tab1.get('lt-quiz:v1:x'), 'новое');
+    // запись не принята (переполнено): вкладка помнит своё в памяти
+    fake.setItem = () => { throw new Error('QuotaExceededError'); };
+    tab1.set('lt-quiz:v1:x', 'только в памяти');
+    assert.equal(tab1.get('lt-quiz:v1:x'), 'только в памяти');
+  } finally {
+    if (had) Object.defineProperty(globalThis, 'localStorage', had); else delete globalThis.localStorage;
+  }
 });
 
 test('slug совпадает с якорями kramdown GFM', () => {
