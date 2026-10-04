@@ -34,7 +34,7 @@ groups:
         annotations:
           summary: Бюджет ошибок сгорает в 14,4 раза быстрее нормы
           description: Доля 5xx выше 14,4 процента и за час, и за 5 минут. При таком темпе месячный бюджет кончится меньше чем за 2 суток.
-          runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html
+          runbook_url: https://distinguished-sre.github.io/learning/load-tester/08-perf-theory/04-load-profile-slo.html
       # Медленное сгорание: в 6 раз быстрее нормы (порог 6 * 1% = 6% ошибок). Окна 6h и 30m.
       - alert: ShopErrorBudgetBurnSlow
         expr: sli:http_error_ratio:rate6h > (6 * 0.01) and sli:http_error_ratio:rate30m > (6 * 0.01)
@@ -43,7 +43,7 @@ groups:
         annotations:
           summary: Бюджет ошибок сгорает в 6 раз быстрее нормы
           description: Доля 5xx выше 6 процентов и за 6 часов, и за 30 минут. Месячный бюджет кончится за 5 суток.
-          runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html
+          runbook_url: https://distinguished-sre.github.io/learning/load-tester/08-perf-theory/04-load-profile-slo.html
       # То же для задержки каталога: бюджет 5%, пороги 14,4 * 5% = 72% и 6 * 5% = 30% медленных запросов.
       - alert: ShopLatencyBudgetBurnFast
         expr: sli:catalog_slow_ratio:rate1h > (14.4 * 0.05) and sli:catalog_slow_ratio:rate5m > (14.4 * 0.05)
@@ -52,7 +52,7 @@ groups:
         annotations:
           summary: Бюджет по задержке каталога сгорает в 14,4 раза быстрее нормы
           description: Больше 72 процентов запросов каталога медленнее 300 мс и за час, и за 5 минут.
-          runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html
+          runbook_url: https://distinguished-sre.github.io/learning/load-tester/08-perf-theory/04-load-profile-slo.html
       - alert: ShopLatencyBudgetBurnSlow
         expr: sli:catalog_slow_ratio:rate6h > (6 * 0.05) and sli:catalog_slow_ratio:rate30m > (6 * 0.05)
         for: 15m
@@ -60,4 +60,4 @@ groups:
         annotations:
           summary: Бюджет по задержке каталога сгорает в 6 раз быстрее нормы
           description: Больше 30 процентов запросов каталога медленнее 300 мс и за 6 часов, и за 30 минут.
-          runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html
+          runbook_url: https://distinguished-sre.github.io/learning/load-tester/08-perf-theory/04-load-profile-slo.html
