@@ -1,0 +1,8 @@
+---
+layout: null
+topic: 4
+course: devops
+permalink: /assets/questions/devops/topic-04.json
+sitemap: false
+---
+{%- include prep-data.json topic=page.topic -%}

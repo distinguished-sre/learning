@@ -16,8 +16,9 @@
     <a class="nav-home{% if page.url == '/load-tester/schedule.html' %} current{% endif %}" href="{{ '/load-tester/schedule.html' | relative_url }}">Расписание</a>
     <a class="nav-home{% if page.url == '/load-tester/ai.html' %} current{% endif %}" href="{{ '/load-tester/ai.html' | relative_url }}">ИИ-помощник</a>
     <a class="nav-home{% if page.url == '/load-tester/interview.html' %} current{% endif %}" href="{{ '/load-tester/interview.html' | relative_url }}">Подготовка к собеседованию</a>
-    {%- elsif page.course == 'monitoring' %}
-    <a class="nav-home{% if page.url == '/monitoring/interview.html' %} current{% endif %}" href="{{ '/monitoring/interview.html' | relative_url }}">Подготовка к собеседованию</a>
+    {%- elsif site.data.questions[page.course] %}
+    {%- capture prep_url %}{{ cbase }}/interview.html{% endcapture %}
+    <a class="nav-home{% if page.url == prep_url %} current{% endif %}" href="{{ prep_url | relative_url }}">Подготовка к собеседованию</a>
     {%- endif %}
     {%- for t in course.topics -%}
       {%- capture tpath %}{{ cbase }}/{{ t.dir }}/{% endcapture -%}
