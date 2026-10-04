@@ -73,6 +73,8 @@ kbd {
   backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
   font-family: var(--mono);
 }
+/* шапка всегда на экране: без этого фокус на её кнопке (Tab) из-за scroll-padding-top прокручивает страницу вверх */
+.topbar :is(a, button, input) { scroll-margin-top: calc(-1 * (var(--bar-h) + 16px)); }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; font-size: 15px; }
 .brand-mark { color: var(--accent); font-size: 22px; line-height: 1; }
 .brand .dim { font-weight: 400; }

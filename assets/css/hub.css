@@ -31,6 +31,8 @@
 .lead2 { font-size: clamp(17px, 1.6vw, 19.5px); line-height: 1.65; color: var(--muted); max-width: 64ch; margin: 0 0 40px; }
 .hub code { font: 500 .88em var(--mono); background: var(--bg-2); border: 1px solid var(--line); padding: .1em .4em; border-radius: 6px; color: var(--accent-ink); }
 .band { padding: clamp(64px, 8vw, 104px) 0; position: relative; }
+#courses { padding-top: clamp(48px, 5vw, 64px); }
+#courses .lead2 { margin-bottom: 28px; }
 .band-alt { background: var(--bg-2); }
 .band-alt code { background: var(--bg); }
 .spark { color: var(--accent); display: inline-block; }
