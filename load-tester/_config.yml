@@ -1,0 +1,88 @@
+# Сайт курса: GitHub Pages проекта https://distinguished-sre.github.io/load-tester/
+title: Курс нагрузочного тестирования от Евгения Быкова
+description: "Нагрузочное тестирование и мониторинг с нуля: Linux, Python, автотесты API, Locust, k6 и поиск узких мест на учебном интернет-магазине"
+email: jenyabykov322@yandex.ru
+github_username: distinguished-sre
+lang: ru
+url: "https://distinguished-sre.github.io"
+baseurl: "/load-tester"
+repo_url: "https://github.com/distinguished-sre/load-tester"
+logo: /assets/favicon.svg
+image: /og.jpg
+
+# Тему cayman убрали: оформление своё (_layouts, assets/css/style.scss).
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    default_lang: text
+    guess_lang: false
+
+# Все плагины из белого списка GitHub Pages.
+plugins:
+  - jekyll-relative-links
+  - jekyll-redirect-from
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Ссылки [текст](03-file.md) в уроках превращаются в .html
+relative_links:
+  enabled: true
+  collections: false
+
+# Указав exclude, мы заменяем стандартный список Jekyll целиком, поэтому
+# служебные пути перечислены. CLAUDE.md намеренно содержит Liquid-теги как
+# текст и не должен попадать на сайт. project/ и _samples: это код, а не страницы.
+exclude:
+  - README.md
+  - CLAUDE.md
+  - project/
+  - _samples/
+  - tools/
+  - "*.sh"
+  - Makefile
+  - Gemfile
+  - Gemfile.lock
+  - gemfiles
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - .sass-cache
+  - .jekyll-cache
+
+# Уроки используют lesson, обзоры тем задают topic явно.
+defaults:
+  - scope: {path: ""}
+    values: {image: /og.jpg}
+  - scope: {path: "01-linux"}
+    values: {layout: lesson}
+  - scope: {path: "02-web"}
+    values: {layout: lesson}
+  - scope: {path: "03-git"}
+    values: {layout: lesson}
+  - scope: {path: "04-python"}
+    values: {layout: lesson}
+  - scope: {path: "05-docker"}
+    values: {layout: lesson}
+  - scope: {path: "06-api-testing"}
+    values: {layout: lesson}
+  - scope: {path: "07-observability"}
+    values: {layout: lesson}
+  - scope: {path: "08-perf-theory"}
+    values: {layout: lesson}
+  - scope: {path: "09-locust"}
+    values: {layout: lesson}
+  - scope: {path: "10-k6"}
+    values: {layout: lesson}
+  - scope: {path: "11-bottlenecks"}
+    values: {layout: lesson}
+  - scope: {path: "12-process"}
+    values: {layout: lesson}
+  - scope: {path: "13-final"}
+    values: {layout: lesson}
+  - scope: {path: "schedule.md"}
+    values: {layout: page}

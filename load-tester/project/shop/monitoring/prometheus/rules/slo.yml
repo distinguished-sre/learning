@@ -1,0 +1,63 @@
+# SLO из урока 8.4:
+#   доступность: не менее 99% запросов без 5xx (бюджет ошибок 1%);
+#   задержка каталога: не менее 95% запросов быстрее 300 мс (бюджет 5%).
+# Порог 300 мс из таблицы цели урока 8.4: в гистограмме магазина есть корзина le="0.3", по ней считается доля быстрых.
+groups:
+  - name: shop-sli
+    rules:
+      # Доля ошибок (5xx) за окно. `or vector(0)`: без единой пятисотки ряда нет, а нужен ноль.
+      - record: sli:http_error_ratio:rate5m
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) or vector(0)) / sum(rate(http_requests_total[5m]))
+      - record: sli:http_error_ratio:rate30m
+        expr: (sum(rate(http_requests_total{status=~"5.."}[30m])) or vector(0)) / sum(rate(http_requests_total[30m]))
+      - record: sli:http_error_ratio:rate1h
+        expr: (sum(rate(http_requests_total{status=~"5.."}[1h])) or vector(0)) / sum(rate(http_requests_total[1h]))
+      - record: sli:http_error_ratio:rate6h
+        expr: (sum(rate(http_requests_total{status=~"5.."}[6h])) or vector(0)) / sum(rate(http_requests_total[6h]))
+      # Доля медленных запросов каталога (дольше 300 мс) за окно.
+      - record: sli:catalog_slow_ratio:rate5m
+        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.3"}[5m])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[5m]))
+      - record: sli:catalog_slow_ratio:rate30m
+        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.3"}[30m])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[30m]))
+      - record: sli:catalog_slow_ratio:rate1h
+        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.3"}[1h])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[1h]))
+      - record: sli:catalog_slow_ratio:rate6h
+        expr: 1 - sum(rate(http_request_duration_seconds_bucket{route=~"/api/(products|categories).*", le="0.3"}[6h])) / sum(rate(http_request_duration_seconds_count{route=~"/api/(products|categories).*"}[6h]))
+  - name: shop-slo-burn
+    rules:
+      # Быстрое сгорание: бюджет горит в 14,4 раза быстрее нормы (порог 14,4 * 1% = 14,4% ошибок).
+      # Окна 1h и 5m: беда настоящая (1h) и идёт прямо сейчас (5m).
+      - alert: ShopErrorBudgetBurnFast
+        expr: sli:http_error_ratio:rate1h > (14.4 * 0.01) and sli:http_error_ratio:rate5m > (14.4 * 0.01)
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Бюджет ошибок сгорает в 14,4 раза быстрее нормы
+          description: Доля 5xx выше 14,4 процента и за час, и за 5 минут. При таком темпе месячный бюджет кончится меньше чем за 2 суток.
+          runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html
+      # Медленное сгорание: в 6 раз быстрее нормы (порог 6 * 1% = 6% ошибок). Окна 6h и 30m.
+      - alert: ShopErrorBudgetBurnSlow
+        expr: sli:http_error_ratio:rate6h > (6 * 0.01) and sli:http_error_ratio:rate30m > (6 * 0.01)
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: Бюджет ошибок сгорает в 6 раз быстрее нормы
+          description: Доля 5xx выше 6 процентов и за 6 часов, и за 30 минут. Месячный бюджет кончится за 5 суток.
+          runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html
+      # То же для задержки каталога: бюджет 5%, пороги 14,4 * 5% = 72% и 6 * 5% = 30% медленных запросов.
+      - alert: ShopLatencyBudgetBurnFast
+        expr: sli:catalog_slow_ratio:rate1h > (14.4 * 0.05) and sli:catalog_slow_ratio:rate5m > (14.4 * 0.05)
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Бюджет по задержке каталога сгорает в 14,4 раза быстрее нормы
+          description: Больше 72 процентов запросов каталога медленнее 300 мс и за час, и за 5 минут.
+          runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html
+      - alert: ShopLatencyBudgetBurnSlow
+        expr: sli:catalog_slow_ratio:rate6h > (6 * 0.05) and sli:catalog_slow_ratio:rate30m > (6 * 0.05)
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: Бюджет по задержке каталога сгорает в 6 раз быстрее нормы
+          description: Больше 30 процентов запросов каталога медленнее 300 мс и за 6 часов, и за 30 минут.
+          runbook_url: https://distinguished-sre.github.io/load-tester/08-perf-theory/04-load-profile-slo.html

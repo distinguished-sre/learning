@@ -1,0 +1,79 @@
+name: Вопросы и тесты
+
+on:
+  push:
+    paths:
+      - '_data/**'
+      - '[0-9][0-9]-*/*.md'
+      - 'interview.md'
+      - '_includes/**'
+      - '_layouts/**'
+      - 'assets/js/quiz*.js'
+      - 'assets/js/prep.js'
+      - 'assets/js/site.js'
+      - 'assets/questions/**'
+      - 'tools/check_questions.py'
+      - 'tools/quiz.test.mjs'
+      - 'tools/browser.test.mjs'
+      - '.github/workflows/quiz.yml'
+  pull_request:
+    paths:
+      - '_data/**'
+      - '[0-9][0-9]-*/*.md'
+      - 'interview.md'
+      - '_includes/**'
+      - '_layouts/**'
+      - 'assets/js/quiz*.js'
+      - 'assets/js/prep.js'
+      - 'assets/js/site.js'
+      - 'assets/questions/**'
+      - 'tools/check_questions.py'
+      - 'tools/quiz.test.mjs'
+      - 'tools/browser.test.mjs'
+      - '.github/workflows/quiz.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quiz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Банки вопросов
+        run: python tools/check_questions.py --stats
+      - name: Логика тестов
+        if: ${{ !cancelled() }}
+        run: node --test tools/quiz.test.mjs
+      - name: Сборка Jekyll, как на GitHub Pages
+        if: ${{ !cancelled() }}
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+      - name: "Собранный сайт: банки в уроках, якоря, JSON тем, ссылки"
+        if: ${{ !cancelled() }}
+        run: python tools/check_questions.py --site _site
+      - name: "Браузер: две вкладки, битая запись, фокус на итоге"
+        if: ${{ !cancelled() }}
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+          SITE_DIR=_site node --test tools/browser.test.mjs
+      - name: Собранный сайт для ручной проверки в браузере
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: _site
+          retention-days: 3

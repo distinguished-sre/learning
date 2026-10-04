@@ -1,0 +1,129 @@
+name: Учебный стенд Магазин
+
+on:
+  push:
+    paths:
+      - 'project/shop/**'
+      - '.github/workflows/stand.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: project/shop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Настройки и запуск всего стенда
+        run: |
+          cp .env.example .env
+          docker compose --profile monitoring config --quiet
+          docker compose --profile monitoring up -d --build --wait --wait-timeout 300
+          curl --fail --silent http://localhost:8000/readyz | jq -e '.status == "ready"'
+      - name: Установка инструментов проверки
+        run: |
+          python -m pip install -r examples/api-tests/requirements.txt locust==2.46.6
+          python -m py_compile shop/app/*.py payment/main.py payment/telemetry.py examples/api-tests/*.py examples/locust/locustfile.py
+          cp examples/k6/shop.js "$RUNNER_TEMP/shop.mjs" && node --check "$RUNNER_TEMP/shop.mjs"
+          # Порты стенда привязаны к 127.0.0.1, PostgreSQL и Redis на хост не опубликованы.
+          if docker ps --format '{{.Ports}}' | grep -E '0\.0\.0\.0|\[::\]|:(5432|6379)->'; then echo 'Порт стенда открыт не только на 127.0.0.1'; exit 1; fi
+      - name: Эталонные API-тесты
+        run: python -m pytest examples/api-tests -v
+      - name: Locust — 20 пользователей на минуту
+        run: |
+          mkdir -p results
+          locust -f examples/locust/locustfile.py --headless --host http://localhost:8000 -u 20 -r 5 -t 60s --csv results/locust
+          python - <<'PY'
+          import csv
+          with open('results/locust_stats.csv', newline='') as stream:
+              total = next(row for row in csv.DictReader(stream) if row['Name'] == 'Aggregated')
+          count, failures = int(total['Request Count']), int(total['Failure Count'])
+          assert count > 0, 'Locust не отправил запросов'
+          assert failures / count < 0.01, f'Ошибки Locust: {failures}/{count}'
+          print(f'Locust: {count} запросов, {failures} ошибок')
+          PY
+      - name: k6 и remote write в Prometheus
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/examples/k6:/scripts:ro" \
+            -e BASE_URL=http://localhost:8000 -e DURATION=60s -e RATE=2 \
+            -e K6_PROMETHEUS_RW_SERVER_URL=http://localhost:9090/api/v1/write \
+            grafana/k6:2.3.0 run -o experimental-prometheus-rw /scripts/shop.js
+      - name: Метрики, логи, трейсы и интерфейсы наблюдения
+        run: |
+          # Компоненты без healthcheck могут ещё прогреваться; ограниченные повторы убирают гонку.
+          retry() {
+            for attempt in $(seq 1 24); do
+              if "$@"; then return 0; fi
+              echo "Повтор ${attempt}/24: $*"
+              sleep 5
+            done
+            return 1
+          }
+          check_up() {
+            curl -fsSG http://localhost:9090/api/v1/query --data-urlencode 'query=up' |
+              jq -e '.status == "success" and (.data.result | length == 8) and all(.data.result[]; .value[1] == "1")'
+          }
+          check_rps() {
+            curl -fsSG http://localhost:9090/api/v1/query --data-urlencode 'query=sum(rate(http_requests_total[1m]))' |
+              jq -e '.status == "success" and (.data.result | length > 0) and (.data.result[0].value[1] | tonumber) > 0'
+          }
+          check_k6() {
+            curl -fsSG http://localhost:9090/api/v1/query --data-urlencode 'query={__name__=~"k6_.*"}' |
+              jq -e '.status == "success" and (.data.result | length > 0)'
+          }
+          check_loki() {
+            curl -fsSG http://localhost:3100/loki/api/v1/query_range \
+              --data-urlencode 'query={service="shop"}' --data-urlencode 'limit=10' |
+              jq -e '.status == "success" and ([.data.result[].values[]] | length > 0)'
+          }
+          check_tempo() {
+            # Трейс запроса с оплатой должен содержать спаны обоих сервисов (traceparent shop -> payment).
+            local id
+            id=$(curl -fsSG http://localhost:3200/api/search --data-urlencode 'q={ resource.service.name = "payment" }' --data-urlencode 'limit=1' |
+              jq -er '.traces[0].traceID') || return 1
+            curl -fsS "http://localhost:3200/api/traces/${id}" |
+              jq -e '[.. | objects | select(.key? == "service.name") | .value.stringValue] | unique | (index("shop") != null and index("payment") != null)'
+          }
+          check_trace_id_in_logs() {
+            curl -fsSG http://localhost:3100/loki/api/v1/query_range \
+              --data-urlencode 'query={service="shop"} | json | trace_id != ""' --data-urlencode 'limit=5' |
+              jq -e '.status == "success" and ([.data.result[].values[]] | length > 0)'
+          }
+          check_grafana() {
+            curl -fsS http://localhost:3000/api/health | jq -e '.database == "ok"'
+          }
+          retry check_up
+          retry check_rps
+          retry check_k6
+          retry check_loki
+          retry check_tempo
+          retry check_trace_id_in_logs
+          retry check_grafana
+          retry curl -fsS http://localhost:9093/-/ready
+          # Каждый запущенный контейнер стенда обязан перезапускаться сам.
+          docker compose --profile monitoring ps -q |
+            xargs docker inspect -f '{{.Name}} {{.HostConfig.RestartPolicy.Name}}' |
+            tee /dev/stderr | awk '$2 != "unless-stopped" { bad = 1 } END { exit bad }'
+      - name: Учебное узкое место — Seq Scan по orders
+        run: |
+          docker compose exec -T postgres psql -U shop -d shop -v ON_ERROR_STOP=1 -At \
+            -c 'EXPLAIN (FORMAT JSON) SELECT id, status, total, created_at FROM orders WHERE user_id = 1 ORDER BY created_at DESC, id DESC LIMIT 20' > results/explain.json
+          jq -e '[.. | objects | select(."Node Type"? == "Seq Scan" and ."Relation Name"? == "orders")] | length > 0' results/explain.json
+      - name: Логи при ошибке
+        if: failure()
+        run: docker compose --profile monitoring logs --no-color
+      - name: Остановить стенд и удалить данные
+        if: always()
+        run: docker compose --profile monitoring down -v
