@@ -847,7 +847,7 @@ pod/notes-7c54d8b9d-t6w9z: 0
 
 Три пода `Running` на разных workers. Хэши и то, какой из подов получил заметку, у тебя будут другими: важно, что строка больше нуля только в одном.
 
-**Как читать вывод:** `configured` значит, что объект существовал и `apply` изменил его. `3/3` и `UP-TO-DATE 3` говорят, что все три копии на новом шаблоне. Счётчики строк 0, 1, 0 показывают главный урок задания: каждая реплика хранит заметку в своём `emptyDir`, поэтому три копии это три разные базы. Решается это общим хранилищем в 5.5. Эталон: [k8s/base/10-deployment.yaml](https://github.com/distinguished-sre/devops/tree/devops/project/notes/k8s/base/10-deployment.yaml).
+**Как читать вывод:** `configured` значит, что объект существовал и `apply` изменил его. `3/3` и `UP-TO-DATE 3` говорят, что все три копии на новом шаблоне. Счётчики строк 0, 1, 0 показывают главный урок задания: каждая реплика хранит заметку в своём `emptyDir`, поэтому три копии это три разные базы. Решается это общим хранилищем в 5.5. Эталон: [k8s/base/10-deployment.yaml](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/base/10-deployment.yaml).
 
 **Объясни себе:**
 
@@ -865,7 +865,7 @@ pod/notes-7c54d8b9d-t6w9z: 0
 Скачай скрипт поломки и запусти один сценарий (1, 2 или 3). Скрипт не читай: ломай, диагностируй, чини. Он работает без `sudo`, берёт твой `k8s/base/10-deployment.yaml`, применяет испорченную копию к Deployment `notes` (сам файл в проекте не меняется) и требует, чтобы задание 4 было выполнено.
 
 ```bash
-curl -fsSL -o /tmp/break-5.2.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.2/break.sh
+curl -fsSL -o /tmp/break-5.2.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.2/break.sh
 bash /tmp/break-5.2.sh 1    # или 2, или 3
 kubectl -n notes get pods
 ```

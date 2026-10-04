@@ -1265,7 +1265,7 @@ cd ~/notes && git add deploy/nginx/notes.conf && git commit -m "nginx: HTTPS д�
 Скрипт поломки скачивается и запускается одинаково во всех уроках:
 
 ```bash
-curl -fsSL -o /tmp/break-2.6.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/2.6/break.sh
+curl -fsSL -o /tmp/break-2.6.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/2.6/break.sh
 sudo bash /tmp/break-2.6.sh 1
 ```
 

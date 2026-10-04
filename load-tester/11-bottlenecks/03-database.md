@@ -292,7 +292,7 @@ Execution Time: 0.65 ms
 Стенд с мониторингом, `BCRYPT_ROUNDS=4` после прошлого урока (вход нам не мешает) и прогретые пользователи. Остальные настройки по умолчанию: `DB_POOL_MAX=5`, `BUG_N_PLUS_ONE=1`, индекса `orders_user_id_idx` нет. Проверь:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 grep -E '^(DB_POOL_MAX|BUG_N_PLUS_ONE|BCRYPT_ROUNDS)=' .env
 docker compose exec -T postgres psql -U shop -d shop -c "SELECT indexname FROM pg_indexes WHERE tablename='orders'"
 ```
@@ -310,7 +310,7 @@ BCRYPT_ROUNDS=4
 Если в списке есть `orders_user_id_idx`, удали его: `docker compose exec -T postgres psql -U shop -d shop -c "DROP INDEX orders_user_id_idx"`. Удобно сделать псевдоним для работы с базой:
 
 ```bash
-alias psqlshop='docker compose -f ~/load-tester/project/shop/compose.yaml exec -T postgres psql -U shop -d shop'
+alias psqlshop='docker compose -f ~/learning/load-tester/project/shop/compose.yaml exec -T postgres psql -U shop -d shop'
 ```
 
 ### 1. Базовая линия на 40 визитах

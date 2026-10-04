@@ -1,0 +1,6 @@
+{%- comment -%}
+  Ключ урока в базе вопросов: "5.3" → "05-03" (_data/questions/<курс>/{open,quiz}/05-03.json).
+  Вход: include.lesson. Выход (глобальный): qkey.
+{%- endcomment -%}
+{%- assign qk_parts = include.lesson | split: '.' -%}
+{%- capture qkey -%}{% if qk_parts[0].size == 1 %}0{% endif %}{{ qk_parts[0] }}-{% if qk_parts[1].size == 1 %}0{% endif %}{{ qk_parts[1] }}{%- endcapture -%}

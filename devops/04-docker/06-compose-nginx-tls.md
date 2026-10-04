@@ -865,7 +865,7 @@ A  deploy/nginx/compose.conf
 A  scripts/gen-tls.sh
 ```
 
-Адреса у тебя будут другими, важно, что они отличаются. Вывод `git status` не содержит `deploy/tls/` и `.env`: оба закрыты `.gitignore`. Эталон файлов: [project/notes на GitHub](https://github.com/distinguished-sre/devops/tree/devops/project/notes).
+Адреса у тебя будут другими, важно, что они отличаются. Вывод `git status` не содержит `deploy/tls/` и `.env`: оба закрыты `.gitignore`. Эталон файлов: [project/notes на GitHub](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
 
 **Как читать вывод:** два IP это адрес `notes` до и после; заметка вернулась через прокси, значит nginx нашёл приложение по новому адресу, а данные лежат в базе, а не в контейнере `notes`. Если сделать `curl` сразу после `up -d`, а не через 12 секунд, возможен 502: приложение стартует, а в кэше nginx ещё старый адрес.
 
@@ -886,7 +886,7 @@ A  scripts/gen-tls.sh
 
 ```bash
 cd ~/notes
-curl -fsSL -o /tmp/break-4.6.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.6/break.sh
+curl -fsSL -o /tmp/break-4.6.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.6/break.sh
 bash /tmp/break-4.6.sh 1        # номер сценария: 1, 2 или 3
 ```
 

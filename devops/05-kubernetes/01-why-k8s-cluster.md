@@ -800,7 +800,7 @@ notes   Active   2s    app.kubernetes.io/part-of=notes,kubernetes.io/metadata.na
 
 **Как читать вывод:** `created` и `unchanged` это ответ кластера на `apply` (третий вариант, `configured`, значит «отличалось и обновлено»). `Active` значит, что namespace готов принимать объекты. В `LABELS` кроме твоей метки есть `kubernetes.io/metadata.name`, её добавил кластер сам. Последняя строка подтверждает, что namespace по умолчанию теперь `notes`.
 
-Эталон файлов: [project/notes на GitHub](https://github.com/distinguished-sre/devops/tree/devops/project/notes/kind).
+Эталон файлов: [project/notes на GitHub](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/kind).
 
 **Объясни себе:**
 
@@ -817,7 +817,7 @@ notes   Active   2s    app.kubernetes.io/part-of=notes,kubernetes.io/metadata.na
 Скачай сценарии и запусти один. Скрипт не читай: цель в том, чтобы диагностировать по симптомам. Работает без `sudo`, трогает только кластер `notes`, контейнер `notes-break-port` и файл `~/.kube/config` (копия сохраняется рядом).
 
 ```bash
-curl -fsSL -o /tmp/break-5.1.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.1/break.sh
+curl -fsSL -o /tmp/break-5.1.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.1/break.sh
 bash /tmp/break-5.1.sh 1    # или 2, или 3
 ```
 

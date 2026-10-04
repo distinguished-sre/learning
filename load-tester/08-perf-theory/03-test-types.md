@@ -250,7 +250,7 @@ Load на 300 RPS: трафик 299, p95 14 мс, ошибок 0, CPU 62%, `http
 
 ## Практика
 
-Стенд поднят, как в 8.2 (`docker compose --profile monitoring up -d --wait` в `~/load-tester/project/shop`), оплата `delay_ms` равна 50, утечка выключена. Перед началом освежи `~/perf-lab/08-theory/` и виртуальное окружение: `cd ~/perf-lab/08-theory && source ~/perf-lab/.venv/bin/activate`.
+Стенд поднят, как в 8.2 (`docker compose --profile monitoring up -d --wait` в `~/learning/load-tester/project/shop`), оплата `delay_ms` равна 50, утечка выключена. Перед началом освежи `~/perf-lab/08-theory/` и виртуальное окружение: `cd ~/perf-lab/08-theory && source ~/perf-lab/.venv/bin/activate`.
 
 ### 1. Генератор по профилю: shape.py
 
@@ -469,7 +469,7 @@ python shape.py catalog "30:100,30:200,30:300,30:400,30:500,30:600" 30
 Включи утечку и перезапусти `shop`:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 sed -i.bak 's/^LEAK_ENABLED=0/LEAK_ENABLED=1/' .env && rm .env.bak
 docker compose up -d shop
 ```
@@ -483,7 +483,7 @@ python shape.py catalog "180:100" 60
 ```
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 for i in 1 2 3 4 5 6 7 8 9; do
   docker stats --no-stream --format '{% raw %}{{.MemUsage}}{% endraw %}' $(docker compose ps -q shop); sleep 20
 done

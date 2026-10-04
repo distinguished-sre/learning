@@ -492,7 +492,7 @@ inhibit_rules:
 
 ## Практика
 
-Перед началом основной стек «Заметок» запущен (`docker compose up -d` в `~/notes`), мониторинг из уроков 8.2-8.4 работает (`docker compose -f ~/notes/monitoring/compose.yml ps`). Все файлы ниже лежат в `~/notes/monitoring/` и `~/notes/docs/`, эталон: [project/notes/monitoring](https://github.com/distinguished-sre/devops/tree/devops/project/notes/monitoring).
+Перед началом основной стек «Заметок» запущен (`docker compose up -d` в `~/notes`), мониторинг из уроков 8.2-8.4 работает (`docker compose -f ~/notes/monitoring/compose.yml ps`). Все файлы ниже лежат в `~/notes/monitoring/` и `~/notes/docs/`, эталон: [project/notes/monitoring](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/monitoring).
 
 ### Задание 1. Четыре алерта и проверка правил
 
@@ -526,7 +526,7 @@ groups:
         annotations:
           summary: "Заметки недоступны"
           description: "Target {{ $labels.instance }} не отвечает больше минуты."
-          runbook_url: "https://github.com/distinguished-sre/devops/blob/devops/project/notes/docs/runbooks/NotesDown.md"
+          runbook_url: "https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/docs/runbooks/NotesDown.md"
 
       # Симптом: доля ответов 5xx выше 5% (recording rule из урока 8.3)
       - alert: NotesHighErrorRate
@@ -535,7 +535,7 @@ groups:
         labels: {severity: critical, service: notes}
         annotations:
           summary: "Доля ошибок 5xx выше 5%"
-          runbook_url: "https://github.com/distinguished-sre/devops/blob/devops/project/notes/docs/runbooks/NotesHighErrorRate.md"
+          runbook_url: "https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/docs/runbooks/NotesHighErrorRate.md"
 
       # Симптом: 95-й перцентиль задержки выше 500 мс
       - alert: NotesHighLatency
@@ -544,7 +544,7 @@ groups:
         labels: {severity: warning, service: notes}
         annotations:
           summary: "p95 задержки выше 500 мс"
-          runbook_url: "https://github.com/distinguished-sre/devops/blob/devops/project/notes/docs/runbooks/NotesHighLatency.md"
+          runbook_url: "https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/docs/runbooks/NotesHighLatency.md"
 
       # Предупреждение заранее: диск закончится в ближайшие сутки
       - alert: NotesDiskFillingUp
@@ -553,7 +553,7 @@ groups:
         labels: {severity: warning, service: notes}
         annotations:
           summary: "Диск заполнится меньше чем за 24 часа"
-          runbook_url: "https://github.com/distinguished-sre/devops/blob/devops/project/notes/docs/runbooks/NotesDiskFillingUp.md"
+          runbook_url: "https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/docs/runbooks/NotesDiskFillingUp.md"
 YAML
 ```
 {% endraw %}
@@ -597,7 +597,7 @@ tests:
             exp_annotations:
               summary: "Заметки недоступны"
               description: "Target notes:8080 не отвечает больше минуты."
-              runbook_url: "https://github.com/distinguished-sre/devops/blob/devops/project/notes/docs/runbooks/NotesDown.md"
+              runbook_url: "https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/docs/runbooks/NotesDown.md"
 
   # Всплеск ошибок на 2 минуты: за счёт for уведомления быть не должно
   - interval: 15s
@@ -962,7 +962,7 @@ git commit -m "Алерты, Alertmanager и runbook (урок 8.5)"
 Скачай скрипт. У curl флаг `-f` означает «при ошибке сервера не сохраняй страницу с ошибкой», `-s` тихий режим, `-S` всё же показывать ошибки, `-L` разрешает переходы по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-8.5.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.5/break.sh
+curl -fsSL -o /tmp/break-8.5.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.5/break.sh
 bash /tmp/break-8.5.sh 1
 ```
 

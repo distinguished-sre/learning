@@ -21,7 +21,7 @@ time: "3 ч"
 - Терминал, `sudo apt install`, `man`: [урок 1.1](01-workstation-terminal.md). Пакет `dnsutils` (команда `dig`) и `curl` ты поставил там же.
 - Конвейеры `|`, `grep`, `awk`: [урок 1.2](02-text-logs.md). Они нужны, чтобы вырезать нужное из вывода.
 - Процесс и PID: [урок 1.3](03-processes-resources.md). `ss` покажет, какой процесс занимает порт.
-- Глубже о сети: [DNS](https://distinguished-sre.github.io/devops/02-network/03-dns.html) и [порты и TCP](https://distinguished-sre.github.io/devops/02-network/02-ports-tcp-ssh.html) в курсе DevOps. Для нас достаточно того, что написано здесь.
+- Глубже о сети: [DNS](../../devops/02-network/03-dns.html) и [порты и TCP](../../devops/02-network/02-ports-tcp-ssh.html) в курсе DevOps. Для нас достаточно того, что написано здесь.
 
 HTTP (протокол, на котором работают сайты и API: сообщения «запрос» и «ответ» с кодом вроде 200 или 404) подробно разбирается в [уроке 2.1](../02-web/01-client-server-http.md). Сейчас нужно знать только, что `curl` отправляет такой запрос и показывает ответ.
 

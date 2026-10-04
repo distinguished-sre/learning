@@ -25,12 +25,12 @@
 В каталоге своего проекта выбери версию, например v2.2:
 
 ```bash
-curl -fsSL -o app.py https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/v2.2.py
+curl -fsSL -o app.py https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/v2.2.py
 python3 --version
 HOST=127.0.0.1 PORT=8080 APP_VERSION=dev NOTES_DATA="$PWD/notes.txt" python3 app.py
 ```
 
-Общий шаблон URL: `https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/<v>.py`. Вместо `<v>` подставь имя из таблицы. Файлы станут доступны по этому адресу после публикации изменений в ветке `devops`.
+Общий шаблон URL: `https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/<v>.py`. Вместо `<v>` подставь имя из таблицы. Файлы станут доступны по этому адресу после публикации изменений в ветке `devops`.
 
 В другом терминале:
 

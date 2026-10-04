@@ -1139,7 +1139,7 @@ mkdir -p ~/notes && cd ~/notes
 nano app.py                # вставь код ниже; сохранить: Ctrl+O, Enter; выйти: Ctrl+X
 ```
 
-Код целиком (это версия v1, [эталон на GitHub](https://github.com/distinguished-sre/devops/tree/devops/project/notes/versions)). Комментарии в коде объясняют, зачем строка нужна:
+Код целиком (это версия v1, [эталон на GitHub](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/versions)). Комментарии в коде объясняют, зачем строка нужна:
 
 ```python
 #!/usr/bin/env python3
@@ -1303,7 +1303,7 @@ Notes service v1.0.0
 Скрипт поломки лежит в репозитории курса, читать его не надо: диагностика и есть упражнение. Перед началом убедись, что задание 5 выполнено и `~/notes/app.py` есть. Скачай скрипт (в ВМ, до поломки: сценарий 3 сломает поиск программ, и тогда `curl` не запустится по имени):
 
 ```bash
-curl -fsSL -o /tmp/break-1.1.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/1.1/break.sh
+curl -fsSL -o /tmp/break-1.1.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/1.1/break.sh
 ```
 
 Разбор: `curl` скачивает файл, `-f` сообщает ошибку при кодах 4xx и 5xx, `-s` тихий режим, `-S` показывать ошибки, `-L` идти по перенаправлениям, `-o /tmp/break-1.1.sh` куда сохранить (каталог `/tmp` временный, чистится при перезагрузке). Запуск: `bash /tmp/break-1.1.sh 1` (сценарий 1, 2 или 3). Скрипту не нужен `sudo`: он меняет только твой домашний каталог, а то, что «пропало», прячет в `~/.break-1.1`, поэтому ничего не теряется. Скрипт откажется работать от root.

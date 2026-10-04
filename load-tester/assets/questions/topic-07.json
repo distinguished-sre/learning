@@ -1,7 +1,0 @@
----
-layout: null
-topic: 7
-permalink: /assets/questions/topic-07.json
-sitemap: false
----
-{%- include prep-data.json topic=page.topic -%}

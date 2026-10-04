@@ -1108,7 +1108,7 @@ notes-r Up 12 seconds (healthy)
 
 **Как читать вывод:** `ok` это ответ `/healthz`. `(healthy)` в статусе значит, что встроенная проверка `HEALTHCHECK` из `Dockerfile` (урок 4.2) успешно прошла. Пауза `sleep 12` нужна, чтобы Docker успел выполнить первую проверку (интервал 10 секунд). Если статус `(health: starting)`, подожди ещё немного.
 
-Эталон файлов: [project/notes в репозитории курса](https://github.com/distinguished-sre/devops/tree/devops/project/notes).
+Эталон файлов: [project/notes в репозитории курса](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
 
 5. Убери за собой тренировочный стенд:
 
@@ -1136,7 +1136,7 @@ docker image rm notes:single notes:test notes:0.4.0-rc1 localhost:5001/alice/not
 Запусти сломанный сценарий и найди причину сам, не читая скрипт. Скрипт правит только файл `.github/workflows/image.yml` в `~/notes`, поэтому `sudo` не нужен (под `sudo` скрипт откажется запускаться):
 
 ```bash
-curl -fsSL -o /tmp/break-4.7.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.7/break.sh
+curl -fsSL -o /tmp/break-4.7.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.7/break.sh
 bash /tmp/break-4.7.sh 1
 ```
 

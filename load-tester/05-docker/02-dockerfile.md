@@ -22,7 +22,7 @@ time: "3.5 ч"
 - Файлы, переменные окружения и `PATH`: [урок 1.1](../01-linux/01-workstation-terminal.md), права на выполнение (`chmod +x`) и скрипты оболочки `#!/bin/sh`: [урок 1.5](../01-linux/05-bash-scripts.md).
 - Стенд «Магазин» и его устройство в общих чертах: [урок 2.3](../02-web/03-backend-anatomy.md).
 - Python, `pip` и `requirements.txt` по-настоящему ты проходишь в [теме 4](../04-python/05-venv-requests.md). Здесь достаточно знать: `pip install` скачивает библиотеки, а `requirements.txt` это их список.
-- Глубже про написание Dockerfile и многоэтапную сборку: [урок DevOps «Dockerfile»](https://distinguished-sre.github.io/devops/05-docker/02-dockerfile.html). Для курса хватит того, что ниже.
+- Глубже про написание Dockerfile и многоэтапную сборку: [урок DevOps «Dockerfile»](../../devops/04-docker/02-dockerfile.html). Для курса хватит того, что ниже.
 
 ## Картина целиком
 
@@ -254,13 +254,13 @@ SIGTERM придёт оболочке `sh`, она не передаст его 
 
 ## Практика
 
-Ты не будешь править файлы в клоне `~/load-tester`: он должен остаться чистым, иначе `git pull` потом начнёт ругаться на конфликты. Скопируй каталог сервиса в свой репозиторий и работай с копией.
+Ты не будешь править файлы в клоне `~/learning`: он должен остаться чистым, иначе `git pull` потом начнёт ругаться на конфликты. Скопируй каталог сервиса в свой репозиторий и работай с копией.
 
 ### 1. Подготовь копию для экспериментов
 
 ```bash
 mkdir -p ~/perf-lab/05-docker
-cp -r ~/load-tester/project/shop/shop ~/perf-lab/05-docker/shop-build
+cp -r ~/learning/load-tester/project/shop/shop ~/perf-lab/05-docker/shop-build
 cd ~/perf-lab/05-docker/shop-build
 ls -la
 ```

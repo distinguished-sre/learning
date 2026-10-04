@@ -1151,7 +1151,7 @@ curl: (7) Failed to connect to notes.lab port 8080 after 0 ms: Couldn't connect 
 Скачай скрипт. У curl флаг `-f` означает «при ошибке сервера не сохраняй страницу с ошибкой», `-L` разрешает переходить по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-2.3.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/2.3/break.sh
+curl -fsSL -o /tmp/break-2.3.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/2.3/break.sh
 sudo bash /tmp/break-2.3.sh 1
 ```
 

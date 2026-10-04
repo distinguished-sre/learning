@@ -859,7 +859,7 @@ k8s/base/40-postgres.yaml-48-              valueFrom:
 порт 5432 открыт
 ```
 
-Состояние проекта после урока: StatefulSet `postgres`, PVC 1 ГиБ, Service `db`, Secret `notes-db` создан командой. Приложение по-прежнему в режиме `STORE=file`. Эталон: [k8s/base/40-postgres.yaml](https://github.com/distinguished-sre/devops/tree/devops/project/notes/k8s/base/40-postgres.yaml).
+Состояние проекта после урока: StatefulSet `postgres`, PVC 1 ГиБ, Service `db`, Secret `notes-db` создан командой. Приложение по-прежнему в режиме `STORE=file`. Эталон: [k8s/base/40-postgres.yaml](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/base/40-postgres.yaml).
 
 **Как читать вывод:** `unchanged (server dry run)` значит, что манифест корректен и совпадает с тем, что уже в кластере. `?? k8s/base/40-postgres.yaml` в `git status` значит, что файл новый и ещё не добавлен в git. Строка `порт 5432 открыт` появляется только при успешном соединении.
 
@@ -883,7 +883,7 @@ k8s/base/40-postgres.yaml-48-              valueFrom:
 Скачай скрипт. У curl флаг `-f` означает «при ошибке сервера не сохраняй страницу с ошибкой», `-L` разрешает переходить по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-5.5.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.5/break.sh
+curl -fsSL -o /tmp/break-5.5.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.5/break.sh
 bash /tmp/break-5.5.sh 1
 ```
 

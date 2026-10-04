@@ -1,7 +1,7 @@
 ---
 layout: page
 title: "Подготовка к собеседованию"
-permalink: /interview.html
+permalink: /load-tester/interview.html
 quiz_page: true
 description: "Все вопросы курса в одном месте: устные вопросы с собеседований, тесты по урокам и проверка случайным блоком."
 ---
@@ -14,7 +14,7 @@ description: "Все вопросы курса в одном месте: уст�
 
 Тренировка здесь не тратит вопросы тестов в уроках: у страницы своя история.
 
-<div class="prep" data-prep data-base="{{ '/assets/questions/' | relative_url }}">
+<div class="prep" data-prep data-base="{{ '/assets/questions/load-tester/' | relative_url }}">
   <p class="dim">Страница работает с включённым JavaScript.</p>
-  <script type="application/json" data-prep-course>[{% for t in site.data.course.topics %}{% unless forloop.first %},{% endunless %}{"n":{{ t.n }},"title":{{ t.title | jsonify }},"lessons":[{% for l in t.lessons %}{% unless forloop.first %},{% endunless %}{"id":{{ l.id | jsonify }},"title":{{ l.title | jsonify }}}{% endfor %}]}{% endfor %}]</script>
+  <script type="application/json" data-prep-course>[{% for t in site.data.courses[page.course].topics %}{% unless forloop.first %},{% endunless %}{"n":{{ t.n }},"title":{{ t.title | jsonify }},"lessons":[{% for l in t.lessons %}{% unless forloop.first %},{% endunless %}{"id":{{ l.id | jsonify }},"title":{{ l.title | jsonify }}}{% endfor %}]}{% endfor %}]</script>
 </div>

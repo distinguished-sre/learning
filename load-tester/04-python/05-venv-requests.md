@@ -24,7 +24,7 @@ time: "3.5 ч"
 - HTTP: запрос, ответ, коды, заголовки, JSON и токен в заголовке `Authorization`: [урок 2.1](../02-web/01-client-server-http.md) и [урок 2.2](../02-web/02-rest-json-auth.md). Что такое `curl`, ты помнишь из [урока 1.4](../01-linux/04-network-cli.md).
 - Python: переменные и словари ([4.1](01-first-program.md), [4.2](02-conditions-loops.md)), функции и `try`/`except` ([4.3](03-functions-errors.md)), JSON как «словарь в виде текста» ([4.4](04-files-json-csv.md)).
 - Git: коммит и push в свой репозиторий `perf-lab` ([урок 3.1](../03-git/01-git-basics.md) и [урок 3.2](../03-git/02-github.md)).
-- Стенд «Магазин» запущен: `curl -s localhost:8000/readyz` отвечает `{"status":"ready"}` ([урок 2.1](../02-web/01-client-server-http.md)). Если нет, зайди в `~/load-tester/project/shop` и выполни `docker compose up -d --wait`.
+- Стенд «Магазин» запущен: `curl -s localhost:8000/readyz` отвечает `{"status":"ready"}` ([урок 2.1](../02-web/01-client-server-http.md)). Если нет, зайди в `~/learning/load-tester/project/shop` и выполни `docker compose up -d --wait`.
 
 ## Картина целиком
 
@@ -581,7 +581,7 @@ python shop_flow.py
 python errors_demo.py
 ```
 
-Ты должен увидеть те же четыре строки. Поэкспериментируй: измени таймаут в случае 3 с `0.05` на `5`, и вместо `ReadTimeout` вход пройдёт, а `print` не вызовется. Это показывает, что таймаут срабатывает **только когда сервер медлит дольше** разрешённого. Потом останови стенд (`cd ~/load-tester/project/shop && docker compose stop shop`) и запусти `first_request.py`: получишь `ConnectionError`. Верни стенд: `docker compose start shop`, и подожди, пока `curl -s localhost:8000/readyz` снова ответит.
+Ты должен увидеть те же четыре строки. Поэкспериментируй: измени таймаут в случае 3 с `0.05` на `5`, и вместо `ReadTimeout` вход пройдёт, а `print` не вызовется. Это показывает, что таймаут срабатывает **только когда сервер медлит дольше** разрешённого. Потом останови стенд (`cd ~/learning/load-tester/project/shop && docker compose stop shop`) и запусти `first_request.py`: получишь `ConnectionError`. Верни стенд: `docker compose start shop`, и подожди, пока `curl -s localhost:8000/readyz` снова ответит.
 
 ### 5. Сравни requests.get и Session
 

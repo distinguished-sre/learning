@@ -4,7 +4,7 @@ title: "Облако"
 topic: 6
 time: "9 ч"
 redirect_from:
-  - /6-Cloud-SaaS-PaaS-IaaS.html
+  - /devops/6-Cloud-SaaS-PaaS-IaaS.html
 ---
 
 ## О чём тема

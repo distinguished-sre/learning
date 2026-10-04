@@ -1612,7 +1612,7 @@ gh api repos/:owner/:repo/branches/main/protection/required_status_checks --jq '
 ```bash
 cd ~/notes
 git switch main && git pull && git switch -c ci/break-drill
-curl -fsSL -o /tmp/break-3.4.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/3.4/break.sh
+curl -fsSL -o /tmp/break-3.4.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/3.4/break.sh
 bash /tmp/break-3.4.sh 1        # сценарии 1, 2, 3, а вернуть ветку в исходное состояние: fix
 git push -u origin ci/break-drill
 gh pr create --fill

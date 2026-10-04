@@ -1030,7 +1030,7 @@ visudo: invalid sudoers file
 
 **Шаги**
 
-1. Обнови `~/notes/app.py` до v2 (замени файл целиком). Версия из эталона: [`project/notes/versions/v2.py`](https://github.com/distinguished-sre/devops/tree/devops/project/notes/versions/v2.py). Скопируй код ниже в редактор, который использовал в уроке 1.1, или скачай файл командой `curl -fsSL -o ~/notes/app.py https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/v2.py`.
+1. Обнови `~/notes/app.py` до v2 (замени файл целиком). Версия из эталона: [`project/notes/versions/v2.py`](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/versions/v2.py). Скопируй код ниже в редактор, который использовал в уроке 1.1, или скачай файл командой `curl -fsSL -o ~/notes/app.py https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/v2.py`.
 
 ```python
 #!/usr/bin/env python3
@@ -1250,7 +1250,7 @@ sh: 1: cannot create /opt/notes/app.py: Permission denied
 Скачай скрипт и запусти нужный сценарий. Читать скрипт не нужно, это часть упражнения. У `curl` флаг `-f` значит «при ошибке сервера не сохраняй страницу с ошибкой», `-s` тихий режим, `-S` показывать ошибки, `-L` идти по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-1.3.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/1.3/break.sh
+curl -fsSL -o /tmp/break-1.3.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/1.3/break.sh
 sudo bash /tmp/break-1.3.sh 1
 ```
 

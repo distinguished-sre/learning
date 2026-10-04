@@ -238,7 +238,7 @@ flowchart TD
 ### 1. Подготовь стенд и дашборд
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring up -d --wait
 curl -s localhost:8000/readyz
 curl -s localhost:8001/admin/config
@@ -510,10 +510,10 @@ git push
 
 ## Сломай и почини
 
-Теперь проверим соблазнительное «лечение»: увеличить пул. Повтори весь инцидент (шаги 4-6), но на этот раз не откатывай оплату. Вместо этого, когда найдёшь причину, измени `~/load-tester/project/shop/.env`: поставь `DB_POOL_MAX=20` и пересоздай магазин:
+Теперь проверим соблазнительное «лечение»: увеличить пул. Повтори весь инцидент (шаги 4-6), но на этот раз не откатывай оплату. Вместо этого, когда найдёшь причину, измени `~/learning/load-tester/project/shop/.env`: поставь `DB_POOL_MAX=20` и пересоздай магазин:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 sed -i 's/^DB_POOL_MAX=.*/DB_POOL_MAX=20/' .env
 docker compose up -d shop
 ```

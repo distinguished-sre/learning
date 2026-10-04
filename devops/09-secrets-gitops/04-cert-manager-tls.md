@@ -685,7 +685,7 @@ flux get helmreleases -A
 
 2. Тег состояния проекта после урока: `v0.7.0` (`git -C ~/notes tag -a v0.7.0 -m "9.4: cert-manager"`).
 
-Эталон: [project/notes/gitops](https://github.com/distinguished-sre/devops/tree/devops/project/notes/gitops).
+Эталон: [project/notes/gitops](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/gitops).
 
 **Что должно получиться.**
 
@@ -715,7 +715,7 @@ apps                    main@sha1:...   False       True    Applied revision: ma
 Скачай скрипт и запусти сценарий. Не читай его: причину нужно найти диагностикой. Нужен кластер из заданий 1-3.
 
 ```bash
-curl -fsSL -o /tmp/break-9.4.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/9.4/break.sh
+curl -fsSL -o /tmp/break-9.4.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/9.4/break.sh
 bash /tmp/break-9.4.sh 1     # 1, 2, 3 или random
 ```
 

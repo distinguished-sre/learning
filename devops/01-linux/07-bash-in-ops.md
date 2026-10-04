@@ -1594,7 +1594,7 @@ reading config file /etc/logrotate.d/notes
 Скрипт поломок ломает только скрипт бэкапа `/usr/local/bin/notes-backup.sh` и расписание `/etc/cron.d/notes` (оригиналы он сохраняет в `/var/lib/notes-break-1.7`). Для него нужно, чтобы задание 7 было выполнено. Скачай его и не читай: он подсказывает ответ.
 
 ```bash
-curl -fsSL -o /tmp/break-1.7.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/1.7/break.sh
+curl -fsSL -o /tmp/break-1.7.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/1.7/break.sh
 sudo bash /tmp/break-1.7.sh 1     # сценарии 1, 2, 3 или 4; вернуть всё: sudo bash /tmp/break-1.7.sh fix
 ```
 

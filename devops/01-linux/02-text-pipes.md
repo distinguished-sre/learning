@@ -1142,7 +1142,7 @@ cp app.log.keep app.log     # вернуть лог на место
 Скачай скрипт. У `curl` флаг `-f` означает «при ошибке сервера не сохраняй страницу с ошибкой», `-s` убирает индикатор, `-S` всё же показывает ошибки, `-L` разрешает переходить по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-1.2.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/1.2/break.sh
+curl -fsSL -o /tmp/break-1.2.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/1.2/break.sh
 bash /tmp/break-1.2.sh 1
 ```
 

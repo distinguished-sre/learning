@@ -895,7 +895,7 @@ notes-vm                   : ok=15   changed=0    unreachable=0    failed=0    s
 
 **Как читать вывод:** `200` это код ответа `/healthz` (`-o /dev/null` выбрасывает тело, `-s` убирает индикатор, `-w '%{http_code}\n'` печатает только код). Повторный запуск не должен ничего менять: если `changed` не ноль, смотри, какие задачи помечены жёлтым.
 
-Эталон: [infra/ansible в репозитории курса](https://github.com/distinguished-sre/devops/tree/devops/project/notes/infra/ansible).
+Эталон: [infra/ansible в репозитории курса](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/infra/ansible).
 
 **Объясни себе:**
 

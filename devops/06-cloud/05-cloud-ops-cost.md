@@ -880,7 +880,7 @@ forgotten-disk	10 ГБ	ORPHAN
 Ломаем регулярный бэкап из задания 2 на `notes-vm`: он должен быть настроен, в бакете есть хотя бы один дамп. Скрипт ничего не создаёт и не удаляет в облаке: меняет права файла cron, держит замок процессом и прячет копию ключей. Запускай под `yc-user` (нужен `sudo`):
 
 ```bash
-curl -fsSL -o /tmp/break-6.5.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/6.5/break.sh
+curl -fsSL -o /tmp/break-6.5.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/6.5/break.sh
 sudo bash /tmp/break-6.5.sh 1
 ```
 

@@ -534,10 +534,10 @@ Buyer(user0003@shop.lab, задач=20, ошибок=0)
 
 ### 4. Locust глазами «пользователя класса»
 
-Сравни свой `ShopUser` с файлом `~/load-tester/project/shop/examples/locust/locustfile.py`: запускать его не нужно, мы поставим Locust в [теме 9](../09-locust/01-first-locustfile.md). Найди глазами:
+Сравни свой `ShopUser` с файлом `~/learning/load-tester/project/shop/examples/locust/locustfile.py`: запускать его не нужно, мы поставим Locust в [теме 9](../09-locust/01-first-locustfile.md). Найди глазами:
 
 ```bash
-sed -n 1,40p ~/load-tester/project/shop/examples/locust/locustfile.py
+sed -n 1,40p ~/learning/load-tester/project/shop/examples/locust/locustfile.py
 ```
 
 Отметь для себя: `class ShopUser(HttpUser)` это наследование, `wait_time = between(1, 3)` это атрибут класса, `on_start` вызывается на старте пользователя, `@task(6)` и `@task(3)` над методами `catalog` и `product` это знакомые веса. `self.client.get(...)` это замена твоему `self.session.get(...)`: у `HttpUser` уже есть готовая сессия.

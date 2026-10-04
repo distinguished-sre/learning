@@ -525,7 +525,7 @@ curl -s -u admin:CHANGE_ME http://127.0.0.1:3000/api/datasources | jq '.[] | {na
     ]
   },
   "links": [
-    {"title": "Runbook: NotesHighErrorRate", "type": "link", "url": "https://github.com/distinguished-sre/devops/blob/devops/project/notes/docs/runbooks/NotesHighErrorRate.md", "targetBlank": true}
+    {"title": "Runbook: NotesHighErrorRate", "type": "link", "url": "https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/docs/runbooks/NotesHighErrorRate.md", "targetBlank": true}
   ],
   "panels": [
     {
@@ -750,7 +750,7 @@ git add monitoring/
 git commit -m "Grafana 13.2.2: provisioning и дашборды Notes RED, Node USE"
 ```
 
-3. Пароль `CHANGE_ME` замени на свой и не коммить его: перенеси в `monitoring/.env` (файл в `.gitignore`), а в compose укажи `GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}`. Эталон: [project/notes/monitoring/](https://github.com/distinguished-sre/devops/tree/devops/project/notes/monitoring).
+3. Пароль `CHANGE_ME` замени на свой и не коммить его: перенеси в `monitoring/.env` (файл в `.gitignore`), а в compose укажи `GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}`. Эталон: [project/notes/monitoring/](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/monitoring).
 
 **Что должно получиться**
 
@@ -781,7 +781,7 @@ compose OK
 Скачай скрипт. У curl флаг `-f` означает «при ошибке сервера не сохраняй страницу с ошибкой», `-s` тихий режим, `-S` показывать ошибки, `-L` идти по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-8.6.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.6/break.sh
+curl -fsSL -o /tmp/break-8.6.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.6/break.sh
 bash /tmp/break-8.6.sh 1
 ```
 

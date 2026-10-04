@@ -270,7 +270,7 @@ http_request_duration_seconds_count{method="GET",route="/api/products"} 1542.0
 
 ### Как настроен Prometheus на стенде
 
-Prometheus настраивается одним YAML-файлом. Вот выдержка из `~/load-tester/project/shop/monitoring/prometheus/prometheus.yml`:
+Prometheus настраивается одним YAML-файлом. Вот выдержка из `~/learning/load-tester/project/shop/monitoring/prometheus/prometheus.yml`:
 
 ```yaml
 global:
@@ -308,7 +308,7 @@ scrape_configs:
 
 ```bash
 mkdir -p ~/perf-lab/07-monitoring
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring up -d --wait --wait-timeout 300
 ```
 
@@ -350,7 +350,7 @@ tempo               Up 40 seconds
 **Типичные ошибки:**
 
 - `port is already allocated` (порт занят): на машине уже что-то слушает 9090 или 3000. Найди владельца: `ss -ltnp | grep -E ':9090|:3000'` и останови его.
-- `no configuration file provided`: ты не в каталоге `~/load-tester/project/shop`.
+- `no configuration file provided`: ты не в каталоге `~/learning/load-tester/project/shop`.
 - Prometheus запустился, но в цели `shop` ошибка: подожди 30 секунд, пока `shop` станет здоровым.
 
 ### 2. Прочитай /metrics глазами
@@ -517,7 +517,7 @@ cd ~/perf-lab && git add 07-monitoring && git commit -m "7.1: каталог м�
 **Поломка 1. Магазин пропал.** Остановим сервис и посмотрим, как это увидит мониторинг.
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose stop shop
 ```
 
@@ -642,4 +642,4 @@ Ubuntu 24.04, Docker Engine с Compose v2, стенд «Магазин» из `p
 
 Дальше: [урок 7.2. PromQL: rate, sum by, histogram_quantile](02-promql.md), где ты научишься задавать Prometheus вопросы: сколько запросов в секунду, какая доля ошибок и чему равен p95.
 
-**Глубже:** устройство Prometheus и форматы метрик подробнее в [курсе DevOps](https://distinguished-sre.github.io/devops/08-observability/02-prometheus-basics.html), если захочется заглянуть дальше учебного стенда.
+**Глубже:** устройство Prometheus и форматы метрик подробнее в [курсе DevOps](../../devops/08-observability/02-prometheus-basics.html), если захочется заглянуть дальше учебного стенда.

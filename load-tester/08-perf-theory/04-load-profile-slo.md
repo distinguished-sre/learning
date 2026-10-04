@@ -292,7 +292,7 @@ flowchart TD
 
 ## Практика
 
-Стенд поднят (`docker compose --profile monitoring up -d --wait` в `~/load-tester/project/shop`), утечка выключена, оплата 50 мс, как в 8.2. Рабочий каталог `~/perf-lab/08-theory`, окружение `source ~/perf-lab/.venv/bin/activate`.
+Стенд поднят (`docker compose --profile monitoring up -d --wait` в `~/learning/load-tester/project/shop`), утечка выключена, оплата 50 мс, как в 8.2. Рабочий каталог `~/perf-lab/08-theory`, окружение `source ~/perf-lab/.venv/bin/activate`.
 
 ### 1. Сгенерируй «обычный» трафик
 

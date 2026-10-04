@@ -970,7 +970,7 @@ echo 'psycopg[binary]>=3.2,<4' > requirements.txt
 3. Замени `app.py` эталоном версии v4. Этот файл заменяет твою версию из урока 2.4 целиком и сохраняет все прежние эндпоинты (`/healthz`, `/slow`, `/error`, `/leak`, `/burn` и остальные). Ниже разобрано, что в нём нового.
 
 ```bash
-curl -fsSL -o app.py https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/v4.py
+curl -fsSL -o app.py https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/v4.py
 grep -c psycopg app.py
 ```
 
@@ -1058,7 +1058,7 @@ def pg_sleep(sec):
 - `GET /slowsql?sec=N` (демонстрационный, в реальном сервисе его бы не было): целое `N` от 0 до 30 (иначе 400 `sec must be 0..30`), вызывает `pg_sleep(N)` и отвечает 200 `slept N`; при `STORE=file` отвечает 501 `{"error": "postgres only"}`;
 - в `main` при `STORE=postgres` вызывается `initialize_storage()`: она пишет предупреждение в лог, если база недоступна, но не падает.
 
-Полный файл версии v4 лежит в репозитории курса: [project/notes/versions/v4.py](https://github.com/distinguished-sre/devops/tree/devops/project/notes/versions/v4.py).
+Полный файл версии v4 лежит в репозитории курса: [project/notes/versions/v4.py](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/versions/v4.py).
 
 4. Обновлять `Dockerfile` не нужно: он из урока 4.2 уже копирует `requirements.txt` первым слоем и ставит зависимости. Пересобери образ (`-t` даёт ему имя и версию, точка означает «контекст сборки: текущий каталог»):
 
@@ -1190,7 +1190,7 @@ git commit -m "Хранилище PostgreSQL: STORE=postgres, readyz по БД, 
 Скачай скрипт и запусти нужный сценарий. `curl -fsSL -o` сохраняет файл (разбор флагов был в задании 4), `bash файл 1` запускает скрипт с аргументом «сценарий 1»:
 
 ```bash
-curl -fsSL -o /tmp/break-4.4.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.4/break.sh
+curl -fsSL -o /tmp/break-4.4.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.4/break.sh
 bash /tmp/break-4.4.sh 1
 ```
 

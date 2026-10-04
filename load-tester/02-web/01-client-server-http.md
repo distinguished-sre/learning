@@ -24,7 +24,7 @@ time: "3.5 ч"
 - Что такое порт, `curl` и DNS: [урок 1.4](../01-linux/04-network-cli.md). Здесь мы повторим, что нужно, но подробности там.
 - Больше ничего. Docker, веб-серверы и базы объяснять не придётся: в этом уроке ты запустишь стенд по готовому рецепту, а как он устроен, разберём в [теме 5](../05-docker/index.md).
 
-Хочешь то же глубже, с точки зрения администратора сервера: [урок про HTTP в курсе DevOps](https://distinguished-sre.github.io/devops/02-network/04-http.html).
+Хочешь то же глубже, с точки зрения администратора сервера: [урок про HTTP в курсе DevOps](../../devops/02-network/04-http.html).
 
 ## Картина целиком
 
@@ -214,7 +214,7 @@ x-request-id: 51c0b7aa2d3e4f6081928374a5b6c7d8
 <details markdown="1">
 <summary>Для любопытных: остальные коды «Магазина»</summary>
 
-Все адреса API в [README стенда](https://github.com/distinguished-sre/load-tester/blob/main/project/shop/README.md).
+Все адреса API в [README стенда](https://github.com/distinguished-sre/learning/blob/main/load-tester/project/shop/README.md).
 
 | Код | Название | Когда в «Магазине» |
 |---|---|---|
@@ -387,15 +387,15 @@ This message shows that your installation appears to be working correctly.
 ### 3. Скачай и запусти стенд
 
 ```bash
-git clone https://github.com/distinguished-sre/load-tester.git ~/load-tester
-cd ~/load-tester/project/shop
+git clone https://github.com/distinguished-sre/learning.git ~/learning
+cd ~/learning/load-tester/project/shop
 cp .env.example .env
 docker compose up -d --build --wait
 ```
 
 Разбор:
 
-- `git clone адрес папка` скачивает копию репозитория курса в `~/load-tester`. Нам нужна папка `project/shop` с описанием стенда. Подробнее про git: [тема 3](../03-git/index.md).
+- `git clone адрес папка` скачивает копию репозитория курсов в `~/learning`. Нам нужна папка `load-tester/project/shop` с описанием стенда. Подробнее про git: [тема 3](../03-git/index.md).
 - `cp .env.example .env` копирует файл с настройками стенда. Файл `.env` это набор настроек (порты, пароли, размеры пулов), которые стенд прочитает при запуске. Пока ничего в нём не меняй.
 - `docker compose up -d --build --wait`: «подними всё, что описано в `compose.yaml`». `-d` (detach) запустить в фоне и вернуть терминал, `--build` собрать образы магазина и оплаты из исходников, `--wait` дождаться, пока все сервисы сообщат, что они здоровы. Что такое образ, контейнер и `compose`, расскажет [тема 5](../05-docker/index.md).
 
@@ -449,7 +449,7 @@ shop-shop-1        shop-shop        "./entrypoint.sh"        shop       Up 3 min
 - `docker compose up` ждёт и падает по времени, а `shop-postgres-1` остаётся `starting`: база ещё заполняется данными, на медленном диске это до нескольких минут. Подожди, повтори `docker compose up -d --wait`. Прогресс видно в логах: `docker compose logs -f postgres` (выйти: `Ctrl+C`).
 - `curl: (7) Failed to connect ... Connection refused` сразу после запуска: сервис ещё стартует. Подожди 10 секунд и повтори.
 
-Остановить стенд: `docker compose down` (данные базы сохранятся). Остановить и стереть всё, включая данные: `docker compose down -v`. Следующий запуск после `down -v` снова будет долгим, потому что база заполняется заново. Команды выполняются из `~/load-tester/project/shop`.
+Остановить стенд: `docker compose down` (данные базы сохранятся). Остановить и стереть всё, включая данные: `docker compose down -v`. Следующий запуск после `down -v` снова будет долгим, потому что база заполняется заново. Команды выполняются из `~/learning/load-tester/project/shop`.
 
 ### 4. Прочитай запрос и ответ построчно
 
@@ -610,7 +610,7 @@ cat ~/perf-lab/02-web/http-codes.md
 
 ## Сломай и почини
 
-**Поломка 1.** Остановим Redis (хранилище корзин и токенов) и посмотрим, как это видят разные проверки. Из каталога `~/load-tester/project/shop`:
+**Поломка 1.** Остановим Redis (хранилище корзин и токенов) и посмотрим, как это видят разные проверки. Из каталога `~/learning/load-tester/project/shop`:
 
 ```bash
 docker compose stop redis

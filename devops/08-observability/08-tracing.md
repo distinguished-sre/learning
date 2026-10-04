@@ -601,7 +601,7 @@ hello
 
 **Шаги:**
 
-1. Добавь в `requirements.txt` три пакета с закреплёнными версиями (актуальные значения лежат в [эталонном requirements.txt](https://github.com/distinguished-sre/devops/tree/devops/project/notes/requirements.txt)):
+1. Добавь в `requirements.txt` три пакета с закреплёнными версиями (актуальные значения лежат в [эталонном requirements.txt](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/requirements.txt)):
 
 ```text
 opentelemetry-api==1.45.0
@@ -609,7 +609,7 @@ opentelemetry-sdk==1.45.0
 opentelemetry-exporter-otlp-proto-http==1.45.0
 ```
 
-2. В `app.py` добавь трейсинг. Полный файл: [эталон v7](https://github.com/distinguished-sre/devops/blob/devops/project/notes/versions/v7.py). Вот четыре изменения. Первое, импорты и настройка. Если адрес экспорта не задан, трейсинг выключен:
+2. В `app.py` добавь трейсинг. Полный файл: [эталон v7](https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/versions/v7.py). Вот четыре изменения. Первое, импорты и настройка. Если адрес экспорта не задан, трейсинг выключен:
 
 ```python
 from contextlib import contextmanager
@@ -867,7 +867,7 @@ monitoring/tempo/tempo.yml
 v0.7.0
 ```
 
-Эталон состояния после урока: [project/notes](https://github.com/distinguished-sre/devops/tree/devops/project/notes).
+Эталон состояния после урока: [project/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
 
 **Как читать вывод:** первая строка подтверждает, что запущена новая версия. Две следующие: `ls` нашёл оба файла. Последняя: тег создан.
 
@@ -885,7 +885,7 @@ v0.7.0
 Скачай скрипт поломок и запусти один из сценариев (номер выбери сам, но не читай сам скрипт):
 
 ```bash
-curl -fsSL -o /tmp/break-8.8.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.8/break.sh
+curl -fsSL -o /tmp/break-8.8.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.8/break.sh
 bash /tmp/break-8.8.sh 1
 ```
 

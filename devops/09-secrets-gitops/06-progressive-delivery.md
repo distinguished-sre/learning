@@ -683,7 +683,7 @@ def should_fail():
     return FAIL_RATE > 0 and random.random() < FAIL_RATE
 ```
 
-Если `should_fail()` вернул `True`, обработчик отвечает 500 `{"error":"injected failure"}`. Полный файл: [эталон v7.1](https://github.com/distinguished-sre/devops/tree/devops/project/notes).
+Если `should_fail()` вернул `True`, обработчик отвечает 500 `{"error":"injected failure"}`. Полный файл: [эталон v7.1](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
 
 **Предскажи:** новая версия 0.7.1 с `FAIL_RATE=0.3` получает 10% трафика. Какая доля ошибок будет у сервиса в целом, и какая у canary-подов?
 

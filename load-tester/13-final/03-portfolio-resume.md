@@ -256,7 +256,7 @@ cat > README.md <<'EOF'
 
 ## Как запустить
 
-1. Стенд: `cd ~/load-tester/project/shop && cp .env.example .env && docker compose --profile monitoring up -d --build --wait`
+1. Стенд: `cd ~/learning/load-tester/project/shop && cp .env.example .env && docker compose --profile monitoring up -d --build --wait`
 2. Окружение: `python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
 3. Сценарий: `locust -f 09-locust/locustfile.py --host http://localhost:8000`
 

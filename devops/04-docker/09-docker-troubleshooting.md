@@ -1387,7 +1387,7 @@ local     notes_pgdata
 Запусти скрипт и не читай его (это твоя тренировка диагностики). Скрипт создаёт всё в Docker и метит меткой `break=4.9`; реальный диск он не заполняет, объём «мусора» несколько сотен мегабайт. Запуск без `sudo`, от своего пользователя:
 
 ```bash
-curl -fsSL -o /tmp/break-4.9.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.9/break.sh
+curl -fsSL -o /tmp/break-4.9.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.9/break.sh
 bash /tmp/break-4.9.sh 1
 ```
 

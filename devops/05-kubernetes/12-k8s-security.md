@@ -937,7 +937,7 @@ tmp-ok
 
 **Как читать вывод:** `200` через `notes.lab` значит, что Gateway (namespace `envoy-gateway-system`) прошёл через политику. `000` из `nettest`: чужой под отсечён. `uid=10001`: приложение не root. `Read-only file system` в корне и `tmp-ok` в `/tmp`: read-only корень работает, а `emptyDir` доступен для записи.
 
-Закоммить: `git add k8s helm && git commit -m "5.12: PSS restricted, RBAC, NetworkPolicy, chart 0.2.0"`. Эталон: [project/notes](https://github.com/distinguished-sre/devops/tree/devops/project/notes).
+Закоммить: `git add k8s helm && git commit -m "5.12: PSS restricted, RBAC, NetworkPolicy, chart 0.2.0"`. Эталон: [project/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
 
 **Объясни себе:**
 
@@ -957,7 +957,7 @@ tmp-ok
 Скачай скрипт и запусти сценарий, не читая его. Нужны все четыре задания урока (namespace с `enforce: restricted`, чарт 0.2.0). Запускай без `sudo`:
 
 ```bash
-curl -fsSL -o /tmp/break-5.12.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.12/break.sh
+curl -fsSL -o /tmp/break-5.12.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.12/break.sh
 bash /tmp/break-5.12.sh 1
 ```
 

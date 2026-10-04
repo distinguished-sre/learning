@@ -343,7 +343,7 @@ locust -f steady.py --headless -u 10 -r 10 -t 60s --csv ../results/$(date +%F)-o
 Во втором терминале, на 20-й секунде после старта, останови магазин на 5 секунд:
 
 ```bash
-cd ~/load-tester/project/shop && docker compose pause shop && sleep 5 && docker compose unpause shop
+cd ~/learning/load-tester/project/shop && docker compose pause shop && sleep 5 && docker compose unpause shop
 ```
 
 `docker compose pause` замораживает процессы контейнера: они не завершаются, но и не работают, запросы зависают. `unpause` размораживает. Это имитация пятисекундной остановки магазина (например, из-за сборки мусора или перегрузки базы).

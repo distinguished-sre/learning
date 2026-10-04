@@ -19,7 +19,7 @@ time: "3 ч"
 - Терминал и редактор `nano`: [урок 1.1](01-workstation-terminal.md). Права доступа к файлу и `chmod` разберём в этом уроке.
 - Конвейеры, `awk`, перенаправления `>`: [урок 1.2](02-text-logs.md).
 - `curl -w`, `%{http_code}`, `--max-time`, порты: [урок 1.4](04-network-cli.md). Скрипт будет собран из этих команд.
-- Глубже: [основы Bash](https://distinguished-sre.github.io/devops/01-linux/06-bash-basics.html) и [скрипты в эксплуатации](https://distinguished-sre.github.io/devops/01-linux/07-bash-in-ops.html) в курсе DevOps. Для нас здесь всё нужное собрано.
+- Глубже: [основы Bash](../../devops/01-linux/06-bash-basics.html) и [скрипты в эксплуатации](../../devops/01-linux/07-bash-in-ops.html) в курсе DevOps. Для нас здесь всё нужное собрано.
 
 ## Картина целиком
 

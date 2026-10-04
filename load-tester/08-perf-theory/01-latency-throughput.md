@@ -298,7 +298,7 @@ flowchart TD
 ### 1. Подними стенд и проверь, что он живой
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring up -d --wait
 curl -s localhost:8000/readyz
 ```

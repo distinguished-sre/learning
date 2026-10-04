@@ -568,7 +568,7 @@ export default function () {
 
 **Типичные ошибки:**
 
-- `WARN ... Request Failed ... dial tcp 127.0.0.1:8000: connect: connection refused`: стенд не запущен. Подними его (`docker compose up -d` в `~/load-tester/project/shop`) и проверь `readyz`.
+- `WARN ... Request Failed ... dial tcp 127.0.0.1:8000: connect: connection refused`: стенд не запущен. Подними его (`docker compose up -d` в `~/learning/load-tester/project/shop`) и проверь `readyz`.
 - `GoError: ... open ... no such file`: неверный путь к файлу сценария, запускай из каталога `~/perf-lab/10-k6`.
 
 ### 4. Сценарий покупателя

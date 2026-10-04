@@ -695,7 +695,7 @@ spec:
             severity: page
           annotations:
             summary: "Доля 5xx у Заметок выше 5% уже 5 минут"
-            runbook_url: "https://github.com/distinguished-sre/devops/tree/devops/project/notes/docs/runbooks/NotesHighErrorRatio.md"
+            runbook_url: "https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/docs/runbooks/NotesHighErrorRatio.md"
         - alert: NotesTargetDown
           expr: up{job="{{ include "notes.fullname" . }}"} == 0
           for: 2m
@@ -793,7 +793,7 @@ NAME                                        AGE
 prometheusrule.monitoring.coreos.com/notes  20s
 ```
 
-Эталон: [project/notes/helm/notes](https://github.com/distinguished-sre/devops/tree/devops/project/notes/helm/notes) и [values-kps.yaml](https://github.com/distinguished-sre/devops/tree/devops/project/notes/monitoring/k8s).
+Эталон: [project/notes/helm/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/helm/notes) и [values-kps.yaml](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/monitoring/k8s).
 
 **Объясни себе.**
 - Почему метрики выключены в `values.yaml` и включены в `values-dev.yaml`?
@@ -808,7 +808,7 @@ prometheusrule.monitoring.coreos.com/notes  20s
 Поломка делается скриптом, он меняет объекты в кластере `kind-notes`. Скачай и запусти (сценарий 1, 2 или 3; `fix` возвращает всё как было). Скрипт не читай, диагностируй по симптомам.
 
 ```bash
-curl -fsSL -o /tmp/break-8.9.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.9/break.sh
+curl -fsSL -o /tmp/break-8.9.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.9/break.sh
 bash /tmp/break-8.9.sh 1
 ```
 

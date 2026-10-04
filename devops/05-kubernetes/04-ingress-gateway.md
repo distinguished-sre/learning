@@ -689,7 +689,7 @@ Accepted ResolvedRefs
 
 4. Если в 8 ГБ-режиме ты уменьшал реплики, верни три: `kubectl scale deploy/notes -n notes --replicas=3`.
 
-Эталон файлов: [project/notes/k8s/base](https://github.com/distinguished-sre/devops/tree/devops/project/notes/k8s/base).
+Эталон файлов: [project/notes/k8s/base](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/base).
 
 **Что должно получиться:**
 
@@ -718,7 +718,7 @@ https True
 Скачай скрипт поломки и запусти один из сценариев (номер от 1 до 3, либо `random`). Скрипт не читай: причину ищи по симптомам.
 
 ```bash
-curl -fsSL -o /tmp/break-5.4.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.4/break.sh
+curl -fsSL -o /tmp/break-5.4.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.4/break.sh
 bash /tmp/break-5.4.sh random
 ```
 

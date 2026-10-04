@@ -880,7 +880,7 @@ A  compose.yml
 
 **Как читать вывод:** буква в первой колонке `git status --short` это статус в индексе: `A` новый файл добавлен, `M` файл изменён. Файла `.env` в списке нет, а `0` в конце подтверждает, что среди файлов git его нет. Если попробовать `git add .env`, git откажет: `The following paths are ignored by one of your .gitignore files: .env`. Так и задумано, не используй `-f`.
 
-Состояние проекта после урока: `compose.yml` (сервисы `notes` и `db`), `.env.example`, `.env` в `.gitignore`, сеть `notes-net`, том `notes_pgdata`, приложение на `127.0.0.1:8080`, база только внутри сети. Открытый долг: пароль лежит в `.env` открытым текстом, для платформы он закроется в [уроке 9.2](../09-secrets-gitops/02-vault-k8s-eso.md). Сверить себя можно с [эталоном](https://github.com/distinguished-sre/devops/tree/devops/project/notes).
+Состояние проекта после урока: `compose.yml` (сервисы `notes` и `db`), `.env.example`, `.env` в `.gitignore`, сеть `notes-net`, том `notes_pgdata`, приложение на `127.0.0.1:8080`, база только внутри сети. Открытый долг: пароль лежит в `.env` открытым текстом, для платформы он закроется в [уроке 9.2](../09-secrets-gitops/02-vault-k8s-eso.md). Сверить себя можно с [эталоном](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
 
 **Объясни себе:**
 
@@ -896,7 +896,7 @@ A  compose.yml
 Скачай скрипт поломки и запусти нужный сценарий. Читать скрипт не нужно: цель в том, чтобы найти причину по симптомам. Перед этим закоммить рабочее состояние (задание 4). Скрипт запускается без `sudo`, из каталога `~/notes`, и работает с твоим стендом (`docker` должен быть доступен тебе без `sudo`, как в предыдущих уроках).
 
 ```bash
-curl -fsSL -o /tmp/break-4.5.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.5/break.sh
+curl -fsSL -o /tmp/break-4.5.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.5/break.sh
 cd ~/notes
 bash /tmp/break-4.5.sh 1     # номер сценария 1, 2 или 3
 ```

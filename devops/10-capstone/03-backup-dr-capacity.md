@@ -851,7 +851,7 @@ scripts/restore-drill.sh
 Скачай сценарий и не читай скрипт: он подменяет состояние, ты диагностируешь. Скрипт работает от твоего пользователя, без `sudo`.
 
 ```bash
-curl -fsSL -o /tmp/break-10.3.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/10.3/break.sh
+curl -fsSL -o /tmp/break-10.3.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/10.3/break.sh
 bash /tmp/break-10.3.sh 1
 ```
 

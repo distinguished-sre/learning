@@ -284,7 +284,7 @@ flowchart TD
 **Чистый старт.** Есть ещё условие, которое забывают: «одно исходное состояние». Каждый прогон оставляет следы. В таблицах `orders` и `order_items` появляются новые заказы, у товаров уменьшается остаток, в Redis лежат чужие корзины и токены входа, а статистика `pg_stat_statements` копит запросы всех прошлых прогонов. Если ты поменяешь `BCRYPT_ROUNDS`, пароли пользователей в базе всё равно остались старыми. Второй прогон сравнивается с первым при другой базе, и разницу вызвала уже не твоя правка. Поэтому перед каждым прогоном, который попадёт в сравнение, возвращай стенд в исходное состояние:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring down -v
 docker compose --profile monitoring up -d --build --wait
 curl -s localhost:8000/readyz
@@ -311,7 +311,7 @@ curl -s localhost:8000/readyz
 
 ```bash
 mkdir -p ~/perf-lab/11-bottlenecks ~/perf-lab/results
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 git status --short .env.example && cp -n .env.example .env
 docker compose --profile monitoring up -d --wait
 curl -s localhost:8000/readyz

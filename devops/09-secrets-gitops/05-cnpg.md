@@ -471,7 +471,7 @@ PostgreSQL хранит на диске WAL, пока он не отправле
 
 ## Практика
 
-Предполагается кластер `kind-notes` из урока 9.3 с Flux, Vault, ESO и cert-manager. Репозиторий `notes-gitops` склонирован в `~/notes-gitops`. Эталон лежит в [project/notes/gitops](https://github.com/distinguished-sre/devops/tree/devops/project/notes/gitops).
+Предполагается кластер `kind-notes` из урока 9.3 с Flux, Vault, ESO и cert-manager. Репозиторий `notes-gitops` склонирован в `~/notes-gitops`. Эталон лежит в [project/notes/gitops](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/gitops).
 
 Все задания, кроме первого шага с MinIO, выполняются в `kubectl` и в git-репозитории `notes-gitops`. Если команда `kubectl cnpg` не находится, это плагин CNPG для `kubectl`: поставь его по инструкции на cloudnative-pg.io (в Homebrew пакет называется `kubectl-cnpg`), он нужен для `kubectl cnpg status`.
 

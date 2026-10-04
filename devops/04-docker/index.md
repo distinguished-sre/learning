@@ -4,7 +4,7 @@ title: "Docker и Compose"
 topic: 4
 time: "17.5 ч"
 redirect_from:
-  - /4-Docker-и-Compose.html
+  - /devops/4-Docker-и-Compose.html
 ---
 
 ## О чём тема

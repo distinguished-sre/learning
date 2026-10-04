@@ -164,7 +164,7 @@ EOF
 Подними стенд с мониторингом (если не поднят) и открой Prometheus по адресу `http://localhost:9090`. Запусти нагрузку на минуту, чтобы были данные:
 
 ```bash
-cd ~/load-tester/project/shop && docker compose --profile monitoring up -d --wait
+cd ~/learning/load-tester/project/shop && docker compose --profile monitoring up -d --wait
 source ~/perf-lab/.venv/bin/activate
 locust -f ~/perf-lab/09-locust/locustfile.py --host http://localhost:8000 --headless -u 5 -r 1 -t 3m --only-summary
 ```

@@ -624,4 +624,4 @@ Ubuntu 24.04, Prometheus 3.15 (HTTP API `/api/v1/query`), `jq` 1.7, стенд �
 
 Дальше: [урок 7.3. Grafana: дашборд RED и USE для «Магазина»](03-grafana.md), где эти запросы станут панелями дашборда, который ты будешь держать открытым на втором экране во время нагрузочного теста.
 
-**Глубже:** больше о PromQL, `without`, `on` и `group_left` в [курсе DevOps](https://distinguished-sre.github.io/devops/08-observability/03-promql.html), если захочется заглянуть дальше нужного для тестов.
+**Глубже:** больше о PromQL, `without`, `on` и `group_left` в [курсе DevOps](../../devops/08-observability/03-promql.html), если захочется заглянуть дальше нужного для тестов.

@@ -2,7 +2,7 @@
 
 **Узнай, выдержит ли сайт толпу.** Бесплатный курс для человека без опыта в IT: от первого терминала до поиска узких мест под нагрузкой и пробных собеседований.
 
-**[Открыть курс →](https://distinguished-sre.github.io/load-tester/)** · [Расписание](https://distinguished-sre.github.io/load-tester/schedule.html) · [ИИ-помощник](https://distinguished-sre.github.io/load-tester/ai.html)
+**[Открыть курс →](https://distinguished-sre.github.io/learning/load-tester/)** · [Расписание](https://distinguished-sre.github.io/learning/load-tester/schedule.html) · [ИИ-помощник](https://distinguished-sre.github.io/learning/load-tester/ai.html)
 
 13 тем · 57 уроков · около 170 часов · 5 занятий в неделю по 1,5–2 часа, около пяти месяцев
 
@@ -48,8 +48,8 @@
 Стенд «Магазин» поднимается так (команды разбираются в теме 5):
 
 ```bash
-git clone https://github.com/distinguished-sre/load-tester.git ~/load-tester
-cd ~/load-tester/project/shop && cp .env.example .env
+git clone https://github.com/distinguished-sre/learning.git ~/learning
+cd ~/learning/load-tester/project/shop && cp .env.example .env
 docker compose --profile monitoring up -d --build --wait
 ```
 
@@ -57,8 +57,8 @@ docker compose --profile monitoring up -d --build --wait
 
 ## Устройство репозитория
 
-- `index.md`, `_layouts/home.html`: главная курса; `ai.md`: страница «ИИ-помощник» с промптом преподавателя; `schedule.md`: расписание.
-- `_data/course.yml`: порядок тем и уроков; `NN-тема/`: уроки в Markdown; `_layouts/`, `_includes/`, `assets/`: оформление и виджеты.
-- `project/shop/`: стенд «Магазин»; `.github/workflows/stand.yml` поднимает его и прогоняет эталонные тесты.
+- `index.md` (layout `home-load-tester` в корне репозитория): главная курса; `ai.md`: страница «ИИ-помощник» с промптом преподавателя; `schedule.md`: расписание.
+- `../_data/courses/load-tester.yml`: порядок тем и уроков; `NN-тема/`: уроки в Markdown; оформление и виджеты (`_layouts/`, `_includes/`, `assets/`) общие для всех курсов и лежат в корне репозитория.
+- `project/shop/`: стенд «Магазин»; `.github/workflows/stand.yml` в корне репозитория поднимает его и прогоняет эталонные тесты.
 
 Сайт собирает Jekyll в GitHub Actions при push в `main` и публикует на GitHub Pages.

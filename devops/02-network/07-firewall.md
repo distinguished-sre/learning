@@ -994,7 +994,7 @@ passwordauthentication no
 Скачай скрипт и запусти сценарий. Сам скрипт не читай: диагностика начинается с симптома. Скрипт меняет правила `ufw` и настройки sshd, поэтому запускай его только на учебной ВМ с консольным доступом (`multipass shell`, консоль облака). Сценарии 1 и 3 отрезают новые входы по SSH: уже открытая сессия остаётся, но лечить придётся через консоль. На всякий случай скрипт ставит таймер, который сам выполнит `fix` через 30 минут.
 
 ```bash
-curl -fsSL -o /tmp/break-2.7.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/2.7/break.sh
+curl -fsSL -o /tmp/break-2.7.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/2.7/break.sh
 sudo bash /tmp/break-2.7.sh 2
 ```
 

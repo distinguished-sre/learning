@@ -1116,7 +1116,7 @@ CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 Скачай скрипт и запусти один из трёх сценариев. Не читай скрипт до конца диагностики: в нём ответ.
 
 ```bash
-curl -fsSL -o /tmp/break-4.1.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.1/break.sh
+curl -fsSL -o /tmp/break-4.1.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.1/break.sh
 sudo bash /tmp/break-4.1.sh 1
 ```
 

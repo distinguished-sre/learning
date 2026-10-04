@@ -21,7 +21,7 @@ Docker Compose описывает весь стенд одним файлом `c
 - Образ, контейнер, `docker run`, порты, тома: [урок 5.1](01-containers.md). Dockerfile и сборка образа «Магазина»: [урок 5.2](02-dockerfile.md).
 - Как «Магазин» устроен как веб-сервис (запрос, база, кэш): [урок 2.3](../02-web/03-backend-anatomy.md). Что такое таблица и запрос SQL: [урок 2.4](../02-web/04-sql-basics.md).
 - Файлы YAML и `curl`: [урок 1.2](../01-linux/02-text-logs.md) и [урок 1.4](../01-linux/04-network-cli.md). YAML мы разберём ниже, с нуля.
-- Глубже про Compose: [урок DevOps «Docker Compose»](https://distinguished-sre.github.io/devops/05-docker/03-compose.html). Для нашего курса хватит этого урока.
+- Глубже про Compose: [урок DevOps «Docker Compose»](../../devops/04-docker/05-compose-postgres.html). Для нашего курса хватит этого урока.
 
 ## Картина целиком
 
@@ -239,7 +239,7 @@ flowchart TD
 
 `down -v`: только она удаляет том, и следующий запуск зальёт сид заново. Обычный `down` оставит все данные, включая заказы, которые натворил прошлый тест.
 
-Осторожно: `down -v` стирает всю базу. На учебном стенде это хорошо, на настоящей катастрофа, поэтому на боевых серверах `-v` не пишут. И `docker compose down` не то же, что `docker rm`: оно работает с проектом целиком и читает `compose.yaml` из текущей папки (`~/load-tester/project/shop`).
+Осторожно: `down -v` стирает всю базу. На учебном стенде это хорошо, на настоящей катастрофа, поэтому на боевых серверах `-v` не пишут. И `docker compose down` не то же, что `docker rm`: оно работает с проектом целиком и читает `compose.yaml` из текущей папки (`~/learning/load-tester/project/shop`).
 
 > **Главное:** `down` убирает контейнеры и оставляет данные, `down -v` стирает и данные, и следующий запуск начнёт с нового сида.
 {: .key}
@@ -260,7 +260,7 @@ flowchart TD
 Все команды выполняй из папки стенда. Если стенд уже поднят с урока 2.1, это нормально: часть шагов покажет текущее состояние, а ту, где важен чистый старт, ты сделаешь через `down -v`.
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 ```
 
 ### 1. Прочитай файл и проверь его
@@ -490,14 +490,14 @@ real    0m52.1s
 
 ```bash
 mkdir -p ~/perf-lab/05-docker
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose ps > ~/perf-lab/05-docker/compose-ps.txt
 docker compose config > ~/perf-lab/05-docker/compose-config.txt
 cat > ~/perf-lab/05-docker/stand-start.sh <<'EOF'
 #!/bin/sh
 # Поднять чистый стенд и дождаться готовности. Аргумент "clean" стирает данные.
 set -eu
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 if [ "${1:-}" = "clean" ]; then docker compose down -v; fi
 docker compose up -d --build --wait --wait-timeout 300
 curl -s localhost:8000/readyz; echo
@@ -517,7 +517,7 @@ git push
 
 | Текст ошибки | Причина | Что делать |
 |---|---|---|
-| `no configuration file provided: not found` | ты не в папке с `compose.yaml` | `cd ~/load-tester/project/shop` или `docker compose -f ~/load-tester/project/shop/compose.yaml ...` |
+| `no configuration file provided: not found` | ты не в папке с `compose.yaml` | `cd ~/learning/load-tester/project/shop` или `docker compose -f ~/learning/load-tester/project/shop/compose.yaml ...` |
 | `dependency failed to start: container shop-postgres-1 is unhealthy` | база не стала healthy за отведённое время или упала при старте | `docker compose logs postgres`: ищи `FATAL`/`ERROR` в сиде; часто мало места на диске или битый том: `docker compose down -v` и заново |
 | `Bind for 127.0.0.1:8000 failed: port is already allocated` (или `address already in use`) | порт 8000 уже занят: на твоей машине висит другая программа или контейнер | `sudo ss -ltnp \| grep 8000`; останови чужое или поменяй порт хоста в `ports:` на `"127.0.0.1:8080:8000"` (тогда стенд будет на `localhost:8080`) |
 | `services.shop Additional property cpuz is not allowed` | опечатка в имени ключа в `compose.yaml` | исправь написание и проверь `docker compose config -q` |
@@ -539,7 +539,7 @@ git push
 **Поломка.** Нарочно сломай настройку подключения. В `.env` замени имя сервиса базы на `localhost`:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 sed -i.bak 's#^DATABASE_URL=.*#DATABASE_URL=postgresql://shop:shop@localhost:5432/shop#' .env && rm .env.bak
 docker compose up -d
 sleep 20

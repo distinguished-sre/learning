@@ -665,7 +665,7 @@ notes   <none>      2h
 
 **Как читать вывод:** первая строка это число строк файла и его путь, вторая имя ветки и короткий хеш коммита, третья сколько строк добавлено. Если в файле пусто, ищи проблему в `EOF`.
 
-Чарт `helm/notes` (версия 0.2.0) и `k8s/base/` не меняются. Эталон: `project/notes/docs/runbooks/k8s-triage.md` в [репозитории курса](https://github.com/distinguished-sre/devops/tree/devops/project/notes/docs/runbooks).
+Чарт `helm/notes` (версия 0.2.0) и `k8s/base/` не меняются. Эталон: `project/notes/docs/runbooks/k8s-triage.md` в [репозитории курса](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/docs/runbooks).
 
 **Объясни себе:**
 
@@ -682,7 +682,7 @@ notes   <none>      2h
 Теперь без подсказок. Скрипт применит одну из поломок, знакомых по урокам 5.x. Читать его нельзя: цель найти причину алгоритмом, а не подсмотреть. Запускай без `sudo`, нужны релиз из урока 5.9 и Service из урока 5.3.
 
 ```bash
-curl -fsSL -o /tmp/break-5.13.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.13/break.sh
+curl -fsSL -o /tmp/break-5.13.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.13/break.sh
 bash /tmp/break-5.13.sh random
 ```
 

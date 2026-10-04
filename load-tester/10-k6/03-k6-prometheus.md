@@ -288,7 +288,7 @@ export function handleSummary(data) {
 Поднимаем стенд (если не запущен) и проверяем, что Prometheus принимает запись:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring up -d --wait
 curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:9090/api/v1/write
 ```

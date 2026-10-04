@@ -657,7 +657,7 @@ HTTP/1.0 200 OK
 
 **Как читать вывод:** две строки `Forwarding from` (одна для IPv4, другая для IPv6, адрес `[::1]`) значат «порт 8080 твоего компьютера пробрасывается в порт 8080 пода». Первая строка результата `curl` это статус ответа приложения: `200 OK`. Версия HTTP в ней (`1.0` или `1.1`) зависит от версии приложения, важен код.
 
-Состояние проекта: Service `notes` `:8080`, DNS `notes.notes.svc`, вход снаружи пока только через `port-forward` (постоянный вход появится в [уроке 5.4](04-ingress-gateway.md)), хранилище всё ещё `emptyDir`, образ `notes:0.4.0`. Эталон: [k8s/base/20-service.yaml](https://github.com/distinguished-sre/devops/tree/devops/project/notes/k8s/base/20-service.yaml).
+Состояние проекта: Service `notes` `:8080`, DNS `notes.notes.svc`, вход снаружи пока только через `port-forward` (постоянный вход появится в [уроке 5.4](04-ingress-gateway.md)), хранилище всё ещё `emptyDir`, образ `notes:0.4.0`. Эталон: [k8s/base/20-service.yaml](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/base/20-service.yaml).
 
 **Объясни себе:** почему порт-форвард годится для отладки, но не для публикации? Что будет с соединением при пересоздании пода?
 
@@ -672,7 +672,7 @@ HTTP/1.0 200 OK
 Скачай скрипт поломки и запусти один из сценариев. Скрипт не читай: диагностируй так, как в реальной жизни. Сценарии: 1, 2, 3 (или `random`).
 
 ```bash
-curl -fsSL -o /tmp/break-5.3.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.3/break.sh
+curl -fsSL -o /tmp/break-5.3.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.3/break.sh
 bash /tmp/break-5.3.sh random
 ```
 

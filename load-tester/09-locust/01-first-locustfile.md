@@ -300,7 +300,7 @@ flowchart TD
 Стенд с мониторингом (если ещё не запущен):
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 cp -n .env.example .env
 docker compose --profile monitoring up -d --wait
 curl -s localhost:8000/readyz

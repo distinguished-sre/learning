@@ -758,7 +758,7 @@ deployment.apps/notes   2/2     2            2           3h
 Скачай скрипт и запусти сценарий, не читая его. Скрипту нужен работающий кластер kind, установленный metrics-server (задание 1) и HPA `notes` (задание 2 или 3):
 
 ```bash
-curl -fsSL -o /tmp/break-5.11.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.11/break.sh
+curl -fsSL -o /tmp/break-5.11.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.11/break.sh
 bash /tmp/break-5.11.sh 1
 ```
 

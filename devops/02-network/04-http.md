@@ -930,7 +930,7 @@ cp ~/notes/app.py ~/notes/app.py.before-v3
 2. Чтобы не ошибиться в правках, возьми эталонную версию v3. Команда `curl -fsSL -o ~/notes/app.py <URL>`: `-f` не сохранит страницу с ошибкой вместо файла, `-s` и `-S` тихий режим с показом ошибок, `-L` идёт за перенаправлениями, `-o` записывает ответ в файл.
 
 ```bash
-curl -fsSL -o ~/notes/app.py https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/v3.py
+curl -fsSL -o ~/notes/app.py https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/v3.py
 ```
 
 3. Посмотри, что изменилось. `diff старый новый` показывает различия: `<` строки только в старом файле, `>` только в новом, `2c2` значит «строка 2 заменена». `| head -12` оставляет первые 12 строк.
@@ -1044,7 +1044,7 @@ class Handler(BaseHTTPRequestHandler):
 
 Стандартный обработчик по имени метода ищет функцию `do_<МЕТОД>`. Все известные методы направлены в один `_handle`, а `__getattr__` перехватывает любые незнакомые (`do_PROPFIND`): они тоже дойдут до проверки и получат 405, а не стандартный 501. Так появилась поддержка `HEAD`: раньше метода `do_HEAD` не было, отсюда 501.
 
-Полный файл лежит в эталоне: [versions/v3.py](https://github.com/distinguished-sre/devops/tree/devops/project/notes/versions/v3.py). Ты уже скачал его командой выше.
+Полный файл лежит в эталоне: [versions/v3.py](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/versions/v3.py). Ты уже скачал его командой выше.
 
 4. Выкати новую версию на сервер. `sudo install -o root -g root -m 755 источник назначение` копирует файл и сразу задаёт владельца и права (урок 1.3): root владеет кодом, права 755 позволяют всем читать и выполнять, но менять только root. `systemctl restart` перезапускает сервис (урок 1.8), `sleep 1` даёт секунду на запуск, `cmp` сравнивает два файла побайтно и молчит, если они одинаковые.
 
@@ -1424,7 +1424,7 @@ curl -sS --max-time 3 http://127.0.0.1:9091/; echo
 Скачай скрипт и запусти один из сценариев. Это как реальная неудачная выкладка: подменяется код `/opt/notes/app.py`, сервис перезапускается, и он «ведёт себя странно».
 
 ```bash
-curl -fsSL -o /tmp/break-2.4.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/2.4/break.sh
+curl -fsSL -o /tmp/break-2.4.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/2.4/break.sh
 sudo bash /tmp/break-2.4.sh 1
 ```
 

@@ -643,7 +643,7 @@ notes:http_latency:p95_5m ok
 Скрипт правит только файл правил `~/notes/monitoring/prometheus/rules/notes.rules.yml` из задания 4: одно из трёх правил после его запуска считает неправильно. Исходный файл скрипт сохраняет рядом (`.before-break`), `fix` его возвращает. Читать скрипт не нужно, диагностика и есть упражнение. Запускай без `sudo`. Нагрузку из задания 1 держи включённой.
 
 ```bash
-curl -fsSL -o /tmp/break-8.3.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.3/break.sh
+curl -fsSL -o /tmp/break-8.3.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.3/break.sh
 bash /tmp/break-8.3.sh 1
 ```
 

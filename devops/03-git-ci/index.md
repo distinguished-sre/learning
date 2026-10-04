@@ -4,7 +4,7 @@ title: "Git и CI"
 topic: 3
 time: "11.5 ч"
 redirect_from:
-  - /3-Git-Gitlab-Github.html
+  - /devops/3-Git-Gitlab-Github.html
 ---
 
 ## О чём тема

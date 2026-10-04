@@ -322,7 +322,7 @@ flowchart TD
 ### 1. Подними стенд и убедись, что он в исходном состоянии
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 cp .env.example .env
 docker compose --profile monitoring down -v
 docker compose --profile monitoring up -d --build --wait
@@ -525,7 +525,7 @@ cd ~/perf-lab/12-process && source ~/perf-lab/.venv/bin/activate && python table
 
 Скопируй шаблон: `cp ~/perf-lab/reports/TEMPLATE.md ~/perf-lab/reports/2026-10-shop-purchase.md`. Заполни в таком порядке (вывод идёт последним, хотя стоит первым):
 
-1. Раздел 3 «Среда»: параметры своего ноутбука (`nproc`, `free -h`, `docker compose version`, твой `machine.md` из [урока 1.1](../01-linux/01-workstation-terminal.md)), хеш коммита стенда (`git -C ~/load-tester rev-parse --short HEAD`), версию k6 (`k6 version`). Запиши минимум три отличия от прода.
+1. Раздел 3 «Среда»: параметры своего ноутбука (`nproc`, `free -h`, `docker compose version`, твой `machine.md` из [урока 1.1](../01-linux/01-workstation-terminal.md)), хеш коммита стенда (`git -C ~/learning rev-parse --short HEAD`), версию k6 (`k6 version`). Запиши минимум три отличия от прода.
 2. Раздел 4: сценарий из `shop.js`. Загляни в скрипт и перечисли пять запросов итерации.
 3. Раздел 5: таблица из шага 3 и график. В Markdown на GitHub график строится прямо из текста блоком `xychart-beta`. Подставь свои числа:
 

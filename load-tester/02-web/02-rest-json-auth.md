@@ -21,7 +21,7 @@ time: "2.5 ч"
 ## Что нужно знать
 
 - Запрос, ответ, метод, заголовок, код статуса: [урок 2.1](01-client-server-http.md). Здесь мы много раз будем смотреть 200, 201, 401, 404, 422.
-- Стенд «Магазин» запущен (`docker compose ps` показывает четыре `healthy`). Если нет, вернись к практике 2.1: `cd ~/load-tester/project/shop && docker compose up -d --wait`.
+- Стенд «Магазин» запущен (`docker compose ps` показывает четыре `healthy`). Если нет, вернись к практике 2.1: `cd ~/learning/load-tester/project/shop && docker compose up -d --wait`.
 - `jq` установлен в [уроке 1.1](../01-linux/01-workstation-terminal.md): проверь `jq --version`.
 - Переменные оболочки и подстановка `$(...)`: [урок 1.1](../01-linux/01-workstation-terminal.md).
 
@@ -546,7 +546,7 @@ chmod +x ~/perf-lab/02-web/order-flow.sh
 **Поломка 1. Токен «умер».** Токен хранится в Redis, а значит, его можно удалить. Сделай это сам, как будто прошёл час:
 
 ```bash
-docker compose -f ~/load-tester/project/shop/compose.yaml exec redis redis-cli DEL "session:$TOKEN"
+docker compose -f ~/learning/load-tester/project/shop/compose.yaml exec redis redis-cli DEL "session:$TOKEN"
 curl -s -w '\n%{http_code}\n' localhost:8000/api/cart -H "Authorization: Bearer $TOKEN"
 ```
 

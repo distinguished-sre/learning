@@ -641,7 +641,7 @@ kubectl --context kind-notes -n notes get rollout notes -w
 time kubectl --context kind-notes argo rollouts undo notes -n notes
 ```
 
-5. Закоммить `RELEASING.md`. Итоговое состояние проекта: `docs/security.md`, `RELEASING.md`, эталон https://github.com/distinguished-sre/devops/tree/devops/project/notes.
+5. Закоммить `RELEASING.md`. Итоговое состояние проекта: `docs/security.md`, `RELEASING.md`, эталон https://github.com/distinguished-sre/learning/tree/main/devops/project/notes.
 
 **Что должно получиться** (кластер в этой редакции не запускался, вывод показан по документации Argo Rollouts, у тебя цифры и номер ревизии другие):
 
@@ -672,7 +672,7 @@ real    0m1.9s
 
 ```bash
 curl -fsSL -o /tmp/break-10.5.sh \
-  https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/10.5/break.sh
+  https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/10.5/break.sh
 bash /tmp/break-10.5.sh 1
 ```
 

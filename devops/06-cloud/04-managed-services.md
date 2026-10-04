@@ -889,7 +889,7 @@ notes-proxy-1   nginx:1.30                        Up 20 seconds
 Здесь ты ломаешь связь «Заметок» с Managed PostgreSQL на `notes-vm` (нужно выполненное задание 5 и хотя бы одна заметка). Скрипт ничего не создаёт и не удаляет в облаке: он правит `.env`, добавляет правила `iptables` с меткой `break-6.4` и двигает последовательность. Запускай на ВМ под `yc-user` (ему доступен `sudo`).
 
 ```bash
-curl -fsSL -o /tmp/break-6.4.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/6.4/break.sh
+curl -fsSL -o /tmp/break-6.4.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/6.4/break.sh
 sudo bash /tmp/break-6.4.sh 1
 ```
 

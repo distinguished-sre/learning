@@ -641,7 +641,7 @@ db:5432 1
 
 ```bash
 cd ~/notes
-curl -fsSL -o /tmp/break-8.4.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.4/break.sh
+curl -fsSL -o /tmp/break-8.4.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.4/break.sh
 bash /tmp/break-8.4.sh 1
 ```
 

@@ -177,7 +177,7 @@ route:
   annotations:
     summary: "Цель {{ $labels.job }} недоступна"
     description: "Prometheus не может скрейпить {{ $labels.instance }} больше минуты: метрики этого источника не обновляются."
-    runbook_url: https://distinguished-sre.github.io/load-tester/07-observability/04-exporters.html
+    runbook_url: https://distinguished-sre.github.io/learning/load-tester/07-observability/04-exporters.html
 ```
 {% endraw %}
 
@@ -468,7 +468,7 @@ wait
 Правило `ExporterDown` из теории уже есть в стенде: оно в группе `shop-meta` файла `monitoring/prometheus/rules/alerts.yml`. Проверь, что оно живое. Сначала синтаксис правил (утилита `promtool` лежит в образе Prometheus, отдельно её ставить не надо):
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker run --rm -v "$PWD/monitoring/prometheus/rules:/r:ro" --entrypoint promtool prom/prometheus:v3.15.0 check rules /r/alerts.yml /r/slo.yml
 ```
 
@@ -514,7 +514,7 @@ cd ~/perf-lab && git add 07-monitoring && git commit -m "7.6: инцидент 0
 **Поломка: молчащий алерт.** Ты написал алерт, но он не сработал, хотя сервис сломан. Такое бывает постоянно. Смоделируем: поменяем в **своей копии** правила имя метрики на неверное (`shop_db_pool_waitng`, опечатка) и убедимся, что инцидент пройдёт мимо.
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 cp monitoring/prometheus/rules/alerts.yml ~/perf-lab/07-monitoring/alerts.yml.orig
 sed -i.bak 's/shop_db_pool_waiting > 0/shop_db_pool_waitng > 0/' monitoring/prometheus/rules/alerts.yml
 rm monitoring/prometheus/rules/alerts.yml.bak
@@ -611,4 +611,4 @@ Ubuntu 24.04, Docker Compose v2, стенд «Магазин» из `project/sho
 
 Дальше: [урок 7.7. Трейсы: путь одного запроса](07-traces.md): метрики и логи ты уже связал, теперь добавишь третий сигнал и научишься находить медленный участок одного запроса.
 
-**Глубже:** Alertmanager, маршрутизация и тишины в [курсе DevOps](https://distinguished-sre.github.io/devops/08-observability/05-alertmanager.html).
+**Глубже:** Alertmanager, маршрутизация и тишины в [курсе DevOps](../../devops/08-observability/05-alertmanager.html).

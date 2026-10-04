@@ -987,7 +987,7 @@ if __name__ == "__main__":
 
 ```bash
 python3 -m py_compile app.py && echo "синтаксис ok"
-curl -fsSL https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/v2.1.py | diff - app.py && echo "совпадает с эталоном"
+curl -fsSL https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/v2.1.py | diff - app.py && echo "совпадает с эталоном"
 grep -n 'signal.signal' app.py
 ```
 
@@ -1076,14 +1076,14 @@ HTTP 201
 - Код 130 при `Ctrl+C` вместо 0: остался запущенным старый процесс; найди его `pgrep -af app.py`.
 - Открытый запрос всё равно оборвался: пропущена строка `server.daemon_threads = False`.
 
-Итог задания: в `~/notes` лежит v2.1 (обработчик SIGTERM/SIGINT, `shutting down`, выход с кодом 0, логи с уровнем). Долг остался один: сервис по-прежнему запускается руками и не поднимется сам после падения. Его закроет [урок 1.8](08-systemd-editors.md). Эталон: [project/notes/versions/v2.1.py](https://github.com/distinguished-sre/devops/tree/devops/project/notes/versions/v2.1.py).
+Итог задания: в `~/notes` лежит v2.1 (обработчик SIGTERM/SIGINT, `shutting down`, выход с кодом 0, логи с уровнем). Долг остался один: сервис по-прежнему запускается руками и не поднимется сам после падения. Его закроет [урок 1.8](08-systemd-editors.md). Эталон: [project/notes/versions/v2.1.py](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/versions/v2.1.py).
 
 ## Сломай и почини
 
 Скрипт создаёт три поломки. Читать его код не нужно, это часть упражнения: диагностируй сам. Скачай его и запусти первый сценарий (нужен `sudo`, потому что третий сценарий монтирует файловую систему; сервис при этом запускается от твоего пользователя). Перед этим должен быть пройден урок 1.3 и в `~/notes` должен лежать `app.py` (лучше версии v2.1 из задания 5, но подойдёт и v2):
 
 ```bash
-curl -fsSL -o /tmp/break-1.4.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/1.4/break.sh
+curl -fsSL -o /tmp/break-1.4.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/1.4/break.sh
 sudo bash /tmp/break-1.4.sh 1
 ```
 

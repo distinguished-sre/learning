@@ -1,0 +1,132 @@
+# Единый сайт курсов: GitHub Pages проекта https://distinguished-sre.github.io/learning/
+# Курсы лежат в папках devops/, load-tester/ (позже monitoring/). Данные курса: _data/courses/<курс>.yml,
+# курс страницы задаётся в defaults ниже (page.course).
+title: Обучение
+description: "Три курса Евгения Быкова: DevOps, нагрузочное тестирование и мониторинг. Теория простым языком, вопросы с ответами и практика"
+email: jenyabykov322@yandex.ru
+github_username: distinguished-sre
+lang: ru
+url: "https://distinguished-sre.github.io"
+baseurl: "/learning"
+repo_url: "https://github.com/distinguished-sre/learning"
+logo: /assets/favicon.svg
+
+# Тему cayman убрали: оформление своё (_layouts, assets/css/style.scss).
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    default_lang: text
+    guess_lang: false
+
+# Все плагины из белого списка GitHub Pages.
+plugins:
+  - jekyll-relative-links
+  - jekyll-redirect-from
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Ссылки [текст](03-file.md) в уроках превращаются в .html
+relative_links:
+  enabled: true
+  collections: false
+
+# Указав exclude, мы заменяем стандартный список Jekyll целиком, поэтому
+# служебные пути перечислены. CLAUDE.md намеренно содержит Liquid-теги как
+# текст и не должен попадать на сайт. project/ и _samples/: это код, а не страницы.
+# README.md исключён: на сайт идёт index.md (в devops/ это бывший README.md).
+exclude:
+  - README.md
+  - CLAUDE.md
+  - project/
+  - _samples/
+  - tools/
+  - "*.sh"
+  - "**/README.md"
+  - "**/CLAUDE.md"
+  - "**/project"
+  - "**/tools"
+  - "**/*.sh"
+  - Makefile
+  - Gemfile
+  - Gemfile.lock
+  - gemfiles
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - .sass-cache
+  - .jekyll-cache
+
+# Уроки получают layout lesson и course по scope пути, обзоры тем задают topic явно,
+# главные страницы курсов (index.md) задают layout home-<курс> сами.
+defaults:
+  - scope: {path: "devops"}
+    values: {course: devops, image: /devops/devops-thumb.png, description: "Десять блоков от Linux до Kubernetes, GitOps и сквозного проекта. Теория простым языком, вопросы с ответами и практика"}
+  - scope: {path: "devops/01-linux"}
+    values: {layout: lesson}
+  - scope: {path: "devops/02-network"}
+    values: {layout: lesson}
+  - scope: {path: "devops/03-git-ci"}
+    values: {layout: lesson}
+  - scope: {path: "devops/04-docker"}
+    values: {layout: lesson}
+  - scope: {path: "devops/05-kubernetes"}
+    values: {layout: lesson}
+  - scope: {path: "devops/06-cloud"}
+    values: {layout: lesson}
+  - scope: {path: "devops/07-iac"}
+    values: {layout: lesson}
+  - scope: {path: "devops/08-observability"}
+    values: {layout: lesson}
+  - scope: {path: "devops/09-secrets-gitops"}
+    values: {layout: lesson}
+  - scope: {path: "devops/10-capstone"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester"}
+    values: {course: load-tester, image: /load-tester/og.jpg, description: "Нагрузочное тестирование и мониторинг с нуля: Linux, Python, автотесты API, Locust, k6 и поиск узких мест на учебном интернет-магазине"}
+  - scope: {path: "load-tester/01-linux"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/02-web"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/03-git"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/04-python"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/05-docker"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/06-api-testing"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/07-observability"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/08-perf-theory"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/09-locust"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/10-k6"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/11-bottlenecks"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/12-process"}
+    values: {layout: lesson}
+  - scope: {path: "load-tester/13-final"}
+    values: {layout: lesson}
+  - scope: {path: "monitoring"}
+    values: {course: monitoring, image: /load-tester/og.jpg, description: "Основы мониторинга с нуля: метрики, логи, трейсы, SLO, Prometheus, Grafana и алерты на учебном интернет-магазине"}
+  - scope: {path: "monitoring/01-basics"}
+    values: {layout: lesson}
+  - scope: {path: "monitoring/02-metrics"}
+    values: {layout: lesson}
+  - scope: {path: "monitoring/03-dashboards-alerts"}
+    values: {layout: lesson}
+  - scope: {path: "monitoring/04-logs-traces"}
+    values: {layout: lesson}
+  - scope: {path: "devops/tasks"}
+    values: {layout: default}
+  - scope: {path: "devops/resources.md"}
+    values: {layout: default}
+  - scope: {path: "load-tester/schedule.md"}
+    values: {layout: page}

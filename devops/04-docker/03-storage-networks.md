@@ -1201,7 +1201,7 @@ notes-restore
 
 **Как читать вывод:** `ok` работает сервис. Список заметок пережил все пересоздания контейнера: том цел. Таблицы показывают, что том и сеть с нужными именами существуют. `Up ... (healthy)` значит, что `HEALTHCHECK` из [урока 4.2](02-dockerfile.md) проходит, а в `PORTS` порт опубликован только на `127.0.0.1`.
 
-Новых файлов в репозиторий `~/notes` этот шаг не добавляет: меняется состояние Docker (том `notes-data`, сеть `notes-net`). Эталон проекта на конец урока: <https://github.com/distinguished-sre/devops/tree/devops/project/notes>. Ты продолжишь в [уроке 4.4](04-sql-postgres-basics.md), где в сети `notes-net` появится PostgreSQL.
+Новых файлов в репозиторий `~/notes` этот шаг не добавляет: меняется состояние Docker (том `notes-data`, сеть `notes-net`). Эталон проекта на конец урока: <https://github.com/distinguished-sre/learning/tree/main/devops/project/notes>. Ты продолжишь в [уроке 4.4](04-sql-postgres-basics.md), где в сети `notes-net` появится PostgreSQL.
 
 **Объясни себе:**
 
@@ -1218,7 +1218,7 @@ notes-restore
 Сценарии запускает скрипт. Не читай его: смысл в диагностике. Скачай и запусти (без `sudo`, скрипту нужен только доступ к Docker; перед запуском задание 7 должно быть выполнено):
 
 ```bash
-curl -fsSL -o /tmp/break-4.3.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.3/break.sh
+curl -fsSL -o /tmp/break-4.3.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.3/break.sh
 bash /tmp/break-4.3.sh 1
 ```
 

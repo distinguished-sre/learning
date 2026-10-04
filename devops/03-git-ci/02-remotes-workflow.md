@@ -1282,7 +1282,7 @@ To /home/ubuntu/github-notes.git
 Скрипт создаёт песочницу в `~/break-3.2` (голый «сервер» `origin.git`, твой клон `me` и клон коллеги `colleague`) и ломает её одним из трёх способов. Твой проект `~/notes` и папку `~/sandbox` он не трогает, `sudo` не нужен. Скачай и запусти (скрипт читать не нужно, разбирай симптом как на настоящем инциденте):
 
 ```bash
-curl -fsSL -o /tmp/break-3.2.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/3.2/break.sh
+curl -fsSL -o /tmp/break-3.2.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/3.2/break.sh
 bash /tmp/break-3.2.sh 1
 ```
 

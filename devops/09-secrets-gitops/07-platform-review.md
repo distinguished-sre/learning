@@ -458,7 +458,7 @@ Kyverno и OPA Gatekeeper делают то же самое мощнее: уме
 
 ## Практика
 
-Предполагается кластер `kind-notes` и репозитории `~/notes` (приложение) и `~/notes-gitops` (конфигурация) из уроков 9.1-9.6. Эталон конфигурации лежит в [project/notes/gitops](https://github.com/distinguished-sre/devops/tree/devops/project/notes/gitops).
+Предполагается кластер `kind-notes` и репозитории `~/notes` (приложение) и `~/notes-gitops` (конфигурация) из уроков 9.1-9.6. Эталон конфигурации лежит в [project/notes/gitops](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/gitops).
 
 ### Задание 1. Нарисуй платформу и найди точки отказа
 

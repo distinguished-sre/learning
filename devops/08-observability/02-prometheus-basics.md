@@ -793,7 +793,7 @@ notes	down	server returned HTTP status 404 Not Found
                return self._send(200, generate_latest(), CONTENT_TYPE_LATEST)
    ```
 
-5. Обнови датчики. В `main()` после `initialize_storage()` добавь `BUILD_INFO.labels(VERSION).set(1)` и `update_notes_total()` (оберни его в `try/except STORAGE_ERRORS`, чтобы недоступная база не мешала старту), а в `_create_note` после `save_note(text)` вызови `update_notes_total()`. Полный вариант файла: [versions/v5.py в эталоне](https://github.com/distinguished-sre/devops/tree/devops/project/notes/versions).
+5. Обнови датчики. В `main()` после `initialize_storage()` добавь `BUILD_INFO.labels(VERSION).set(1)` и `update_notes_total()` (оберни его в `try/except STORAGE_ERRORS`, чтобы недоступная база не мешала старту), а в `_create_note` после `save_note(text)` вызови `update_notes_total()`. Полный вариант файла: [versions/v5.py в эталоне](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/versions).
 
 6. Пересобери образ и перезапусти сервис. В `compose.yml` у сервиса `notes` укажи `image: notes:0.5.0` рядом с `build: .`, в `.env` поставь `APP_VERSION=0.5.0`. Разбор команд: `docker build -t notes:0.5.0 .` собирает образ из текущего каталога и даёт ему имя и версию; `docker compose up -d notes` пересоздаёт только сервис `notes`; `grep -E '^(a|b)'` печатает строки, начинающиеся на `a` или `b`; `-k` у `curl` не проверяет самоподписанный сертификат `notes.lab` ([урок 4.6](../04-docker/06-compose-nginx-tls.md)):
 
@@ -862,7 +862,7 @@ GET other 404 2
 Скачай скрипт. У curl флаг `-f` означает «при ошибке сервера не сохраняй страницу с ошибкой», `-L` разрешает переходить по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-8.2.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.2/break.sh
+curl -fsSL -o /tmp/break-8.2.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.2/break.sh
 bash /tmp/break-8.2.sh 1
 ```
 

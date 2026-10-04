@@ -1047,7 +1047,7 @@ git commit -m "Добавить scripts/diagnose.sh: диагностика по
 Скачай скрипт и запусти. Ключи `curl`: `-f` («при ошибке сервера не сохраняй страницу ошибки»), `-sS` (тихо, но ошибки показывать), `-L` (идти по перенаправлениям), `-o` (имя файла):
 
 ```bash
-curl -fsSL -o /tmp/break-2.8.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/2.8/break.sh
+curl -fsSL -o /tmp/break-2.8.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/2.8/break.sh
 sudo bash /tmp/break-2.8.sh random
 ```
 

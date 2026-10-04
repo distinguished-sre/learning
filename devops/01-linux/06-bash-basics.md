@@ -20,7 +20,7 @@ time: "4 ч"
 - [Урок 1.2: текст, потоки и конвейеры](02-text-pipes.md): stdout, stderr, `>`, `2>&1`, `grep`. Без них скрипты бесполезны, потому что скрипт только и делает, что соединяет команды.
 - [Урок 1.3: пользователи, права и sudo](03-users-permissions.md): `chmod +x` (бит исполнения: отметка в правах файла, которая разрешает запускать его как программу) и владелец файла.
 - [Урок 1.4: процессы и сигналы](04-processes-signals.md): что такое процесс, код выхода процесса (число, которое команда возвращает при завершении: 0 значит «успех», остальное «ошибка»), запуск в фоне, `Ctrl+C`.
-- [Урок 1.5: диск, память и CPU](05-disk-memory-cpu.md): в `~/notes` лежит `app.py` версии v2.2 (`/leak`, `/burn`). Если файла нет, скачай эталон: `curl -fsSL -o ~/notes/app.py https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/v2.2.py`.
+- [Урок 1.5: диск, память и CPU](05-disk-memory-cpu.md): в `~/notes` лежит `app.py` версии v2.2 (`/leak`, `/burn`). Если файла нет, скачай эталон: `curl -fsSL -o ~/notes/app.py https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/v2.2.py`.
 
 ## Картина целиком
 
@@ -1161,7 +1161,7 @@ PORT=9000 NOTES_DATA=/tmp/notes-dev.txt python3 app.py
 
 **Как читать вывод:** первая строка `python3 -m unittest -v` это команда, которую make печатает перед выполнением (её печать отключает `@`). Дальше по строке на тест: имя, класс и `ok`. Строка из дефисов, `Ran 6 tests` и итог `OK` (при провале будет `FAILED (failures=1)` и подробности выше). Во втором блоке `lint` напечатал команду и своё сообщение (`@echo` сам себя не показал, только результат). Третий блок: команда `run` со значениями, подставленными Make (видно `PORT=9000`), и лог сервиса. Файл `__pycache__` после `make lint` создан самим Python (кэш байт-кода), его можно игнорировать.
 
-Если твой `app.py` отвечает на какой-то случай иначе, чем описано (например, `PUT` даёт 501), тест это покажет: это не ошибка теста, а расхождение с контрактом сервиса, которое нужно исправить в `app.py`. Эталон проекта: <https://github.com/distinguished-sre/devops/tree/devops/project/notes>.
+Если твой `app.py` отвечает на какой-то случай иначе, чем описано (например, `PUT` даёт 501), тест это покажет: это не ошибка теста, а расхождение с контрактом сервиса, которое нужно исправить в `app.py`. Эталон проекта: <https://github.com/distinguished-sre/learning/tree/main/devops/project/notes>.
 
 **Объясни себе:**
 
@@ -1183,7 +1183,7 @@ PORT=9000 NOTES_DATA=/tmp/notes-dev.txt python3 app.py
 Скачай сломанное окружение и не читай скрипт (иначе пропадёт смысл упражнения). Он аккуратно испортит файлы в `~/notes`; сначала сделай копию (`-a` сохраняет права и даты): `cp -a ~/notes ~/notes.before-break`. Скрипт запускай **без** `sudo`: он правит твои файлы, и от root их владелец поменялся бы.
 
 ```bash
-curl -fsSL -o /tmp/break-1.6.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/1.6/break.sh
+curl -fsSL -o /tmp/break-1.6.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/1.6/break.sh
 bash /tmp/break-1.6.sh 1        # сценарий 1, 2 или 3; вернуть как было: bash /tmp/break-1.6.sh fix
 ```
 

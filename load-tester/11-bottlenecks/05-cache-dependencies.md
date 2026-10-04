@@ -210,7 +210,7 @@ flowchart TD
 
 ## Практика
 
-Стенд поднят, мониторинг включён. Исходное состояние для урока: после 11.3-11.4 в `.env` стоит `BUG_N_PLUS_ONE=0`, `DB_POOL_MAX=15`, `LEAK_ENABLED=0`; индекс `orders_user_id_idx` создан. Проверь: `grep -E '^(CACHE_ENABLED|BUG_N_PLUS_ONE|DB_POOL_MAX|LEAK_ENABLED|PAYMENT_TIMEOUT|PAYMENT_RETRIES)=' ~/load-tester/project/shop/.env` и `psqlshop -c "\d orders"` (индекс на месте). Если что-то не так, верни настройки через `set-env.sh`.
+Стенд поднят, мониторинг включён. Исходное состояние для урока: после 11.3-11.4 в `.env` стоит `BUG_N_PLUS_ONE=0`, `DB_POOL_MAX=15`, `LEAK_ENABLED=0`; индекс `orders_user_id_idx` создан. Проверь: `grep -E '^(CACHE_ENABLED|BUG_N_PLUS_ONE|DB_POOL_MAX|LEAK_ENABLED|PAYMENT_TIMEOUT|PAYMENT_RETRIES)=' ~/learning/load-tester/project/shop/.env` и `psqlshop -c "\d orders"` (индекс на месте). Если что-то не так, верни настройки через `set-env.sh`.
 
 ### Часть 1. Кэш
 
@@ -458,7 +458,7 @@ git push
 cd ~/perf-lab/11-bottlenecks
 ./run.sh cache-flush SCENARIO=product RATE=250 DURATION=90s &
 sleep 30
-cd ~/load-tester/project/shop && docker compose exec -T redis redis-cli FLUSHALL
+cd ~/learning/load-tester/project/shop && docker compose exec -T redis redis-cli FLUSHALL
 ```
 
 Что произойдёт: hit ratio мгновенно падает до нуля и медленно (десятки секунд) восстанавливается, в базу в первые секунды летит почти полная нагрузка (до 250 запросов в секунду вместо 40), p95 на несколько секунд подпрыгивает. `FLUSHALL` стирает и корзины (они тоже в Redis), поэтому на боевой системе так делать нельзя; здесь мы лишь воспроизводим перезапуск Redis.

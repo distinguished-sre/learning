@@ -1,0 +1,71 @@
+# Порядок уроков курса «Мониторинг: основы». time темы = сумма time её уроков.
+title: "Мониторинг: основы. Курс Евгения Быкова"
+topics:
+  - n: 1
+    dir: 01-basics
+    title: "Что и зачем мерить"
+    subtitle: "Три сигнала, RED и USE, SLI и SLO: как договориться, что сервис работает хорошо"
+    time: "5.5 ч"
+    layer: "сигналы · SLI · SLO"
+    project: "Считаем доступность и задержку «Магазина» по его же логам"
+    lessons:
+      - id: "1.1"
+        slug: 01-signals
+        title: "Мониторинг и наблюдаемость: метрики, логи, трейсы, RED и USE"
+        time: "2.5 ч"
+      - id: "1.2"
+        slug: 02-sli-slo
+        title: "SLI, SLO и бюджет ошибок: почему не среднее"
+        time: "3 ч"
+  - n: 2
+    dir: 02-metrics
+    title: "Метрики и Prometheus"
+    subtitle: "Как числа попадают из сервиса в хранилище и как задавать им вопросы"
+    time: "9.5 ч"
+    layer: "Prometheus · PromQL · экспортёры"
+    project: "Поднимаем мониторинг «Магазина» и пишем запросы RED и USE"
+    lessons:
+      - id: "2.1"
+        slug: 01-prometheus
+        title: "Метрики и Prometheus: /metrics, типы метрик, метки"
+        time: "3 ч"
+      - id: "2.2"
+        slug: 02-promql
+        title: "PromQL: rate, sum by, доля ошибок и p95"
+        time: "3.5 ч"
+      - id: "2.3"
+        slug: 03-exporters
+        title: "Экспортёры и проверки снаружи: хост, контейнеры, база, blackbox"
+        time: "3 ч"
+  - n: 3
+    dir: 03-dashboards-alerts
+    title: "Дашборды и алерты"
+    subtitle: "Увидеть проблему глазами и узнать о ней раньше пользователя"
+    time: "6 ч"
+    layer: "Grafana · Alertmanager"
+    project: "Собираем дашборды RED и USE и алерты с runbook"
+    lessons:
+      - id: "3.1"
+        slug: 01-grafana
+        title: "Grafana: дашборды RED и USE как код"
+        time: "3 ч"
+      - id: "3.2"
+        slug: 02-alerts
+        title: "Алерты и Alertmanager: симптомы, маршруты, runbook"
+        time: "3 ч"
+  - n: 4
+    dir: 04-logs-traces
+    title: "Логи и трейсы"
+    subtitle: "Почему сломалось: от графика к строке лога и к пути одного запроса"
+    time: "6 ч"
+    layer: "Loki · Alloy · Tempo · OpenTelemetry"
+    project: "Находим медленный запрос по логам и трейсам и связываем три сигнала"
+    lessons:
+      - id: "4.1"
+        slug: 01-logs
+        title: "Логи: JSON, Loki, Alloy и LogQL"
+        time: "3 ч"
+      - id: "4.2"
+        slug: 02-traces
+        title: "Трейсы: спаны, OpenTelemetry, Tempo и связь сигналов"
+        time: "3 ч"

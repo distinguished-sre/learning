@@ -1034,7 +1034,7 @@ curl: (7) Failed to connect to 127.0.0.1 port 9090 after 0 ms: Couldn't connect 
 Скачай скрипт. У curl флаг `-f` означает «при ошибке сервера не сохраняй страницу с ошибкой», `-s` «без полосы загрузки», `-S` «но ошибки покажи», `-L` «ходи по перенаправлениям», `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-2.2.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/2.2/break.sh
+curl -fsSL -o /tmp/break-2.2.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/2.2/break.sh
 bash /tmp/break-2.2.sh 1
 ```
 
@@ -1342,7 +1342,7 @@ Bastion (jump host) - единственный сервер с SSH снаруж�
 - Ubuntu 24.04 LTS: OpenSSH 9.6p1 (`openssh-server 1:9.6p1-3ubuntu13.19`), iproute2 6.1.0, iptables 1.8.10 (nf_tables), netcat-openbsd 1.226, curl 8.5.0, tcpdump 4.99.4, Python 3.12. Прогнаны все задания 1-4 (кроме проверки с настоящего внешнего клиента: адрес `172.17.0.8` это адрес контейнера), туннель `-L`, `-J`, все три сценария `break.sh` и `fix`.
 - Ubuntu 26.04 LTS (контейнер без systemd, без прав на iptables): OpenSSH 10.2p1, iproute2 6.19.0, netcat-openbsd 1.234, curl 8.18.0, Python 3.14.4. Проверены сообщения `nc` и `curl` при отказе (`Connection refused`; curl пишет `Could not connect to server`), формат `ss -tlnp`, `ssh-keygen`, вход по ключу и предупреждение о правах ключа. Вид вывода тот же, что на 24.04. Правило DROP и `ssh.socket` на 26.04 не прогонялись.
 - Не проверялось: `ip_unprivileged_port_start = 1024` на обычной ВМ (в контейнере Docker значение 0), строка `systemd-resolve` на `127.0.0.53:53`, работа с двумя отдельными машинами (клиент и сервер в стенде были одним контейнером), `ssh-add` с парольной фразой (проверен только запуск агента и добавление ключа без фразы).
-- «Заметки» `app.py`: v2.2, эталон в [project/notes/](https://github.com/distinguished-sre/devops/tree/devops/project/notes)
+- «Заметки» `app.py`: v2.2, эталон в [project/notes/](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes)
 
 ## Итог урока: ты умеешь
 

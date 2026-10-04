@@ -190,7 +190,7 @@ Thread 19 (active): "AnyIO worker thread"
 
 ## Практика
 
-Стенд поднят с мониторингом, настройки по умолчанию (проверь `grep -E '^(WEB_CONCURRENCY|BCRYPT_ROUNDS)=' ~/load-tester/project/shop/.env`: `1` и `12`). Рабочий каталог `~/perf-lab/11-bottlenecks`, скрипты из урока 11.1 на месте.
+Стенд поднят с мониторингом, настройки по умолчанию (проверь `grep -E '^(WEB_CONCURRENCY|BCRYPT_ROUNDS)=' ~/learning/load-tester/project/shop/.env`: `1` и `12`). Рабочий каталог `~/perf-lab/11-bottlenecks`, скрипты из урока 11.1 на месте.
 
 ### 1. Базовая линия входа
 
@@ -269,7 +269,7 @@ services:
     cap_add:
       - SYS_PTRACE
 EOF
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 export COMPOSE_FILE=compose.yaml:$HOME/perf-lab/11-bottlenecks/ptrace.yaml
 docker compose up -d --force-recreate --wait shop
 ```
@@ -282,7 +282,7 @@ docker compose up -d --force-recreate --wait shop
 # терминал 1
 cd ~/perf-lab/11-bottlenecks && ./run.sh login-profile SCENARIO=login RATE=5 DURATION=90s
 # терминал 2
-cd ~/load-tester/project/shop && export COMPOSE_FILE=compose.yaml:$HOME/perf-lab/11-bottlenecks/ptrace.yaml
+cd ~/learning/load-tester/project/shop && export COMPOSE_FILE=compose.yaml:$HOME/perf-lab/11-bottlenecks/ptrace.yaml
 docker compose exec shop sh -c 'pip install -q py-spy && py-spy dump --pid 1'
 ```
 
@@ -335,7 +335,7 @@ services:
 EOF
 ./set-env.sh WEB_CONCURRENCY=1
 export COMPOSE_FILE=compose.yaml:$HOME/perf-lab/11-bottlenecks/ptrace.yaml:$HOME/perf-lab/11-bottlenecks/cpus2.yaml
-cd ~/load-tester/project/shop && docker compose up -d --force-recreate --wait shop
+cd ~/learning/load-tester/project/shop && docker compose up -d --force-recreate --wait shop
 cd ~/perf-lab/11-bottlenecks && ./run.sh login-cpus2 SCENARIO=login RATE=6 DURATION=40s
 ```
 
@@ -364,7 +364,7 @@ done
 Разбор: `seq -w 1 50` печатает числа от 01 до 50 с нулями слева, `user00${n}` собирает адреса `user0001@shop.lab`…`user0050@shop.lab`, `curl -s -o /dev/null` отправляет вход и выбрасывает ответ. Каждый такой вход дорогой (250 мс на проверку старого хеша, потом хеш новым cost), всего около 15 секунд. Проверка, что хеш изменился:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose exec -T postgres psql -U shop -d shop -c "SELECT email, left(password_hash, 7) FROM users WHERE id IN (1, 50, 51)"
 ```
 

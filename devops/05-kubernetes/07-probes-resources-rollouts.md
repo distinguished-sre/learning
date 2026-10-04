@@ -606,7 +606,7 @@ def main():
     server = ThreadingHTTPServer((HOST, PORT), Handler)
 ```
 
-Остальная часть `main()` не меняется. Эталон целиком: [project/notes/versions/v4.1.py](https://github.com/distinguished-sre/devops/blob/devops/project/notes/versions/v4.1.py).
+Остальная часть `main()` не меняется. Эталон целиком: [project/notes/versions/v4.1.py](https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/versions/v4.1.py).
 
 4. Проверь новое поведение сразу локально, без кластера. Запусти приложение с медленным стартом и постоянной неготовностью:
 
@@ -915,7 +915,7 @@ ready
 
 **Как читать вывод:** `код: 0` значит, что `kubectl diff` не нашёл различий. `3/3` значит, что три реплики из трёх готовы. Ответ `Notes service v4.1` подтверждает, что вход отдаёт новую версию, а `ready` это ответ `/readyz`.
 
-Состояние проекта: `app.py` v4.1, образ `0.4.1`, git-тег `v0.4.1`, Deployment с `startupProbe`, `livenessProbe /healthz`, `readinessProbe /readyz`, requests 50m/64Mi, limits 200m/128Mi, RollingUpdate 1/0 и `preStop`. Эталон: [project/notes/k8s/base](https://github.com/distinguished-sre/devops/tree/devops/project/notes/k8s/base).
+Состояние проекта: `app.py` v4.1, образ `0.4.1`, git-тег `v0.4.1`, Deployment с `startupProbe`, `livenessProbe /healthz`, `readinessProbe /readyz`, requests 50m/64Mi, limits 200m/128Mi, RollingUpdate 1/0 и `preStop`. Эталон: [project/notes/k8s/base](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s/base).
 
 **Объясни себе:**
 - Почему в git попал файл манифеста, а не команды `set env`, которые мы выполняли?
@@ -928,7 +928,7 @@ ready
 Скачай скрипт поломки и запусти один из сценариев (сам скрипт не читай, иначе теряется смысл упражнения). Он работает без sudo и меняет только Deployment `notes` в namespace `notes`:
 
 ```bash
-curl -fsSL -o /tmp/break-5.7.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.7/break.sh
+curl -fsSL -o /tmp/break-5.7.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.7/break.sh
 bash /tmp/break-5.7.sh 1
 ```
 

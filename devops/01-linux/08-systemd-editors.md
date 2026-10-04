@@ -564,7 +564,7 @@ uid=999(notes) gid=987(notes) groups=987(notes)
 /usr/bin/python3
 ```
 
-Числа `uid`, `gid` и размер файла у тебя другие, важны сами строки: пользователь есть, `app.py` принадлежит root, каталог данных 750 `notes:notes`, а `python3` лежит в `/usr/bin/`. Если `id notes` пишет `no such user`, вернись к [уроку 1.3](03-users-permissions.md). Если у `app.py` не v2.2, скачай эталон: `curl -fsSL -o ~/notes/app.py https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/v2.2.py` и скопируй в `/opt/notes/` (`sudo install -m 644 -o root -g root ~/notes/app.py /opt/notes/app.py`).
+Числа `uid`, `gid` и размер файла у тебя другие, важны сами строки: пользователь есть, `app.py` принадлежит root, каталог данных 750 `notes:notes`, а `python3` лежит в `/usr/bin/`. Если `id notes` пишет `no such user`, вернись к [уроку 1.3](03-users-permissions.md). Если у `app.py` не v2.2, скачай эталон: `curl -fsSL -o ~/notes/app.py https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/v2.2.py` и скопируй в `/opt/notes/` (`sudo install -m 644 -o root -g root ~/notes/app.py /opt/notes/app.py`).
 
 ### Задание 1. Vim без паники
 
@@ -1042,7 +1042,7 @@ ok
 Скачай и запусти сценарий поломки. Файл `break.sh` не читай: цель в том, чтобы найти причину диагностикой. Скрипт создаёт файл-дополнение (drop-in, см. теорию) и правит настройку `PORT` в `/etc/notes/notes.env`, поэтому запускай его только на своём учебном сервере. Флаг `-f` у `curl` значит «при ошибке сервера не сохраняй страницу ошибки», `-L` разрешает переходить по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-1.8.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/1.8/break.sh
+curl -fsSL -o /tmp/break-1.8.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/1.8/break.sh
 sudo bash /tmp/break-1.8.sh 1
 ```
 

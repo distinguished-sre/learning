@@ -4,7 +4,7 @@ title: "Kubernetes и Helm"
 topic: 5
 time: "25.5 ч"
 redirect_from:
-  - /5-Kubernetes-helm.html
+  - /devops/5-Kubernetes-helm.html
 ---
 
 ## О чём тема

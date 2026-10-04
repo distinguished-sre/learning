@@ -692,7 +692,7 @@ git status --short
 Скачай скрипт и запусти один из сценариев (номер 1, 2 или 3; `fix` возвращает исходное состояние). Скрипт правит файлы в `~/notes` (клиент и правила) и работает без `sudo`. Сам скрипт не читай: цель в том, чтобы найти причину по симптомам. Нужны выполненные задания 1-3.
 
 ```bash
-curl -fsSL -o /tmp/break-8.11.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.11/break.sh
+curl -fsSL -o /tmp/break-8.11.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.11/break.sh
 bash /tmp/break-8.11.sh 1
 ```
 

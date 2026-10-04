@@ -1025,7 +1025,7 @@ Summary: 4 resources found parsing stdin - Valid: 3, Invalid: 0, Errors: 0, Skip
 секретов в чарте нет
 ```
 
-**Как читать вывод:** `Valid: 3` это ConfigMap, Service и Deployment; `Skipped: 1` это HTTPRoute, у kubeconform нет схемы для CRD (расширения Kubernetes, поэтому `-ignore-missing-schemas`). Если бы в шаблоне были лишние поля, появилась бы строка вроде `Deployment notes is invalid: ... additional properties 'limits', 'requests' not allowed` (этот текст получен на настоящем прогоне с неверным `nindent`). Эталон состояния: [helm/notes](https://github.com/distinguished-sre/devops/tree/devops/project/notes/helm/notes).
+**Как читать вывод:** `Valid: 3` это ConfigMap, Service и Deployment; `Skipped: 1` это HTTPRoute, у kubeconform нет схемы для CRD (расширения Kubernetes, поэтому `-ignore-missing-schemas`). Если бы в шаблоне были лишние поля, появилась бы строка вроде `Deployment notes is invalid: ... additional properties 'limits', 'requests' not allowed` (этот текст получен на настоящем прогоне с неверным `nindent`). Эталон состояния: [helm/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/helm/notes).
 
 **Объясни себе:**
 
@@ -1041,7 +1041,7 @@ Summary: 4 resources found parsing stdin - Valid: 3, Invalid: 0, Errors: 0, Skip
 Скрипт ломает чарт в `~/notes/helm/notes`, кластер не трогает. Скачай его и запусти с номером сценария 1, 2 или 3 (скрипт не читай, разбор ниже, запускай без `sudo`):
 
 ```bash
-curl -fsSL -o /tmp/break-5.9.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.9/break.sh
+curl -fsSL -o /tmp/break-5.9.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.9/break.sh
 bash /tmp/break-5.9.sh 1
 ```
 

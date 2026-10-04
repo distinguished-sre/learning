@@ -425,7 +425,7 @@ docker compose stop cadvisor blackbox alertmanager
 
 **Шаги:**
 
-1. В `app.py` замени настройку `logging` на форматтер, который печатает JSON в stdout. Готовая версия лежит в [эталоне v6](https://github.com/distinguished-sre/devops/blob/devops/project/notes/versions/v6.py), ниже её главные части. Форматтер (formatter) это класс, который превращает запись лога в строку:
+1. В `app.py` замени настройку `logging` на форматтер, который печатает JSON в stdout. Готовая версия лежит в [эталоне v6](https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/versions/v6.py), ниже её главные части. Форматтер (formatter) это класс, который превращает запись лога в строку:
 
 ```python
 import json
@@ -820,7 +820,7 @@ v0.6.0
 Скачай скрипт поломок и запусти один из сценариев (номер выбери сам, но не читай сам скрипт):
 
 ```bash
-curl -fsSL -o /tmp/break-8.7.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/8.7/break.sh
+curl -fsSL -o /tmp/break-8.7.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/8.7/break.sh
 bash /tmp/break-8.7.sh 1
 ```
 

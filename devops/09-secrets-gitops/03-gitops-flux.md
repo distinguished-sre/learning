@@ -912,7 +912,7 @@ notes  notes      1         deployed  notes-0.4.0  0.7.0
 
 **Как читать вывод:** пример показывает только строку `notes`, у тебя будут ещё три релиза. `STATUS deployed` значит, что Helm считает релиз установленным, `REVISION` это счётчик версий релиза.
 
-Состояние проекта: репозиторий `notes-gitops` с каталогами `clusters/kind`, `infrastructure`, `apps/notes`, Flux v2.9.5, цепочка `dependsOn` от controllers к configs и apps. Эталон: [gitops/](https://github.com/distinguished-sre/devops/tree/devops/project/notes/gitops). Долг: сертификат `notes-tls` создан командой (закроет 9.4), Postgres пока StatefulSet (закроет 9.5).
+Состояние проекта: репозиторий `notes-gitops` с каталогами `clusters/kind`, `infrastructure`, `apps/notes`, Flux v2.9.5, цепочка `dependsOn` от controllers к configs и apps. Эталон: [gitops/](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/gitops). Долг: сертификат `notes-tls` создан командой (закроет 9.4), Postgres пока StatefulSet (закроет 9.5).
 
 **Объясни себе:**
 
@@ -932,7 +932,7 @@ notes  notes      1         deployed  notes-0.4.0  0.7.0
 Скачай скрипт и запусти сценарий. Не читай его: причину нужно найти диагностикой. Понадобится кластер из заданий 1-3.
 
 ```bash
-curl -fsSL -o /tmp/break-9.3.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/9.3/break.sh
+curl -fsSL -o /tmp/break-9.3.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/9.3/break.sh
 bash /tmp/break-9.3.sh 1      # номер от 1 до 4, или random
 ```
 

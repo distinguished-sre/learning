@@ -872,7 +872,7 @@ Secret-манифестов с паролем нет
 Скачай скрипт и запусти сценарий. Не читай его: причину нужно найти диагностикой. Понадобятся ESO и `ExternalSecret notes-db` из заданий 1 и 4.
 
 ```bash
-curl -fsSL -o /tmp/break-9.2.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/9.2/break.sh
+curl -fsSL -o /tmp/break-9.2.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/9.2/break.sh
 bash /tmp/break-9.2.sh 1      # или 2, 3; random выбирает случайно
 ```
 

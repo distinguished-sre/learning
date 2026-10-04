@@ -1111,7 +1111,7 @@ notes:0.3.0        2401c7eb01c5        215MB         46.8MB
 Скачай скрипт и запусти сценарий (без `sudo`; скрипт не читай, иначе пропадёт смысл упражнения):
 
 ```bash
-curl -fsSL -o /tmp/break-4.2.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.2/break.sh
+curl -fsSL -o /tmp/break-4.2.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.2/break.sh
 bash /tmp/break-4.2.sh 1
 ```
 

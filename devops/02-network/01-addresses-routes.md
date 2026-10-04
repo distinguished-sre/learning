@@ -848,7 +848,7 @@ HOST=127.0.0.1
 Скачай скрипт. У curl флаг `-f` означает «при ошибке сервера не сохраняй страницу с ошибкой», `-L` разрешает переходить по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-2.1.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/2.1/break.sh
+curl -fsSL -o /tmp/break-2.1.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/2.1/break.sh
 sudo bash /tmp/break-2.1.sh 1
 ```
 

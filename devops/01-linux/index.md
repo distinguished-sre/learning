@@ -4,7 +4,7 @@ title: "Linux, Bash и systemd"
 topic: 1
 time: "16.5 ч"
 redirect_from:
-  - /1-Linux-Bash-Текстовые-редакторы.html
+  - /devops/1-Linux-Bash-Текстовые-редакторы.html
 ---
 
 ## О чём тема

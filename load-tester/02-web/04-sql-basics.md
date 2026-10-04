@@ -20,9 +20,9 @@ time: "3.5 ч"
 
 - Приложение, база, транзакция, пул соединений: [урок 2.3](03-backend-anatomy.md). Здесь мы заглядываем внутрь базы.
 - Запросы к API «Магазина» и их данные: [урок 2.2](02-rest-json-auth.md). Заказ, который ты там оформил, будет виден в базе.
-- Стенд запущен: `cd ~/load-tester/project/shop && docker compose ps` показывает четыре `healthy`.
+- Стенд запущен: `cd ~/learning/load-tester/project/shop && docker compose ps` показывает четыре `healthy`.
 
-Хочешь глубже про PostgreSQL как администратор: [урок курса DevOps про SQL и PostgreSQL](https://distinguished-sre.github.io/devops/04-docker/04-sql-postgres-basics.html).
+Хочешь глубже про PostgreSQL как администратор: [урок курса DevOps про SQL и PostgreSQL](../../devops/04-docker/04-sql-postgres-basics.html).
 
 ## Картина целиком
 
@@ -319,10 +319,10 @@ flowchart TD
 
 ### 1. Подключись к базе
 
-Базе нужен клиент: консольная программа `psql` уже есть внутри контейнера `postgres`, ставить её не нужно. Из каталога `~/load-tester/project/shop`:
+Базе нужен клиент: консольная программа `psql` уже есть внутри контейнера `postgres`, ставить её не нужно. Из каталога `~/learning/load-tester/project/shop`:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose exec postgres psql -U shop shop
 ```
 
@@ -745,7 +745,7 @@ SELECT id, user_id, total, created_at FROM orders ORDER BY id DESC LIMIT 5;
 -- Остаток товара
 SELECT id, name, stock FROM products WHERE id = 5;
 EOF
-docker compose -f ~/load-tester/project/shop/compose.yaml exec -T postgres psql -U shop shop < ~/perf-lab/02-web/queries.sql | head -n 20
+docker compose -f ~/learning/load-tester/project/shop/compose.yaml exec -T postgres psql -U shop shop < ~/perf-lab/02-web/queries.sql | head -n 20
 ```
 
 Разбор: `exec -T` отключает псевдотерминал (нужно, когда ввод идёт из файла через `<`), `< файл` подаёт содержимое файла на ввод `psql`. Так SQL запускают без интерактивного сеанса, в том числе из скриптов. Одиночный запрос можно передать флагом `-c "SELECT count(*) FROM orders"`.
@@ -755,7 +755,7 @@ docker compose -f ~/load-tester/project/shop/compose.yaml exec -T postgres psql 
 
 ## Сломай и почини
 
-В шаге 7 ты вышел из `psql` командой `\q`. Зайди снова (из каталога `~/load-tester/project/shop`):
+В шаге 7 ты вышел из `psql` командой `\q`. Зайди снова (из каталога `~/learning/load-tester/project/shop`):
 
 ```bash
 docker compose exec postgres psql -U shop shop

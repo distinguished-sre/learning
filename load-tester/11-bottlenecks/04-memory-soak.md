@@ -200,7 +200,7 @@ predict_linear(container_memory_working_set_bytes{container_label_com_docker_com
 
 ## Практика
 
-Стенд с мониторингом. В этом уроке вход не нужен, берём сценарий `product`. Для удобства Grafana открыта на `http://localhost:3000`. Перед началом проверь, что всё вернулось к исправленному виду из прошлого урока: `grep -E '^(LEAK_ENABLED|DB_POOL_MAX|BUG_N_PLUS_ONE)=' ~/load-tester/project/shop/.env` должен показать `LEAK_ENABLED=0`, `DB_POOL_MAX=15`, `BUG_N_PLUS_ONE=0`.
+Стенд с мониторингом. В этом уроке вход не нужен, берём сценарий `product`. Для удобства Grafana открыта на `http://localhost:3000`. Перед началом проверь, что всё вернулось к исправленному виду из прошлого урока: `grep -E '^(LEAK_ENABLED|DB_POOL_MAX|BUG_N_PLUS_ONE)=' ~/learning/load-tester/project/shop/.env` должен показать `LEAK_ENABLED=0`, `DB_POOL_MAX=15`, `BUG_N_PLUS_ONE=0`.
 
 ### 1. Контрольный soak: без утечки
 
@@ -283,7 +283,7 @@ $P "predict_linear(container_memory_working_set_bytes{$S=\"shop\"}[4m], 600) / 1
 На шестнадцатой-семнадцатой минуте прогон на считанные секунды начнёт сыпать ошибками (длительность зависит от старта сервиса и проверки здоровья, измерь свою): Docker убьёт контейнер и поднимет его снова. К концу прогона (20 минут) контейнер уже живёт несколько минут. Проверь:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose ps shop
 docker inspect shop-shop-1 | jq '.[0] | {RestartCount, State: (.State | {Status, ExitCode, OOMKilled})}'
 docker events --since 30m --until 1s --filter container=shop-shop-1 --filter event=oom --filter event=die

@@ -25,7 +25,7 @@ time: "4 ч"
 - [Урок 2.3: DNS](03-dns.md): запись `127.0.0.1 notes.lab` в `/etc/hosts`.
 - [Урок 2.4: HTTP](04-http.md): запрос и ответ, заголовки, коды, `curl -i`, эндпоинты `/headers`, `/slow` и `/error` из `app.py` v3.
 
-Если у тебя `app.py` старше v3, скачай эталон: [versions/v3.py](https://github.com/distinguished-sre/devops/tree/devops/project/notes/versions/v3.py).
+Если у тебя `app.py` старше v3, скачай эталон: [versions/v3.py](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/versions/v3.py).
 
 ## Картина целиком
 
@@ -1131,7 +1131,7 @@ enabled
 Скачай сценарий и запусти один из четырёх случаев, не читая скрипт: диагностика и есть упражнение. Скрипт меняет конфиг nginx для `notes.lab` и настройки «Заметок», поэтому запускай его только на своей учебной ВМ. У `curl` флаг `-f` значит «при ошибке сервера не сохраняй страницу с ошибкой», `-L` разрешает переходы по перенаправлениям, `-o` задаёт имя файла:
 
 ```bash
-curl -fsSL -o /tmp/break-2.5.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/2.5/break.sh
+curl -fsSL -o /tmp/break-2.5.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/2.5/break.sh
 sudo bash /tmp/break-2.5.sh 1
 ```
 

@@ -352,9 +352,9 @@ cd ~/perf-lab/06-api-tests
 {"status":"ready"}
 ```
 
-**Как читать вывод:** `ready` значит, что приложение видит и PostgreSQL, и Redis. Если вместо этого `{"detail":{"unavailable":["redis"]}}`, зависимость не поднялась: `docker compose ps` в `~/load-tester/project/shop` покажет, какая.
+**Как читать вывод:** `ready` значит, что приложение видит и PostgreSQL, и Redis. Если вместо этого `{"detail":{"unavailable":["redis"]}}`, зависимость не поднялась: `docker compose ps` в `~/learning/load-tester/project/shop` покажет, какая.
 
-**Типичные ошибки:** `curl: (7) Failed to connect to localhost port 8000` означает, что стенд не запущен: `cd ~/load-tester/project/shop && docker compose up -d --wait`.
+**Типичные ошибки:** `curl: (7) Failed to connect to localhost port 8000` означает, что стенд не запущен: `cd ~/learning/load-tester/project/shop && docker compose up -d --wait`.
 
 ### 2. Изучи границы руками
 
@@ -567,7 +567,7 @@ git push
 **Поломка.** Не продукт, а окружение. Останови Redis, в котором «Магазин» хранит токены и корзины, и прогони свои кейсы:
 
 ```bash
-cd ~/load-tester/project/shop && docker compose stop redis
+cd ~/learning/load-tester/project/shop && docker compose stop redis
 curl -s localhost:8000/readyz
 curl -s -o /dev/null -w '%{http_code}\n' 'localhost:8000/api/products?size=5'
 curl -s -X POST localhost:8000/api/login -H 'Content-Type: application/json' \

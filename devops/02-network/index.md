@@ -4,7 +4,7 @@ title: "Сеть, HTTP, DNS, nginx и TLS"
 topic: 2
 time: "16 ч"
 redirect_from:
-  - /2-Сеть-Nginx-TLS-HTTP-DNS-TCP-IP.html
+  - /devops/2-Сеть-Nginx-TLS-HTTP-DNS-TCP-IP.html
 ---
 
 ## О чём тема

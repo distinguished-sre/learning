@@ -318,7 +318,7 @@ jq . products.json | head -20
 {"items": [{"id": 1, "name": "Товар 1", "price": 137.0, "category_id": 1, "stock": 1000000}, {"id": 2, "name": "Товар 2", "price": 174.0, "category_id": 2, "stock": 1000000}, {"id": 3, "name": "Товар 3", "price": 211.0, "category_id": 3, "stock": 1000000}, {"id": 4, "name": "Товар 4", "price": 248.0, "category_id": 4, "stock": 1000000}, {"id": 5, "name": "Товар 5", "price": 285.0, "category_id": 5, "stock": 1000000}], "page": 1, "size": 5, "total": 10000}
 ```
 
-**Типичные ошибки:** `curl: (7) Failed to connect to localhost port 8000`: стенд не запущен (поднимается в 2.1: `cd ~/load-tester/project/shop && docker compose up -d --wait`). Пустой файл: адрес без кавычек.
+**Типичные ошибки:** `curl: (7) Failed to connect to localhost port 8000`: стенд не запущен (поднимается в 2.1: `cd ~/learning/load-tester/project/shop && docker compose up -d --wait`). Пустой файл: адрес без кавычек.
 
 ### 2. Прочитай JSON из Python: `read_products.py`
 

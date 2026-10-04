@@ -857,10 +857,10 @@ LEAK_MAX_MB = int(os.environ.get("LEAK_MAX_MB", "1024"))   # потолок су
     do_DELETE = do_PATCH = do_OPTIONS = do_PUT
 ```
 
-Последняя строка присваивает тот же обработчик ещё трём методам. Полный файл версии v2.2 можно сверить с эталоном: [project/notes/versions/v2.2.py](https://github.com/distinguished-sre/devops/tree/devops/project/notes/versions/v2.2.py). Скачай эталон в `/tmp` и сравни командой `diff` (она печатает только различия; пустой вывод значит, что файлы совпали):
+Последняя строка присваивает тот же обработчик ещё трём методам. Полный файл версии v2.2 можно сверить с эталоном: [project/notes/versions/v2.2.py](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/versions/v2.2.py). Скачай эталон в `/tmp` и сравни командой `diff` (она печатает только различия; пустой вывод значит, что файлы совпали):
 
 ```bash
-curl -fsSL -o /tmp/v2.2.py https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/versions/v2.2.py
+curl -fsSL -o /tmp/v2.2.py https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/versions/v2.2.py
 diff ~/notes/app.py /tmp/v2.2.py
 ```
 
@@ -1099,7 +1099,7 @@ burned 30
 Скрипт сам запускает свою копию «Заметок» на порту 8080 и ломает её или тестовый диск. Твой собственный сервис на 8080 перед этим останови: `pkill -f "python3 app.py"`. Скачай сценарии и запусти один (файл не читай, разбор ниже в скрытых блоках):
 
 ```bash
-curl -fsSL -o /tmp/break-1.5.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/1.5/break.sh
+curl -fsSL -o /tmp/break-1.5.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/1.5/break.sh
 sudo bash /tmp/break-1.5.sh random    # выберет один из четырёх сценариев; номер не смотри
 ```
 

@@ -2,7 +2,7 @@
 layout: page
 title: "Техническое задание для SRE"
 redirect_from:
-  - /задание-sre.html
+  - /devops/задание-sre.html
 ---
 
 ### 3–4 дня до выхода на новую должность · Solo SRE · Greenfield Department

@@ -573,7 +573,7 @@ FAILED test_shop_api.py::test_add_to_cart - assert 201 == 200
 
 </details>
 
-**Поломка 2: падает «чужой» тест.** Верни `201`, останови стенд (`cd ~/load-tester/project/shop && docker compose stop shop`) и запусти `pytest -x --tb=short`. Потом верни стенд (`docker compose start shop`, подожди, пока ответит `readyz`).
+**Поломка 2: падает «чужой» тест.** Верни `201`, останови стенд (`cd ~/learning/load-tester/project/shop && docker compose stop shop`) и запусти `pytest -x --tb=short`. Потом верни стенд (`docker compose start shop`, подожди, пока ответит `readyz`).
 
 ```text
 E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /readyz (Caused by NewConnectionError(... Connection refused))

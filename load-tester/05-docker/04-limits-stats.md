@@ -21,7 +21,7 @@ time: "3 ч"
 - Процессор, память, загрузка и `top`: [урок 1.3](../01-linux/03-processes-resources.md). Если не помнишь, что такое `%CPU` и RSS, вернись туда.
 - Контейнеры, `docker stop`, код выхода: [урок 5.1](01-containers.md). `compose.yaml` и `.env`: [урок 5.3](03-compose-shop.md).
 - Паспорт машины (сколько ядер, сколько памяти), который ты записывал в [уроке 1.1](../01-linux/01-workstation-terminal.md).
-- Глубже про cgroups и лимиты: [урок DevOps «Ресурсы контейнеров»](https://distinguished-sre.github.io/devops/05-docker/04-resources.html). В этом курсе нам нужна практическая часть, и она ниже.
+- Глубже про cgroups и лимиты: [урок DevOps «Контейнеры: процесс с изоляцией»](../../devops/04-docker/01-containers-idea.html). В этом курсе нам нужна практическая часть, и она ниже.
 
 ## Картина целиком
 
@@ -245,7 +245,7 @@ shop-redis-1       3.20%     9.6MiB / 15.54GiB    0.06%     6
 Стенд из [урока 5.3](03-compose-shop.md) должен быть поднят и здоров (`docker compose ps` показывает `healthy` у четырёх сервисов). Если нет, подними его: `~/perf-lab/05-docker/stand-start.sh`. Нагрузку создаём **только на свой локальный стенд**.
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 mkdir -p ~/perf-lab/05-docker
 ```
 
@@ -378,7 +378,7 @@ shop-shop-1   49.90%   ...
 Сделаем утечку и малый лимит памяти. Включи утечку в `.env` и пересоздай магазин:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 sed -i.bak 's/^LEAK_ENABLED=.*/LEAK_ENABLED=1/' .env && rm .env.bak
 docker compose up -d --wait
 docker update --memory 200m --memory-swap 200m shop-shop-1
@@ -458,7 +458,7 @@ cat > ~/perf-lab/05-docker/stand-passport.md <<'EOF'
 - Базовое потребление в простое: shop __ МиБ, postgres __ МиБ
 - Что НЕ воспроизводит продакшен: локальная сеть, мало данных, один экземпляр каждого сервиса
 EOF
-docker compose -f ~/load-tester/project/shop/compose.yaml config --services > /dev/null && echo ok
+docker compose -f ~/learning/load-tester/project/shop/compose.yaml config --services > /dev/null && echo ok
 ```
 
 Заполни пропуски реальными числами из своих замеров. Закоммить:
@@ -490,7 +490,7 @@ git push
 **Поломка.** Задай слишком маленький лимит памяти и включи нагрузку **без** утечки:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker update --memory 80m --memory-swap 80m shop-shop-1
 ~/perf-lab/05-docker/load.sh 20 8
 docker compose ps -a shop

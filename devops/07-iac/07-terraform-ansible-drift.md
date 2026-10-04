@@ -778,7 +778,7 @@ yaml ok
 
 **Как читать вывод:** после запуска `Run workflow` в списке прогонов найди `terraform`: зелёная галочка значит, что job прошёл. В красном job открой шаг `plan на drift` и найди строки со знаком `~` и итог `Plan: ...`. Если красным стал `static`, смотри, какой из трёх шагов (`fmt`, `validate`, `trivy config`) упал.
 
-Эталон: [project/notes/](https://github.com/distinguished-sre/devops/tree/devops/project/notes/) в репозитории курса. В Actions job `static` зелёный, `drift` зелёный при отсутствии расхождений и красный после ручной правки из задания 2.
+Эталон: [project/notes/](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/) в репозитории курса. В Actions job `static` зелёный, `drift` зелёный при отсутствии расхождений и красный после ручной правки из задания 2.
 
 **Объясни себе:**
 

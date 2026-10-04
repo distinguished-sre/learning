@@ -1090,7 +1090,7 @@ ruff.toml
 
 **Как читать вывод:** четыре строки это файлы в git, порядок алфавитный. Последняя строка: `status: completed` (запуск закончен), `conclusion: success` (итог зелёный), `event: push` (запущен из-за слияния в `main`). Если хочешь развёрнутую таблицу, выполни `gh run list --workflow CI --branch main --limit 1` без `--json`.
 
-Эталон: [project/notes](https://github.com/distinguished-sre/devops/tree/devops/project/notes). Состояние проекта после урока: в `~/notes` живут `.github/workflows/ci.yml`, `requirements-dev.txt`, `ruff.toml`, `Makefile` с `ruff` в цели `lint`; `main` требует проверки `lint`, `test (3.13)`, `test (3.14)`; `app.py` версии v3.
+Эталон: [project/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes). Состояние проекта после урока: в `~/notes` живут `.github/workflows/ci.yml`, `requirements-dev.txt`, `ruff.toml`, `Makefile` с `ruff` в цели `lint`; `main` требует проверки `lint`, `test (3.13)`, `test (3.14)`; `app.py` версии v3.
 
 **Объясни себе:**
 - Почему `push` в `main` тоже запускает CI, если каждый PR уже проверен?
@@ -1108,7 +1108,7 @@ ruff.toml
 ```bash
 cd ~/notes
 git switch main && git pull && git switch -c ci/break-drill
-curl -fsSL -o /tmp/break-3.3.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/3.3/break.sh
+curl -fsSL -o /tmp/break-3.3.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/3.3/break.sh
 bash /tmp/break-3.3.sh 1        # сценарии 1, 2 или 3
 git commit -am "break drill" && git push -u origin ci/break-drill
 gh pr create --fill

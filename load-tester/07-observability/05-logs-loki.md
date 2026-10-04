@@ -333,7 +333,7 @@ quantile_over_time(0.95, {service="shop"} | json | route="/api/orders" | unwrap 
 Сначала нагрузка, чтобы в логах было что смотреть (скрипт из урока 7.4, фоновый режим покупок, 3 минуты):
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 source ~/perf-lab/.venv/bin/activate
 python ~/perf-lab/07-monitoring/orders_load.py orders 3 180 &
 sleep 20
@@ -505,7 +505,7 @@ cd ~/perf-lab && git add 07-monitoring && git commit -m "7.5: запросы Log
 **Поломка: логи пропали.** Понизим подробность логов «Магазина» так, как это иногда делают, чтобы «не засорять» журнал:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 LOG_LEVEL=ERROR docker compose --profile monitoring up -d shop
 ```
 
@@ -589,4 +589,4 @@ Ubuntu 24.04, Docker Compose v2, стенд «Магазин» из `project/sho
 
 Дальше: [урок 7.6. Алерты и первый инцидент](06-alerts-incidents.md): алерт разбудит тебя раньше, чем пожалуется пользователь, а метрики и логи подскажут причину.
 
-**Глубже:** сбор логов и Loki в [курсе DevOps](https://distinguished-sre.github.io/devops/08-observability/07-logs-loki-alloy.html).
+**Глубже:** сбор логов и Loki в [курсе DevOps](../../devops/08-observability/07-logs-loki-alloy.html).

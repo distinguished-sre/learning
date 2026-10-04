@@ -1217,7 +1217,7 @@ git push -u origin ci/image-scan
 Скачай сценарии и запусти один. Скрипт не читай: цель в том, чтобы найти причину по симптомам. Понадобятся образ `notes:0.4.0` и проект `~/notes` из урока 4.7. Скрипт работает без `sudo`, создаёт только образ `notes:break-1`, контейнер `notes-break-2` и файлы в `~/lab48/break`.
 
 ```bash
-curl -fsSL -o /tmp/break-4.8.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/4.8/break.sh
+curl -fsSL -o /tmp/break-4.8.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/4.8/break.sh
 bash /tmp/break-4.8.sh 1
 ```
 

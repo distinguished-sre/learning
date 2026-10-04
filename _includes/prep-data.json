@@ -1,0 +1,21 @@
+{%- comment -%}
+  Вопросы одной темы для страницы «Подготовка к собеседованию» (assets/questions/<курс>/topic-NN.json).
+  Источник тот же, что у уроков: _data/questions/<курс>/{quiz,open}. Устные ответы переведены в HTML,
+  ссылки .md → .html, относительные ссылки prep.js разрешает от адреса урока.
+{%- endcomment -%}
+{%- assign pt = nil -%}
+{%- for x in site.data.courses[page.course].topics -%}{%- if x.n == include.topic -%}{%- assign pt = x -%}{%- endif -%}{%- endfor -%}
+{"topic":{{ pt.n }},"title":{{ pt.title | jsonify }},"lessons":[
+{%- for l in pt.lessons -%}
+{%- include qkey.html lesson=l.id -%}
+{%- assign pq = site.data.questions[page.course].quiz[qkey] -%}
+{%- assign po = site.data.questions[page.course].open[qkey] -%}
+{%- capture purl -%}/{{ page.course }}/{{ pt.dir }}/{{ l.slug }}.html{%- endcapture -%}
+{%- unless forloop.first %},{% endunless %}
+{"id":{{ l.id | jsonify }},"title":{{ l.title | jsonify }},"url":{{ purl | relative_url | jsonify }},"block":{{ pq.block | default: 5 }},
+"quiz":{% if pq %}{{ pq.questions | jsonify }}{% else %}[]{% endif %},
+"open":[{%- for q in po.questions -%}{%- unless forloop.first %},{% endunless %}
+{"id":{{ q.id | jsonify }},"n":{{ q.n }},"tags":{{ q.tags | jsonify }},"q":{{ q.q | markdownify | remove: '<p>' | remove: '</p>' | strip | jsonify }},"a":{{ q.answer | replace: '.md)', '.html)' | replace: '.md#', '.html#' | markdownify | jsonify }}}
+{%- endfor -%}]}
+{%- endfor %}
+]}

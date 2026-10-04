@@ -428,7 +428,7 @@ for i in 1 2 3; do ~/perf-lab/scripts/traffic.sh 120 0 & done
 **Поломка 1.** Останови Prometheus и посмотри на дашборд:
 
 ```bash
-cd ~/load-tester/project/shop && docker compose --profile monitoring stop prometheus
+cd ~/learning/load-tester/project/shop && docker compose --profile monitoring stop prometheus
 ```
 
 Подожди 10-15 секунд, обнови страницу дашборда. **Что видим:** на панелях «No data» или красные треугольники с ошибкой. При этом сама Grafana жива, а `shop` как работал, так и работает. Урок: пустой дашборд не значит «сервис упал», он значит «до метрик не достучались». Восстанови: `docker compose --profile monitoring start prometheus`. Данные за время остановки пропадут навсегда: Prometheus не скрейпил в этот период, и на графике останется провал.
@@ -513,4 +513,4 @@ Grafana 13.2 (образ `grafana/grafana:13.2.3`), Prometheus 3.15, `jq` 1.7, �
 
 Дальше: [урок 7.4. Экспортеры: хост, контейнеры и PostgreSQL](04-exporters.md), где ты разберёшь метрики процессора, памяти и базы, которые на дашборде USE пока читались «по смыслу».
 
-**Глубже:** построение дашбордов, provisioning и переменные подробнее в [курсе DevOps](https://distinguished-sre.github.io/devops/08-observability/06-grafana-dashboards.html), если захочется заглянуть дальше нужного для тестов.
+**Глубже:** построение дашбордов, provisioning и переменные подробнее в [курсе DevOps](../../devops/08-observability/06-grafana-dashboards.html), если захочется заглянуть дальше нужного для тестов.

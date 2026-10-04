@@ -746,7 +746,7 @@ statefulset rolling update complete 1 pods at revision postgres-6c9d5b7f8...
 
 **Как читать вывод:** `statefulset rolling update complete 1 pods` значит, что под `postgres-0` пересоздан с новым шаблоном и снова готов. Последняя строка это ресурсы, которые теперь стоят в кластере: dev-значения из патча. Данные Postgres остались, потому что лежат в PVC, а не в поде.
 
-Эталон файлов: [k8s/base и k8s/overlays](https://github.com/distinguished-sre/devops/tree/devops/project/notes/k8s).
+Эталон файлов: [k8s/base и k8s/overlays](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/k8s).
 
 **Объясни себе:**
 - Почему prod мы не применяем в тот же namespace `notes` на этом же кластере?
@@ -763,7 +763,7 @@ statefulset rolling update complete 1 pods at revision postgres-6c9d5b7f8...
 Скрипт ломает overlay `dev` в твоём `~/notes` тремя разными способами, кластер не трогает. Не читай его, работай как с чужой поломкой. Запускай без `sudo`:
 
 ```bash
-curl -fsSL -o /tmp/break-5.10.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.10/break.sh
+curl -fsSL -o /tmp/break-5.10.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.10/break.sh
 bash /tmp/break-5.10.sh 1        # затем 2 и 3 по очереди; после каждого чини руками или командой fix
 kubectl kustomize ~/notes/k8s/overlays/dev
 ```

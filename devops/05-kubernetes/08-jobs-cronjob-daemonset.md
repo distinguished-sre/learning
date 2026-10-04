@@ -838,7 +838,7 @@ git commit -m "k8s: почасовой pg_dump (CronJob pg-backup) и приме
 Скачай скрипт поломки и запусти один из сценариев (сам скрипт не читай, иначе теряется смысл упражнения). Он работает без sudo и меняет только CronJob `pg-backup` и DaemonSet `node-agent` в namespace `notes`:
 
 ```bash
-curl -fsSL -o /tmp/break-5.8.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/5.8/break.sh
+curl -fsSL -o /tmp/break-5.8.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/5.8/break.sh
 bash /tmp/break-5.8.sh 1
 ```
 

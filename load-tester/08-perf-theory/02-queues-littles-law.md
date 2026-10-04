@@ -249,7 +249,7 @@ flowchart TD
 ### 1. Подготовка
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring up -d --wait
 curl -s localhost:8000/readyz
 cd ~/perf-lab/08-theory && source ~/perf-lab/.venv/bin/activate && ls
@@ -260,7 +260,7 @@ cd ~/perf-lab/08-theory && source ~/perf-lab/.venv/bin/activate && ls
 baseline.md  curl-time.txt  measure.py
 ```
 
-Если стенд запущен с изменёнными настройками, верни стандартные: `cd ~/load-tester/project/shop && cp .env.example .env && docker compose up -d`, и задержку оплаты: `curl -s -X POST localhost:8001/admin/config -H 'Content-Type: application/json' -d '{"delay_ms": 50}'`.
+Если стенд запущен с изменёнными настройками, верни стандартные: `cd ~/learning/load-tester/project/shop && cp .env.example .env && docker compose up -d`, и задержку оплаты: `curl -s -X POST localhost:8001/admin/config -H 'Content-Type: application/json' -d '{"delay_ms": 50}'`.
 
 ### 2. Ступенчатый прогон: sweep.py
 

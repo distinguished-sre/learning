@@ -536,7 +536,7 @@ notes-6d9f7c8b5-zw8nv    1/1     Running   0          2d
 1. Скачай скрипт поломки и запусти случайный сценарий. Содержимое не читай: иначе тренировка теряет смысл. Разбор команды: `curl -fsSL -o файл URL` скачивает файл (`-f` даёт ошибку вместо HTML-страницы «не найдено», `-s` убирает индикатор, `-S` оставляет сообщения об ошибках, `-L` идёт по перенаправлениям, `-o` задаёт имя файла). Аргумент `random` выбирает один из пяти сценариев случайно и не говорит какой. Скрипт работает от твоего пользователя через `kubectl` и `helm`, поэтому `sudo` не нужен.
 
 ```bash
-curl -fsSL -o /tmp/break-10.1.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/10.1/break.sh
+curl -fsSL -o /tmp/break-10.1.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/10.1/break.sh
 bash /tmp/break-10.1.sh random
 ```
 

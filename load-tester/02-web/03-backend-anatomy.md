@@ -207,7 +207,7 @@ flowchart TD
 
 Оно то растёт, то падает, значит это датчик, `shop_db_pool_waiting`. А общее число всех запросов за всё время только растёт: это счётчик.
 
-Список метрик «Магазина» лежит в [README стенда](https://github.com/distinguished-sre/load-tester/blob/main/project/shop/README.md), а зачем их собирать в Prometheus (программу, которая забирает метрики и хранит их историю), расскажет [урок 7.1](../07-observability/01-metrics-prometheus.md). Здесь мы читаем их глазами.
+Список метрик «Магазина» лежит в [README стенда](https://github.com/distinguished-sre/learning/blob/main/load-tester/project/shop/README.md), а зачем их собирать в Prometheus (программу, которая забирает метрики и хранит их историю), расскажет [урок 7.1](../07-observability/01-metrics-prometheus.md). Здесь мы читаем их глазами.
 
 Осторожно: лог и метрику путают. Лог ([урок 1.2](../01-linux/02-text-logs.md)) это запись о каждом событии: «запрос завершился за 4 мс». Метрика это число, накопленное по многим событиям. Логов много и они подробны, метрики компактны и годятся для графиков.
 
@@ -218,12 +218,12 @@ flowchart TD
 
 ## Практика
 
-Все команды из `~/load-tester/project/shop`.
+Все команды из `~/learning/load-tester/project/shop`.
 
 ### 1. Кто работает
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 {% raw %}docker compose ps --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}'{% endraw %}
 ```
 
@@ -328,7 +328,7 @@ sed -i 's/^CACHE_ENABLED=1/CACHE_ENABLED=0/' .env
 docker compose up -d --wait shop
 ```
 
-**Типичные ошибки:** `sed: -e expression #1 ...`: опечатка в кавычках. Проверь `grep CACHE_ENABLED .env`: должно быть `CACHE_ENABLED=0` или `1`. `no such service: shop`: ты не в каталоге `~/load-tester/project/shop`.
+**Типичные ошибки:** `sed: -e expression #1 ...`: опечатка в кавычках. Проверь `grep CACHE_ENABLED .env`: должно быть `CACHE_ENABLED=0` или `1`. `no such service: shop`: ты не в каталоге `~/learning/load-tester/project/shop`.
 
 ### 5. Узнай, как быстро отвечает оплата
 

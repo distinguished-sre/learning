@@ -994,7 +994,7 @@ Jenkinsfile:...:                    ruff check .
 Jenkinsfile:...:                sh 'make test'
 ```
 
-**Как читать вывод:** первые две строки результат `ls`; остальные это `файл:номер строки:строка`. Номера у тебя другие. Обрати внимание, что у GitHub, GitLab и Jenkins команды не совпадают буквально: в `ci.yml` (урок 3.3) написан прямой вызов `python -m unittest -v`, а в двух новых файлах `make test`. Результат один, но правило теперь записано в двух местах: `Makefile` и `ci.yml`. Состояние проекта после урока: в `~/notes` GitHub Actions, `.gitlab-ci.yml` и `Jenkinsfile`, `app.py` не менялся (v3), тег остаётся `v0.2.0`. Эталон: [project/notes](https://github.com/distinguished-sre/devops/tree/devops/project/notes).
+**Как читать вывод:** первые две строки результат `ls`; остальные это `файл:номер строки:строка`. Номера у тебя другие. Обрати внимание, что у GitHub, GitLab и Jenkins команды не совпадают буквально: в `ci.yml` (урок 3.3) написан прямой вызов `python -m unittest -v`, а в двух новых файлах `make test`. Результат один, но правило теперь записано в двух местах: `Makefile` и `ci.yml`. Состояние проекта после урока: в `~/notes` GitHub Actions, `.gitlab-ci.yml` и `Jenkinsfile`, `app.py` не менялся (v3), тег остаётся `v0.2.0`. Эталон: [project/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
 
 **Объясни себе:**
 
@@ -1011,7 +1011,7 @@ Jenkinsfile:...:                sh 'make test'
 Сборка красная или не стартует. Выбери одну поломку из трёх командой `shuf -i 1-3 -n 1` (она печатает случайное число от 1 до 3), внеси её скриптом и не открывай разбор. Скрипт скачивается и запускается одинаково в любом уроке, без `sudo`, потому что правит файлы твоего пользователя и контейнер `jenkins`:
 
 ```bash
-curl -fsSL -o /tmp/break-3.6.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/3.6/break.sh
+curl -fsSL -o /tmp/break-3.6.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/3.6/break.sh
 bash /tmp/break-3.6.sh 1     # вместо 1 подставь выпавший номер: 1, 2 или 3
 ```
 

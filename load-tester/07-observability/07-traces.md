@@ -231,7 +231,7 @@ Alloy получает спаны, пакует и передаёт дальше
 ### 1. Убедись, что трейсы текут
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring ps tempo alloy
 curl -s localhost:3200/ready
 ```

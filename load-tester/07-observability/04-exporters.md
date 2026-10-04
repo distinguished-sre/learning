@@ -285,7 +285,7 @@ rate(pg_stat_user_tables_seq_scan{relname="orders"}[1m])
 Осталось найти, какой запрос виноват. В `compose.yaml` PostgreSQL запускается с `shared_preload_libraries=pg_stat_statements`: это расширение записывает, **какие запросы** выполнялись, сколько раз и сколько времени заняли. Смотреть его удобнее прямо в базе:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring exec postgres psql -U shop -d shop -c \
   "select calls, round(mean_exec_time::numeric, 1) as mean_ms, round(total_exec_time::numeric) as total_ms, left(query, 60) as query from pg_stat_statements order by total_exec_time desc limit 5;"
 ```
@@ -385,7 +385,7 @@ flowchart TD
 Стенд с мониторингом должен работать:
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring ps --status running --services | sort | tr '\n' ' '; echo
 ```
 
@@ -428,7 +428,7 @@ node_memory_MemTotal_bytes 1.6636e+10
 
 **Типичные ошибки:**
 
-- `wget: bad address 'node-exporter'`: контейнер `node-exporter` не запущен или ты не в каталоге `~/load-tester/project/shop`.
+- `wget: bad address 'node-exporter'`: контейнер `node-exporter` не запущен или ты не в каталоге `~/learning/load-tester/project/shop`.
 - Пустой вывод после `grep`: опечатка в имени метрики. Убери `| grep ...` и смотри `| head -30`.
 
 ### 2. Напиши генератор фоновой нагрузки
@@ -695,7 +695,7 @@ cd ~/perf-lab && git add 07-monitoring && git commit -m "7.4: таблица USE
 **Поломка: слепой мониторинг.** Остановим экспортёр контейнеров и посмотрим, что сделает с графиками его отсутствие.
 
 ```bash
-cd ~/load-tester/project/shop
+cd ~/learning/load-tester/project/shop
 docker compose --profile monitoring stop cadvisor
 ```
 
@@ -786,4 +786,4 @@ Ubuntu 24.04, Docker Engine с Compose v2, стенд «Магазин» из `p
 
 Дальше: [урок 7.5. Логи: уровни, структура, Loki и Alloy](05-logs-loki.md): метрики показали, что и где сломалось, а логи расскажут, что происходило с конкретным запросом.
 
-**Глубже:** разбор экспортёров и мониторинга «чёрного ящика» в [курсе DevOps](https://distinguished-sre.github.io/devops/08-observability/04-blackbox-exporters.html).
+**Глубже:** разбор экспортёров и мониторинга «чёрного ящика» в [курсе DevOps](../../devops/08-observability/04-blackbox-exporters.html).

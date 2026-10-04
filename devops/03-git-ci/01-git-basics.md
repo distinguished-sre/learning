@@ -1803,7 +1803,7 @@ git version 2.43.0
 Скачай и запусти учебный стенд. Скрипт создаёт отдельные учебные репозитории в каталоге `~/break-3.1`, твои `~/notes` и `~/git-lab` не затрагиваются. Запускай без `sudo`, от обычного пользователя. Скрипт печатает только симптом, читать его не нужно.
 
 ```bash
-curl -fsSL -o /tmp/break-3.1.sh https://raw.githubusercontent.com/distinguished-sre/devops/devops/project/notes/break/3.1/break.sh
+curl -fsSL -o /tmp/break-3.1.sh https://raw.githubusercontent.com/distinguished-sre/learning/main/devops/project/notes/break/3.1/break.sh
 bash /tmp/break-3.1.sh 1     # сценарий 1: потерянные коммиты; сценарий 2: секрет в коммите
 ```
 

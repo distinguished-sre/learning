@@ -1,0 +1,8 @@
+---
+layout: null
+topic: 4
+course: load-tester
+permalink: /assets/questions/load-tester/topic-04.json
+sitemap: false
+---
+{%- include prep-data.json topic=page.topic -%}
