@@ -9,6 +9,8 @@ on:
       - 'load-tester/interview.md'
       - 'monitoring/[0-9][0-9]-*/*.md'
       - 'monitoring/interview.md'
+      - 'devops/[0-9][0-9]-*/*.md'
+      - 'devops/interview.md'
       - '_includes/**'
       - '_layouts/**'
       - 'assets/js/quiz*.js'
@@ -27,6 +29,8 @@ on:
       - 'load-tester/interview.md'
       - 'monitoring/[0-9][0-9]-*/*.md'
       - 'monitoring/interview.md'
+      - 'devops/[0-9][0-9]-*/*.md'
+      - 'devops/interview.md'
       - '_includes/**'
       - '_layouts/**'
       - 'assets/js/quiz*.js'
@@ -60,11 +64,13 @@ jobs:
         run: |
           python tools/check_questions.py --course load-tester --stats
           python tools/check_questions.py --course monitoring --stats
+          python tools/check_questions.py --course devops --stats
       - name: Логика тестов
         if: ${{ !cancelled() }}
         run: |
           COURSE=load-tester node --test tools/quiz.test.mjs
           COURSE=monitoring node --test tools/quiz.test.mjs
+          COURSE=devops node --test tools/quiz.test.mjs
       - name: Сборка Jekyll, как на GitHub Pages
         if: ${{ !cancelled() }}
         uses: actions/jekyll-build-pages@v1
@@ -76,6 +82,7 @@ jobs:
         run: |
           python tools/check_questions.py --course load-tester --site _site
           python tools/check_questions.py --course monitoring --site _site
+          python tools/check_questions.py --course devops --site _site
       - name: "Браузер: две вкладки, битая запись, фокус на итоге"
         if: ${{ !cancelled() }}
         run: |
@@ -83,6 +90,7 @@ jobs:
           npx playwright install --with-deps chromium
           COURSE=load-tester SITE_DIR=_site node --test tools/browser.test.mjs
           COURSE=monitoring SITE_DIR=_site node --test tools/browser.test.mjs
+          COURSE=devops SITE_DIR=_site node --test tools/browser.test.mjs
       - name: Собранный сайт для ручной проверки в браузере
         if: always()
         uses: actions/upload-artifact@v4
