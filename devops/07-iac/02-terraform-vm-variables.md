@@ -10,6 +10,20 @@ time: "3 ч"
 
 В уроке 7.1 ты описал сеть и подсеть, но значения были вписаны прямо в код. Для одной ВМ это терпимо, а для трёх окружений превращается в копипасту: правишь один файл, забываешь другой. Так в «тестовой» копии легко оставить адрес боевой базы, и тест пойдёт в прод. Поэтому значения живут отдельно от кода.
 
+Вот как это выглядит, когда окружений три, а каталог скопирован трижды. Поиск по копиям показывает число ядер и хост базы в каждой:
+
+```text
+$ grep -rnoE "cores +[=] [0-9]+|@db-[a-z]+" env-prod env-stage env-test
+env-prod/vm.tf:12:cores         = 4
+env-prod/cloud-init.yaml:7:@db-prod
+env-stage/vm.tf:12:cores         = 2
+env-stage/cloud-init.yaml:7:@db-stage
+env-test/vm.tf:12:cores         = 2
+env-test/cloud-init.yaml:7:@db-prod
+```
+
+Ядра у окружений и должны различаться, а вот у `env-test` в строке 7 остался хост боевой базы `db-prod`: при копировании забыли поправить, и тестовая ВМ ходила бы в прод. Заметить такое можно только поиском по всем копиям, а когда значение живёт в одном месте на окружение, забыть его негде.
+
 Есть и вторая причина. IP-адрес созданной машины (её «номер» в сети, [урок 2.1](../02-network/01-addresses-routes.md)) нужен дальше всем: по нему заходят по SSH (защищённое подключение к удалённой машине), на него указывает DNS-имя (телефонная книга интернета: имя в адрес), к нему идёт деплой (выкладка новой версии приложения). Доставать его руками из консоли облака значит снова кликать.
 
 На работе так выглядит каждый Terraform-репозиторий: `variables.tf` со входами, `outputs.tf` с выходами, а между ними ресурсы. Здесь же первая настоящая ловушка: секрет, попавший в state (файл, где Terraform помнит созданное, [урок 7.1](01-iac-terraform-basics.md)).
@@ -144,7 +158,7 @@ Error: Invalid value for variable
 
 Нужен CIDR вроде 203.0.113.7/32, и не весь интернет.
 
-This was checked by the validation rule at variables.tf:3,3-13.
+This was checked by the validation rule at variables.tf:5,3-13.
 ```
 
 Строка с рамкой показывает, какое значение не прошло. Дальше твой `error_message`, потом место правила.
@@ -165,7 +179,7 @@ This was checked by the validation rule at variables.tf:3,3-13.
 
 Пароль базы попал в переменную. Вывод `plan` в логе CI читают все, у кого есть доступ к проекту. Как не показать пароль?
 
-Представь, что закрасил номер карты маркером на копии документа: сама карта осталась у тебя в кармане. Пометка `sensitive = true` заставляет Terraform печатать `(sensitive value)` вместо значения в `plan`, `apply` и `output`. Аналогия ломается тем, что закрашена только копия, которую показали другим, а оригинал лежит в state.
+Представь, что закрасил номер карты маркером на копии документа: сама карта осталась у тебя в кармане. Пометка `sensitive = true` заставляет Terraform печатать `(sensitive value)` в плане и `<sensitive>` в блоке outputs после `apply` вместо значения. Аналогия ломается тем, что закрашена только копия, которую показали другим, а оригинал лежит в state.
 
 Пометка **передаётся дальше по цепочке**: всё, что построено из секретной переменной (в том числе текст user-data целиком), тоже считается секретным. Но в файл `terraform.tfstate` значение записывается как есть, открытым текстом, и в файл плана `tfplan` (`terraform plan -out=tfplan`) тоже.
 
@@ -385,7 +399,7 @@ flowchart TD
 
 Секрет начинает путь в окружении, а заканчивает минимум в трёх местах: в state, в файле плана и в метаданных ВМ.
 
-`urlencode()` нужна, потому что пароль попадёт в URL `postgresql://notes:ПАРОЛЬ@...`, а символы `/`, `+`, `=` в URL ломают разбор. Пример с числами: `urlencode("a/b+c=")` даёт `a%2Fb%2Bc%3D`.
+`urlencode()` нужна, потому что пароль попадёт в URL `postgresql://notes:ПАРОЛЬ@...`, а символ `/` (а также `@`, `#`, `?`) обрывает разбор URL, и ещё часть программ читает `+` и `=` по-своему, поэтому пароль в URL экранируют целиком. Пример с числами: `urlencode("a/b+c=")` даёт `a%2Fb%2Bc%3D`.
 
 Полностью проблему в Terraform не убрать. Её снижают: state в закрытом бакете (7.3), секрет, который сервис берёт из хранилища во время работы (тема 9), и учебный пароль, который меняется после первого входа. В проекте это записано как долг: «state Terraform с секретами», закрывается в 7.3.
 
@@ -886,12 +900,12 @@ data_disk_id = "fhm1abcd2efg3hijk4lm"
 public_ip = "203.0.113.55"
 
 status: done
--rw-r----- 1 root notes 96 Sep 29 10:12 /etc/notes/notes.env
+-rw-r----- 1 root notes 115 Sep 29 10:12 /etc/notes/notes.env
 
 No changes. Your infrastructure matches the configuration.
 ```
 
-Id диска, адрес и время у тебя будут другие. В консоли ожидай строку с именем образа, `"a%2Fb%2Bc%3D"` и `22` (значения `urlencode` и обращения к `local` проверены реальным запуском).
+Id диска, адрес, время и размер файла (он зависит от пароля, около 111-125 байт) у тебя будут другие. В консоли ожидай строку с именем образа, `"a%2Fb%2Bc%3D"` и `22` (значения `urlencode` и обращения к `local` проверены реальным запуском).
 
 **Как читать вывод:**
 
@@ -987,7 +1001,7 @@ Destroy complete! Resources: 9 destroyed.
 2. `plan` показывает `-/+ destroy and then create replacement` для `notes-vm`, хотя код не менялся.
 3. Ревьюер открыл Pull Request и говорит, что в репозитории лежит рабочий пароль БД.
 
-Сценарий 1 воспроизведи временным ресурсом `yandex_vpc_security_group_rule.broken` с `for_each = toset([yandex_compute_disk.data.id])`.
+Сценарий 1 воспроизведи так: добавь в `vm.tf` второй диск `resource "yandex_compute_disk" "tmp"` (копия блока `data` без `lifecycle`) и временное правило `yandex_vpc_security_group_rule.broken` (копия `ingress` с `security_group_binding`, `direction`, `protocol`, `port`, `v4_cidr_blocks`), но с `for_each = toset([yandex_compute_disk.tmp.id])`. Диск `data` для этого не годится: он уже создан, его id известен на `plan`. Остановись на `terraform plan`, ничего не применяй, потом удали оба временных блока.
 
 Для сценария 2 закомментируй `lifecycle { ignore_changes ... }` у ВМ и сравни id образа: `terraform console` и `data.yandex_compute_image.ubuntu.id` против `terraform state show yandex_compute_instance.notes`. Для сценария 3:
 
@@ -1020,14 +1034,14 @@ grep -c 'DATABASE_URL' terraform.tfstate
 Error: Invalid for_each argument
 
   on vm.tf line 118, in resource "yandex_vpc_security_group_rule" "broken":
- 118:   for_each = toset([yandex_compute_disk.data.id])
+ 118:   for_each = toset([yandex_compute_disk.tmp.id])
 
 The "for_each" set includes values derived from resource attributes that
 cannot be determined until apply, and so Terraform cannot determine the
 full set of keys that will identify the instances of this resource.
 ```
 
-Ключи `for_each` должны быть известны при `plan`, а id ещё не созданного диска неизвестен. Исправление: строить ключи из статичных данных (карта в `locals`, как `local.ingress_rules`), а неизвестные значения оставлять в значениях (`each.value`). Блок `broken` удали.
+Ключи `for_each` должны быть известны при `plan`, а id ещё не созданного диска неизвестен. Исправление: строить ключи из статичных данных (карта в `locals`, как `local.ingress_rules`), а неизвестные значения оставлять в значениях (`each.value`). Блоки `broken` и `tmp` удали.
 
 **2. Пересоздание ВМ.** Смена `image_id` даёт `forces replacement`: загрузочный диск ВМ на месте не подменить. Образ в семействе обновился, data source вернул новый id. Исправление: `ignore_changes = [boot_disk[0].initialize_params[0].image_id]` (есть в коде из задания 2). Если ВМ нужно обновить осознанно, делай это командой `terraform apply -replace=yandex_compute_instance.notes` и читай план до конца. Запомни и про user-data: cloud-init выполняется только при первом запуске, правка шаблона живую ВМ сама не перенастроит (в плане смотри пометку `~` или `-/+`). Такие изменения проводят конфигурацией (Ansible, [урок 7.4](04-ansible-basics.md)) или осознанной заменой ВМ.
 

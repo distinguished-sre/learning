@@ -95,8 +95,8 @@ services:
       - '--path.sysfs=/host/sys'
 
   cadvisor:
-    # ⚠️ Если gcr.io недоступен — используй: docker.io/google/cadvisor:latest
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    # ⚠️ Если ghcr.io недоступен, используй: docker.io/google/cadvisor:latest
+    image: ghcr.io/google/cadvisor:v0.60.6
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro

@@ -10,6 +10,16 @@ time: "2.5 ч"
 
 Я твой наставник: опытный коллега, который сидит рядом и смотрит на тот же стенд. Вот история из нашей работы. Тест показал, что при тройной нагрузке всё встаёт, и мы прошли базу, процессор и память. Остались два подозреваемых. Первый: **кэш**, быстрое временное хранилище готовых ответов. Второй: **внешняя зависимость**, всё, что сервис вызывает по сети и чем не владеет (платёжный шлюз, почта, чужое API). Починить её ты не можешь, но обязан пережить её сбой.
 
+```text
+12:04:11 POST /api/orders  order=8841 payment attempt=1 timeout after 1.0s
+12:04:11 POST /api/orders  order=8841 payment attempt=2 timeout after 1.0s
+12:04:12 POST /api/orders  order=8841 payment attempt=3 timeout after 1.0s
+12:04:13 POST /api/orders  order=8841 payment attempt=4 timeout after 1.0s
+12:04:14 POST /api/orders  order=8841 status=504 duration=4.0s
+```
+
+Платёж один и тот же, а шлюз получил четыре запроса подряд без пауз, и всё это время занято соединение с базой. Так небольшой сбой оплаты превращается в лавину для всего магазина.
+
 Кэш способен ускорить сервис в разы и разгрузить базу, но только если не обманываться цифрами. Медленная зависимость способна положить **весь** сервис, а повторные попытки (ретраи), добавленные «для надёжности», превращают небольшой сбой в лавину. Оба явления видны только под нагрузкой, поэтому их находят нагрузочные инженеры.
 
 Шаг проекта: ты включаешь кэш карточек товаров и измеряешь выигрыш (доля попаданий, нагрузка на базу, p95) и проверяешь ловушки кэша. Затем замедляешь заглушку оплаты и смотришь, как один чужой сервис ломает все маршруты. Исправляешь таймаутами и ретраями и записываешь итог всей темы в `~/perf-lab/11-bottlenecks/05-cache-dependencies.md`.
@@ -212,6 +222,12 @@ flowchart TD
 
 Стенд поднят, мониторинг включён. Исходное состояние для урока: после 11.3-11.4 в `.env` стоит `BUG_N_PLUS_ONE=0`, `DB_POOL_MAX=15`, `LEAK_ENABLED=0`; индекс `orders_user_id_idx` создан. Проверь: `grep -E '^(CACHE_ENABLED|BUG_N_PLUS_ONE|DB_POOL_MAX|LEAK_ENABLED|PAYMENT_TIMEOUT|PAYMENT_RETRIES)=' ~/learning/load-tester/project/shop/.env` и `psqlshop -c "\d orders"` (индекс на месте). Если что-то не так, верни настройки через `set-env.sh`.
 
+Если команда `psqlshop` не найдена (новый терминал), задай псевдоним заново:
+
+```bash
+alias psqlshop='docker compose -f ~/learning/load-tester/project/shop/compose.yaml exec -T postgres psql -U shop -d shop'
+```
+
 ### Часть 1. Кэш
 
 #### 1.1. Базовая линия без кэша
@@ -277,17 +293,17 @@ psqlshop -c "SELECT calls FROM pg_stat_statements WHERE query LIKE 'SELECT id, n
 Кэш включён и прогрет. Проверь свежесть:
 
 ```bash
-curl -s localhost:8000/api/products/1 | jq '{id, price}'
+curl -s localhost:8000/api/products/1 | jq -c '{id, price}'
 psqlshop -c "UPDATE products SET price = 1 WHERE id = 1;"
-curl -s localhost:8000/api/products/1 | jq '{id, price}'
+curl -s localhost:8000/api/products/1 | jq -c '{id, price}'
 sleep 61
-curl -s localhost:8000/api/products/1 | jq '{id, price}'
+curl -s localhost:8000/api/products/1 | jq -c '{id, price}'
 ```
 
 ```text
-{"id": 1, "price": "137.00"}
-{"id": 1, "price": "137.00"}
-{"id": 1, "price": "1.00"}
+{"id":1,"price":137.0}
+{"id":1,"price":137.0}
+{"id":1,"price":1.0}
 ```
 
 **Как читать вывод:** после правки в базе второй запрос вернул **старую** цену 137: ответ взят из кэша. Только после TTL (60 секунд) пришла новая цена. Запиши это как риск: «цена в карточке может быть неактуальна до 60 с после ручной правки в БД». Верни цену: `psqlshop -c "UPDATE products SET price = 137 WHERE id = 1;"` (исходное значение возьми из первого вывода).

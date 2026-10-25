@@ -10,6 +10,20 @@ time: "3.5 ч"
 
 Облачная ВМ это не «сервер в интернете», а набор отдельных ресурсов: сеть, подсеть, правила доступа, загрузочный диск, диск данных, публичный адрес. Каждый ресурс создаётся, тарифицируется и ломается отдельно. Типичные инциденты новичка: `Connection timed out` (соединение не установилось: пакеты уходят, ответа нет, обычно их молча отбрасывает файрвол) из-за забытого правила, пропавший после перезагрузки диск, счёт за забытый публичный IP. Чтобы их не было, нужно понимать, из чего собрана облачная ВМ и как части связаны.
 
+```text
+$ ssh deploy@203.0.113.10
+ssh: connect to host 203.0.113.10 port 22: Operation timed out
+
+$ yc compute instance list
++----------------------+----------+---------------+---------+---------------+-------------+
+|          ID          |   NAME   |    ZONE ID    | STATUS  |  EXTERNAL IP  | INTERNAL IP |
++----------------------+----------+---------------+---------+---------------+-------------+
+| fhm3k8s0q1v7n2d4xc9a | notes-vm | ru-central1-a | RUNNING | 203.0.113.10  | 10.10.0.14  |
++----------------------+----------+---------------+---------+---------------+-------------+
+```
+
+ВМ в статусе `RUNNING` и адрес у неё есть, но `ssh` молчит до таймаута: пакеты уходят, а ответа нет. Это типичный признак того, что порт 22 не открыт в группе безопасности, и именно такую цепочку ресурсов ты соберёшь в этом уроке.
+
 Коротко о словах, которые встретятся в первом же абзаце раздела «Шаг проекта» ниже (каждое подробно разберём в теории):
 
 - **Подсеть** (subnet) это «улица» внутри твоей облачной сети: ВМ на одной улице видят друг друга как соседи ([урок 2.1](../02-network/01-addresses-routes.md)). Без неё у ВМ не было бы адреса.
@@ -705,7 +719,7 @@ yc resource-manager folder add-access-binding "$FOLDER_ID" \
   --role storage.editor --subject serviceAccount:"$SA_ID"
 ```
 
-2. Статический ключ и AWS CLI в отдельном профиле (`pip` только в venv или pipx). Ключ сначала сохраняется во временный файл, из него `jq` достаёт две части в настройки профиля `yandex`, файл затем стирается `shred -u` (на macOS такой команды нет: используй `rm -P`).
+2. Статический ключ и AWS CLI в отдельном профиле (`pip` только в venv или pipx). Ключ сначала сохраняется во временный файл, из него `jq` достаёт две части в настройки профиля `yandex`, файл затем стирается `shred -u` (на macOS команды `shred` нет, а `rm -P` в современных версиях ничего не перезаписывает: используй обычный `rm`, а ключ держи только во временном файле с правами `600` и при малейшем подозрении утечки отзови его).
 
 ```bash
 yc iam access-key create --service-account-name notes-s3 --format json > ~/notes-s3-key.json
@@ -754,7 +768,11 @@ upload: ./hello.txt to s3://notes-backups-1a2b3c4d/hello.txt
 docker run -d --name minio -p 9000:9000 \
   -e MINIO_ROOT_USER=notes -e MINIO_ROOT_PASSWORD=CHANGE_ME_long_password \
   -v minio-data:/data quay.io/minio/minio:<тег-с-релизной-страницы> server /data
-aws --endpoint-url http://localhost:9000 s3 mb s3://notes-backups
+pipx install awscli
+aws configure set aws_access_key_id notes --profile local
+aws configure set aws_secret_access_key CHANGE_ME_long_password --profile local
+aws configure set region us-east-1 --profile local
+aws --profile local --endpoint-url http://localhost:9000 s3 mb s3://notes-backups
 ```
 
 ### Задание 5. Проект «Заметки»: `infra/manual/create-vm.sh`

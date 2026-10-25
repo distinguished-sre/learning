@@ -10,6 +10,22 @@ time: "3 ч"
 
 Начнём с ситуации, которая случается почти в каждой команде. Сервис живёт на одной машине. Её перезагрузили ночью после обновления, и сайт лежит, пока не проснётся человек, который умеет поднять всё руками. Вопрос тут не «почему она перезагрузилась», а «почему одна машина решает, живёт ли сайт». К этому добавляется каждый релиз: новую версию включаешь только после остановки старой.
 
+```text
+$ kubectl get nodes
+NAME                  STATUS     ROLES           AGE   VERSION
+notes-control-plane   Ready      control-plane   3d    v1.34.0
+notes-worker          Ready      <none>          3d    v1.34.0
+notes-worker2         NotReady   <none>          3d    v1.34.0
+
+$ kubectl get pods -o wide
+NAME                     READY   STATUS        NODE
+notes-7c9d5b6f4-4xk2p    1/1     Running       notes-worker
+notes-7c9d5b6f4-9tq8m    1/1     Terminating   notes-worker2
+notes-7c9d5b6f4-m2r7v    1/1     Running       notes-worker
+```
+
+Узел `notes-worker2` перестал отвечать, и кластер сам пометил его `NotReady`. Копия на нём уходит в `Terminating`, а работа продолжается на двух живых узлах: никто не будил человека руками.
+
 Compose из [урока 4.5](../04-docker/05-compose-postgres.md) работает на одной машине: она упала, упало всё, а обновление означает остановку старого контейнера. Kubernetes (K8s, читается «кубернетис»; «8» означает восемь букв между K и s) - это программа, которая держит приложение на многих машинах, сама перезапускает упавшее и приводит систему к состоянию, которое ты описал. Без неё, если у тебя сотня контейнеров на двадцати серверах, каждое падение и каждое обновление разбирает человек руками. **Кластер** (cluster) - это группа серверов, которые Kubernetes объединяет в одну большую «машину»: ты говоришь, что запустить, а на каком именно сервере, решает он. На работе кластер это основная платформа для запуска сервисов (платформа - общее место, на котором работают все приложения компании, как торговый центр для магазинов), и без понимания его устройства любая поломка выглядит как магия.
 
 В этом уроке ты сначала поймёшь, из каких частей состоит кластер и кто за что отвечает, а потом поднимешь свой кластер и найдёшь в нём каждую часть. Для этого понадобится **kind** (Kubernetes IN Docker): утилита, которая создаёт учебный кластер на твоём ноутбуке, а каждый «сервер» этого кластера на самом деле контейнер Docker. Настоящих серверов покупать не нужно, а устроен такой кластер так же, как боевой.
@@ -247,7 +263,7 @@ sequenceDiagram
 
 Deployment и ReplicaSet это объекты, которые следят за числом копий, подробно в [уроке 5.2](02-pods-deployments.md); пока считай их «заказом на N копий». Обрати внимание, что стрелки идут от компонентов к API, а не друг к другу: никто никому не звонит.
 
-В шаге 2 («кто ты и можно ли тебе») три проверки: аутентификация (личность, по сертификату или токену), авторизация (права, RBAC, [урок 5.12](12-k8s-security.md)) и проверка схемы (нет ли лишних полей и опечаток в названиях). Если хоть одна не прошла, запись в etcd не происходит, и `kubectl` печатает ошибку сразу. Поэтому опечатка в имени поля даёт немедленный `error validating data`, а не тихий сбой потом.
+В шаге 2 («кто ты и можно ли тебе») три проверки: аутентификация (личность, по сертификату или токену), авторизация (права, RBAC, [урок 5.12](12-k8s-security.md)) и проверка схемы (нет ли лишних полей и опечаток в названиях). Если хоть одна не прошла, запись в etcd не происходит, и `kubectl` печатает ошибку сразу. Поэтому опечатка в имени поля даёт немедленную ошибку `strict decoding error: unknown field`, а не тихий сбой потом.
 
 > **Прикинь сам:** под создан, но навсегда завис в `Pending`, а kubelet на всех узлах здоров. На каком шаге цепочки это застряло?
 {: .predict}
@@ -508,7 +524,7 @@ flowchart TD
 
 Три контейнера: один управляющий узел и два рабочих. Поды «Заметок» будут внутри этих трёх, а не отдельными строками `docker ps`.
 
-Осторожно: сетевой плагин (CNI) выбирается при создании кластера. В kind по умолчанию стоит kindnet, и заменить его позже нельзя, только пересоздать кластер. В [уроке 5.12](12-k8s-security.md) нам понадобится NetworkPolicy (сетевые правила «кто с кем может общаться»), и мы вернёмся к этому.
+Осторожно: сетевой плагин (CNI) выбирается при создании кластера. В kind по умолчанию стоит kindnet, и заменить его позже нельзя, только пересоздать кластер. В [уроке 5.12](12-k8s-security.md) нам понадобится NetworkPolicy (сетевые правила «кто с кем может общаться»), и мы вернёмся к этому. Kindnet в нашем kind-кластере сам применяет NetworkPolicy, замена CNI понадобится, только если нужны возможности Calico или Cilium.
 
 > **Проверь понимание:** ты выполнил `docker ps` и видишь три контейнера `notes-*`. Где искать поды `notes`, которые ты запустишь в следующем уроке?
 
@@ -642,8 +658,8 @@ apiVersion: kind.x-k8s.io/v1alpha4
 name: notes                      # имя кластера, из него строятся имена контейнеров и контекста
 nodes:                           # список узлов
   - role: control-plane          # первый узел: управляющий слой
-    # версия Kubernetes задаётся образом узла; проверь тег на странице релиза kind v0.33.0
-    image: kindest/node:v1.37.1
+    # версия Kubernetes задаётся образом узла; образ и дайджест взяты из релиза kind v0.33.0, при смене версии kind бери пару тег+дайджест оттуда же
+    image: kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed
     kubeadmConfigPatches:        # правка настроек kubeadm (инструмент, который собирает кластер)
       # метка узла, на котором будет принимать трафик входной шлюз (урок 5.4)
       - |
@@ -661,9 +677,9 @@ nodes:                           # список узлов
         hostPort: 443
         protocol: TCP
   - role: worker                 # второй и третий узлы: рабочие
-    image: kindest/node:v1.37.1
+    image: kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed
   - role: worker
-    image: kindest/node:v1.37.1
+    image: kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed
 ```
 
 Что здесь важно. `role` задаёт роль узла, `image` образ, из которого запустится узел (в нём зашита версия Kubernetes). Блок `kubeadmConfigPatches` с `|` содержит многострочный текст, который kind вставит в настройки: он ставит на узел метку (label) `ingress-ready=true`, чтобы позже шлюз сел именно сюда. Блок `extraPortMappings` это тот самый проброс `-p` из Docker, который мы разбирали в теории.
@@ -683,7 +699,7 @@ docker ps --format 'table {{.Names}}\t{{.Ports}}'
 
 ```text
 Creating cluster "notes" ...
- ✓ Ensuring node image (kindest/node:v1.37.1)
+ ✓ Ensuring node image (kindest/node:v1.36.4@sha256:099e0493...)
  ✓ Preparing nodes
  ✓ Writing configuration
  ✓ Starting control-plane
@@ -697,9 +713,9 @@ kubectl cluster-info --context kind-notes
 
 kind-notes
 NAME                  STATUS   ROLES           AGE   VERSION
-notes-control-plane   Ready    control-plane   60s   v1.37.1
-notes-worker          Ready    <none>          40s   v1.37.1
-notes-worker2         Ready    <none>          40s   v1.37.1
+notes-control-plane   Ready    control-plane   60s   v1.36.4
+notes-worker          Ready    <none>          40s   v1.36.4
+notes-worker2         Ready    <none>          40s   v1.36.4
 NAMES                 PORTS
 notes-worker
 notes-worker2
@@ -859,7 +875,7 @@ notes   Active   2s    app.kubernetes.io/part-of=notes,kubernetes.io/metadata.na
 **Типичные ошибки:**
 
 - `error: the path "k8s/base/00-namespace.yaml" does not exist`: ты не в `~/notes`: `cd ~/notes`.
-- `Error from server (BadRequest): ... error validating data: unknown field`: сбились отступы в YAML: `name` и `labels` должны быть вложены в `metadata`.
+- `Error from server (BadRequest): error when creating "k8s/base/00-namespace.yaml": Namespace in version "v1" cannot be handled as a Namespace: strict decoding error: unknown field "name"`: сбились отступы в YAML: `name` и `labels` должны быть вложены в `metadata`.
 
 ## Сломай и почини
 
@@ -909,7 +925,7 @@ kubectl describe node notes-worker | grep -A8 Conditions
 
 **Сценарий 2: `port is already allocated`.** Порт 80 или 443 хоста слушает `nginx`, старый стенд Compose или прошлый кластер. Проверка: `sudo ss -tlnp | grep ':80 '` и `docker ps` покажут владельца. Исправление: останови владельца (`sudo systemctl stop nginx`, `docker compose down` или `docker rm -f <контейнер>`), при остатках прошлой попытки выполни `kind delete cluster --name notes` и создай кластер снова.
 
-**Сценарий 3: узел `NotReady`.** Kubelet на узле не шлёт heartbeat (сигнал «я жив»). Проверка: `kubectl describe node notes-worker`, в блоке Conditions будет `Ready False` или `Unknown`; `docker ps -a` покажет остановленный контейнер узла. Исправление: `docker start notes-worker` (контейнер остановлен) либо `docker exec notes-worker systemctl restart kubelet`. Через полминуты узел вернётся в `Ready`, а вытесненные поды пересоздадутся сами: цикл согласования в действии.
+**Сценарий 3: узел `NotReady`.** Kubelet на узле не шлёт heartbeat (сигнал «я жив»). Проверка: `kubectl describe node notes-worker`, в блоке Conditions будет `Ready False` или `Unknown`; `docker ps -a` покажет остановленный контейнер узла. Исправление: `docker start notes-worker` (контейнер остановлен) либо `docker exec notes-worker systemctl restart kubelet`. Через полминуты узел вернётся в `Ready`. За такой короткий простой поды никуда не денутся: на них по умолчанию стоит допуск на 5 минут `NotReady`, и только если узел молчит дольше, поды пересоздаются на других узлах (цикл согласования в действии).
 
 </details>
 
@@ -1000,7 +1016,7 @@ kubectl get pods отвечает: <вставь текст ошибки>.
 - kind v0.33.0 и kubectl 1.37.1: адреса скачивания проверены запросом (ответ 200), `kubectl version --client` на стенде автора печатает `Client Version: v1.37.1` и `Kustomize Version: v5.8.1`; текст ошибки `localhost:8080 was refused` получен запуском kubectl без kubeconfig.
 - Манифест `00-namespace.yaml` проверен `kubeconform -strict`; `kind.yaml` разобран как YAML (`yq`).
 - Создание кластера, вывод `kubectl get nodes` и `get pods -A`, `crictl ps`, скрипт `break.sh` (только `shellcheck`) не прогонялись: кластеры на стенде автора не поднимались, вывод собран по документации и знанию kind.
-- Kubernetes (образ узла `kindest/node`): v1.37.1, проверь актуальный тег на странице релиза kind.
+- Kubernetes (образ узла `kindest/node`): v1.36.4 с дайджестом из релиза kind v0.33.0 (версия входит в матрицу совместимости Envoy Gateway v1.9 из урока 5.4). Клиент `kubectl` 1.37.1 и сервер 1.36.4 расходятся в патч-версии, это допустимо.
 - containerd и kindnet: из образа узла kind v0.33.0.
 - Docker Engine: версия не закреплена, проверь актуальную версию на странице проекта.
 - Ubuntu: 26.04 LTS и 24.04.

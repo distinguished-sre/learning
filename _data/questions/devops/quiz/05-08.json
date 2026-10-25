@@ -158,8 +158,8 @@
     },
     {
      "id": "d",
-     "text": "Пропустить поле и оставить значение по умолчанию",
-     "why": "Для Job поле обязательно, но варианты Never и OnFailure допустимы."
+     "text": "Never вместе с `backoffLimit: 0`",
+     "why": "Допустимо: Never и OnFailure разрешены при любом значении backoffLimit."
     }
    ],
    "correct": [

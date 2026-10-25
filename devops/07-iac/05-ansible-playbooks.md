@@ -10,6 +10,17 @@ time: "3 ч"
 
 Ad-hoc команды из прошлого урока хороши для разовой проверки, но настройка сервера это десятки шагов, и их нужно повторять на новой ВМ без ручной памяти. **Плейбук** (playbook) записывает эти шаги в текстовый файл: его читает человек, хранит git, запускает CI. На работе плейбук пишут для установки Docker (программа для запуска приложений в изолированных «коробках», [тема 4](../04-docker/index.md)), раскладки конфигов (настроек приложения), создания пользователей, а на собеседовании спрашивают «почему у тебя `changed=1` при каждом запуске» и «почему handler не перезапустил сервис».
 
+Так выглядит итог запуска плейбука на втором прогоне, когда сервер уже настроен: ничего не менялось.
+
+```text
+$ ansible-playbook site.yml
+
+PLAY RECAP *********************************************************
+notes-1 : ok=9  changed=0  unreachable=0  failed=0  skipped=0  rescued=0  ignored=0
+```
+
+Главное здесь `changed=0`: девять задач проверили сервер и поняли, что всё уже как надо. Если бы тут стояло `changed=3` на каждом запуске, плейбук был бы не идемпотентным.
+
 Два слова из этого абзаца, которые встретятся сразу:
 
 - **`changed`** - отметка Ansible «эта задача что-то поменяла на сервере». Если на втором запуске снова `changed`, задача не идемпотентна ([урок 7.4](04-ansible-basics.md)): как сотрудник, который каждый день «заново красит» уже покрашенную стену;
@@ -205,7 +216,7 @@ DATABASE_URL=postgresql://notes:CHANGE_ME@db:5432/notes
 
 Модуль `template` идемпотентен: он рендерит текст, сравнивает с файлом на сервере (по контрольной сумме) и переписывает только при отличии. Совпало: `ok`. Отличается: `changed`, и вызывается handler. Если в шаблон попадёт что-то, меняющееся при каждом запуске (дата, случайное число), задача будет `changed` всегда: это частая причина «плейбук не идемпотентен».
 
-> **Прикинь сам:** В шаблон добавили строку `UPDATED={{ ansible_date_time.iso8601 }}`. Что станет со вторым запуском?
+> **Прикинь сам:** В шаблон добавили строку `UPDATED={{ ansible_facts['date_time']['iso8601'] }}`. Что станет со вторым запуском?
 {: .predict}
 
 Дата меняется каждый раз, поэтому файл каждый раз отличается: задача всегда `changed`, handler всегда срабатывает.
@@ -302,7 +313,7 @@ flowchart TD
 > **Прикинь сам:** Задача с `command: touch /tmp/flag` на втором запуске снова `changed`. Что добавить?
 {: .predict}
 
-`args: {creates: /tmp/flag}`: тогда Ansible увидит файл и пропустит задачу как `ok`. Лучше заменить `command` модулем `file` с `state: touch`.
+`args: {creates: /tmp/flag}`: тогда Ansible увидит файл и пропустит задачу как `ok`. Лучше заменить `command` модулем `file` с `state: touch`, `modification_time: preserve` и `access_time: preserve` (без них время файла обновляется и задача каждый раз `changed`).
 
 Осторожно: `changed_when: false` не «отключает» задачу, а заявляет, что она ничего не меняет. Если такая команда что-то меняет, Ansible об этом не скажет.
 
@@ -313,7 +324,7 @@ flowchart TD
 
 <details markdown="1"><summary>Ответ</summary>
 
-Добавить `args: {creates: /tmp/flag}`, или заменить на модуль `ansible.builtin.file` с `state: touch` и `modification_time: preserve`, или задать `changed_when: false`, если команда только читает.
+Добавить `args: {creates: /tmp/flag}`, или заменить на модуль `ansible.builtin.file` с `state: touch`, `modification_time: preserve` и `access_time: preserve`, или задать `changed_when: false`, если команда только читает.
 
 </details>
 
@@ -329,7 +340,7 @@ sequenceDiagram
     participant S as сервер notes-vm
     P->>P: 1-2. читает плейбук, подставляет переменные в шаблон
     P->>S: 3. SSH-вход как ubuntu
-    P->>S: 4. копирует модуль template и готовый текст
+    P->>S: 4. копирует модуль copy и готовый текст
     P->>S: 5. запускает модуль через sudo
     Note over S: сравнивает контрольные суммы<br>разные: пишет файл, права 0640<br>одинаковые: ничего не трогает
     S-->>P: 6. JSON: changed true или false
@@ -405,7 +416,7 @@ sequenceDiagram
   ansible.builtin.command: touch /var/lib/notes/initialized
 ```
 
-Первый запуск: `changed`, файл создан. Второй: снова `changed`, потому что `command` не знает, что делает `touch`. Исправляем: `args: {creates: /var/lib/notes/initialized}`. Теперь Ansible перед запуском проверяет, есть ли файл: есть, значит задача пропускается с `ok`, второй запуск даёт `changed=0`. Ещё лучше заменить на модуль `file` с `state: touch`, тогда никакие хитрости не нужны.
+Первый запуск: `changed`, файл создан. Второй: снова `changed`, потому что `command` не знает, что делает `touch`. Исправляем: `args: {creates: /var/lib/notes/initialized}`. Теперь Ansible перед запуском проверяет, есть ли файл: есть, значит задача пропускается с `ok`, второй запуск даёт `changed=0`. Можно заменить на модуль `file` с `state: touch`, `modification_time: preserve` и `access_time: preserve` (без них время файла обновляется и задача каждый раз `changed`).
 
 > **Прикинь сам:** Плейбук запустили дважды: в первый раз `changed=4`, во второй `changed=1`. Что делать?
 {: .predict}
@@ -788,7 +799,7 @@ notes-vm                   : ok=5    changed=0    unreachable=0    failed=0    s
 
 - `Task failed: Missing sudo password` (в старых версиях `FAILED! => {"msg": "Missing sudo password"}`): у пользователя ВМ нет `NOPASSWD` в sudo, а `become` включён. Настрой sudo без пароля или запусти с `--ask-become-pass`.
 - `E: Could not get lock /var/lib/dpkg/lock-frontend`: на свежей ВМ фоном идёт `unattended-upgrades` (автообновления). Подожди пару минут и повтори.
-- `ERROR! We were unable to read either as JSON nor YAML`: отступы пробелами, табы в YAML запрещены.
+- `[ERROR]: YAML parsing failed: Tabs are usually invalid in YAML.`: отступы пробелами, табы в YAML запрещены.
 
 ### Задание 2. Docker из официального apt-репозитория
 
@@ -899,7 +910,7 @@ Docker Compose version v<версия>
 **Типичные ошибки:**
 
 - `E: The repository ... does not have a Release file`: у Docker может не быть репозитория для только что вышедшего релиза Ubuntu. Проверь `curl -I https://download.docker.com/linux/ubuntu/dists/<релиз>/Release`; при 404 подставь предыдущий LTS в `suites` (актуальную поддержку смотри на странице Docker).
-- `The task includes an option with an undefined variable. The error was: 'dpkg_arch' is undefined`: задача с `register` не выполнилась раньше или переименована: имена в `register` и в шаблоне должны совпадать.
+- `Error while resolving value for 'architectures': 'dpkg_arch' is undefined` (в начале строки `Task failed: Finalization of task args for 'ansible.builtin.deb822_repository' failed:`): задача с `register` не выполнилась раньше или переименована: имена в `register` и в шаблоне должны совпадать.
 - `Could not resolve host: download.docker.com`: у ВМ нет выхода в интернет или DNS. Проверь `dig download.docker.com` ([урок 2.3](../02-network/03-dns.md)).
 - `[DEPRECATION WARNING]: ansible.builtin.apt_repository has been deprecated`: так предупреждает старый модуль, если взять его из чужих примеров. Замени на `deb822_repository`, как здесь.
 
@@ -999,8 +1010,8 @@ notes-vm | CHANGED | rc=0 >>
 
 **Типичные ошибки:**
 
-- `Error while resolving value for 'notes_store': 'notes_store' is undefined` (или `AnsibleUndefinedVariable`): переменная не определена ни в `vars`, ни в `group_vars`. Определи её или задай значение по умолчанию `{{ notes_store | default('postgres') }}`.
-- `Could not find or access '../templates/notes.env.j2'`: путь `src` считается от каталога плейбука: проверь, что запускаешь из `infra/ansible/` и шаблон лежит в `templates/`.
+- `Task failed: 'notes_store' is undefined` (в блоке `Origin` будет путь к `templates/notes.env.j2`): переменная не определена ни в `vars`, ни в `group_vars`. Определи её или задай значение по умолчанию `{{ notes_store | default('postgres') }}`.
+- `Could not find or access '../templates/notes.env.j2'`: путь `src` считается от каталога плейбука: проверь, что шаблон лежит в `infra/ansible/templates/`, а плейбук в `infra/ansible/playbooks/`; из какого каталога ты запускаешь, не важно.
 - `did not find expected key while parsing a block mapping`: значение с `{{` в начале не взято в кавычки.
 
 ### Задание 4. Шаг проекта: `site.yml` собирает всё
@@ -1060,8 +1071,8 @@ notes-vm                   : ok=15   changed=0    unreachable=0    failed=0    s
 
 **Типичные ошибки:**
 
-- `ERROR! 'import_playbook' is not a valid attribute for a Play`: `import_playbook` записан внутри списка `tasks:`, а должен стоять на верхнем уровне файла.
-- `ERROR! Unable to retrieve file contents. Could not find or access '.../playbooks/base.yml'`: неверный путь: пути в `import_playbook` считаются от каталога `site.yml`.
+- `Task failed: Action 'ansible.builtin.import_playbook' does not support raw params.`: `import_playbook` записан внутри списка `tasks:`, а должен стоять на верхнем уровне файла.
+- `[ERROR]: Unable to retrieve file contents. Could not find or access '.../playbooks/base.yml' on the Ansible Controller`: неверный путь: пути в `import_playbook` считаются от каталога `site.yml`.
 - `UNREACHABLE!`: изменился IP ВМ после пересоздания: обнови `NOTES_VM_IP` или `inventory.yml` ([урок 7.4](04-ansible-basics.md)).
 
 ## Сломай и почини
@@ -1113,7 +1124,7 @@ cat > s3.yml <<'EOF'
   tasks:
     - name: пакет
       ansible.builtin.apt:
-        name: htop
+        name: cowsay
         state: present
 EOF
 ansible-playbook s3.yml
@@ -1149,9 +1160,9 @@ ansible-playbook s4.yml
 
 <details markdown="1"><summary>Разбор сценариев</summary>
 
-1. `changed=1` каждый раз: в плейбуке `command` без `creates`, `removes` или `changed_when`. В recap второго запуска будет `changed=1`. Замени на модуль (`file` с `state: touch`, `copy`, `get_url`) или добавь `args: {creates: /tmp/flag-b5}`. Проверка: второй запуск даёт `changed=0`.
+1. `changed=1` каждый раз: в плейбуке `command` без `creates`, `removes` или `changed_when`. В recap второго запуска будет `changed=1`. Замени на модуль (`file` с `state: touch`, `modification_time: preserve` и `access_time: preserve`, `copy`, `get_url`) или добавь `args: {creates: /tmp/flag-b5}`. Проверка: второй запуск даёт `changed=0`.
 2. `'foo' is undefined`: текст `Error while resolving value for 'msg': 'foo' is undefined`. Переменная не задана или опечатка в имени. Ищи `grep -rn foo .`, определи в `vars` или `group_vars`, либо задай `{{ foo | default('значение') }}`, если пустое допустимо.
-3. Забыт `become: true`: текст `E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)` и `E: Unable to acquire the dpkg frontend lock (/var/lib/dpkg/lock-frontend), are you root?`. Модуль `apt`, `user` или запись в `/etc` выполняется от обычного пользователя. Добавь `become: true` в игру или в задачу.
+3. Забыт `become: true`: текст `E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)` и `E: Unable to acquire the dpkg frontend lock (/var/lib/dpkg/lock-frontend), are you root?`. Модуль `apt`, `user` или запись в `/etc` выполняется от обычного пользователя. Добавь `become: true` в игру или в задачу. Пакет должен быть не установлен (перед запуском проверь `dpkg -l cowsay`): если он уже стоит, модуль `apt` ничего не запускает и ошибки не будет.
 4. Имя в `notify` (`Reload`) не совпадает с `name` handler (`reload`), регистр важен. Текст: `The requested handler 'Reload' was not found in either the main handlers list nor in the listening handlers list`. Выровняй имена. Если имя верное, а handler всё равно не сработал, значит задача вернула `ok` (файл уже совпадал) или игра упала до конца: тогда добавь `meta: flush_handlers` сразу после нужной задачи.
 
 Убери за собой: `rm -rf /tmp/b5` и на ВМ `ansible all -m ansible.builtin.file -a "path=/tmp/flag-b5 state=absent"`.

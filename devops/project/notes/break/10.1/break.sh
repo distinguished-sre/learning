@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Поломки для урока 10.1 «On-call». Запуск: bash break.sh random|1|2|3|4|5|fix
-# Ломает «Заметки» в учебном kind-кластере: 1 OOM, 2 диск, 3 плохой релиз,
+# Поломки для урока 10.1 «On-call». Запуск: bash break.sh random|1|3|4|5|fix
+# Ломает «Заметки» в учебном kind-кластере, четыре поломки: 1 OOM, 3 плохой релиз,
 # 4 сертификат, 5 БД недоступна. Без sudo. Что именно сломано, скрипт не печатает.
 # Состояние хранится в ConfigMap break-10-1 (namespace notes), fix читает его.
 set -euo pipefail
@@ -34,17 +34,6 @@ break_1() {
   local orig; orig=$(kubectl -n "$NS" get deploy notes -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}')
   save --from-literal=scenario=1 --from-literal=orig="$orig"
   kubectl -n "$NS" set resources deploy/notes --limits=memory=8Mi >/dev/null
-}
-
-break_2() {
-  local avail
-  avail=$(kubectl -n "$NS" exec deploy/notes -- df -Pm /data | awk 'NR==2{print $4}')
-  if [[ -z $avail || $avail -gt 4096 ]]; then
-    echo "Диск /data слишком велик (${avail:-?} МБ) для безопасного заполнения, сценарий пропущен." >&2
-    return 2
-  fi
-  save --from-literal=scenario=2
-  kubectl -n "$NS" exec deploy/notes -- sh -c "dd if=/dev/zero of=/data/.break-fill bs=1M count=$avail 2>/dev/null || true"
 }
 
 break_3() {
@@ -82,7 +71,6 @@ do_fix() {
           -p '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/limits/memory"}]' >/dev/null || true
       fi
       wait_rollout ;;
-    2) kubectl -n "$NS" exec deploy/notes -- rm -f /data/.break-fill ;;
     3) helm rollback notes "$(st rev)" -n "$NS" >/dev/null; wait_rollout ;;
     4)
       kubectl -n cert-manager scale deploy/cert-manager --replicas="$(st replicas)" >/dev/null
@@ -102,8 +90,9 @@ do_break() {
     return 0
   fi
   if [[ $n == random ]]; then
-    n=$(( RANDOM % 5 + 1 ))
-    "break_$n" || { local rc=$?; kubectl -n "$NS" delete cm "$STATE" --ignore-not-found >/dev/null; [[ $rc == 2 ]] && n=$(( n % 5 + 1 )) && "break_$n"; }
+    local all=(1 3 4 5)
+    n=${all[RANDOM % 4]}
+    "break_$n" || { kubectl -n "$NS" delete cm "$STATE" --ignore-not-found >/dev/null; exit 1; }
   else
     "break_$n" || { kubectl -n "$NS" delete cm "$STATE" --ignore-not-found >/dev/null; exit 1; }
   fi
@@ -112,7 +101,7 @@ do_break() {
 
 need
 case ${1:-} in
-  1|2|3|4|5|random) do_break "$1" ;;
+  1|3|4|5|random) do_break "$1" ;;
   fix) do_fix ;;
-  *) die "Использование: bash $0 random|1|2|3|4|5|fix" ;;
+  *) die "Использование: bash $0 random|1|3|4|5|fix" ;;
 esac

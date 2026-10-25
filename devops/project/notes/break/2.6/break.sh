@@ -31,7 +31,7 @@ need_https() {
 # Выпустить самоподписанный сертификат: $1 значение SAN (например DNS:notes.lab), $2 каталог
 issue_cert() {
   mkdir -p "$2"
-  openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+  openssl req -x509 -newkey rsa:2048 -noenc -days 365 \
     -subj "/CN=notes.lab" -addext "subjectAltName=$1" \
     -keyout "$2/notes.key" -out "$2/notes.crt" 2>/dev/null
   chmod 600 "$2/notes.key"
@@ -64,7 +64,7 @@ case "${1:-}" in
   2)
     need_root 2; need_https
     # Сертификат с нулевым сроком: к моменту проверки он уже просрочен.
-    openssl req -newkey rsa:2048 -nodes -subj "/CN=notes.lab" \
+    openssl req -newkey rsa:2048 -noenc -subj "/CN=notes.lab" \
       -keyout "$KEY" -out /tmp/break-2.6.csr 2>/dev/null
     printf 'subjectAltName=DNS:notes.lab\n' > /tmp/break-2.6.ext
     openssl x509 -req -in /tmp/break-2.6.csr -signkey "$KEY" -days 0 \

@@ -55,7 +55,7 @@
       "tags": [
         "middle"
       ],
-      "q": "После правки `backend.tf` `plan` пишет `Backend configuration changed`. Чем `-migrate-state` отличается от `-reconfigure`?",
+      "q": "После правки `backend.tf` `plan` пишет `Backend initialization required`, а `terraform init` без флагов `Backend configuration changed`. Чем `-migrate-state` отличается от `-reconfigure`?",
       "answer": "Terraform сравнил конфиг backend с запомненным в `.terraform/` и требует явного решения. `-migrate-state` копирует state из старого места в новое. `-reconfigure` просто переключает на новый backend без копирования, это годится, когда state уже перенесли руками или он не нужен.\n\n**Что хотят услышать:** защита от `plan` по пустому state, различие флагов, осторожность с вопросом «перезаписать?».\n\n**Красный флаг:** «удалю `.terraform/` и всё заработает» без понимания последствий."
     },
     {

@@ -640,7 +640,7 @@
       "skill": "выбор",
       "kind": "понимание",
       "type": "multiple",
-      "text": "Что верно про Jenkins?",
+      "text": "Какие утверждения про Jenkins верны?",
       "options": [
         {
           "id": "a",
@@ -805,7 +805,7 @@
       "skill": "jobs",
       "kind": "понимание",
       "type": "multiple",
-      "text": "Что верно про jobs одного этапа в GitLab CI?",
+      "text": "Какие утверждения про jobs одного этапа в GitLab CI верны?",
       "options": [
         {
           "id": "a",

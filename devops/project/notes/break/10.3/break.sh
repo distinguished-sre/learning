@@ -36,12 +36,16 @@ break_2() {
   fi
   local avail
   avail=$(kubectl -n "$NS" exec "$POD" -c postgres -- df -Pm /var/lib/postgresql/data | awk 'NR==2{print $4}')
-  if [[ -z $avail || $avail -gt 6000 ]]; then
-    die "Том слишком велик (${avail:-?} МБ) для безопасного заполнения, сценарий не применён."
-  fi
+  [[ -n $avail ]] || die "Не удалось узнать свободное место, сценарий не применён."
   # Занимаем 90% свободного места, чтобы PostgreSQL не упал сразу, а том стал почти полным.
+  local mb=$(( avail * 9 / 10 ))
+  if [[ $avail -gt 6000 ]]; then
+    # local-path в kind не ограничивает размер тома: df покажет диск узла, заполнять его целиком нельзя.
+    mb=1024
+    echo "Том большой (local-path не ограничивает размер): занимаю 1 ГБ, ориентируйся на du."
+  fi
   kubectl -n "$NS" exec "$POD" -c postgres -- sh -c \
-    "mkdir -p $JUNK && dd if=/dev/zero of=$JUNK/segment.bin bs=1M count=$(( avail * 9 / 10 )) 2>/dev/null"
+    "mkdir -p $JUNK && dd if=/dev/zero of=$JUNK/segment.bin bs=1M count=$mb 2>/dev/null"
   echo "Готово: утром пришёл алерт про том с данными."
 }
 

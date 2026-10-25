@@ -67,7 +67,7 @@
     "middle"
    ],
    "q": "На `helm install` ошибка `invalid ownership metadata`. Что это и что делать?",
-   "answer": "Объект с таким именем уже есть и создан не Helm: у него нет меток и аннотаций `app.kubernetes.io/managed-by: Helm` и `meta.helm.sh/release-name`. Helm не трогает чужое. Варианты: удалить объект и установить, либо усыновить, дописав метки и аннотации, если простой недопустим.\n\n**Что хотят услышать:** аннотации `meta.helm.sh/release-name` и `release-namespace`, вывод про миграцию с `kubectl apply` на Helm без простоя.\n\n**Красный флаг:** `--force` без понимания, что он пересоздаёт объекты."
+   "answer": "Объект с таким именем уже есть и создан не Helm: у него нет меток и аннотаций `app.kubernetes.io/managed-by: Helm` и `meta.helm.sh/release-name`. Helm не трогает чужое. Варианты: удалить объект и установить, либо усыновить, дописав метки и аннотации, если простой недопустим. В Helm 4 усыновить можно и флагом `--take-ownership` у `install` и `upgrade`: он пропускает проверку аннотаций Helm.\n\n**Что хотят услышать:** аннотации `meta.helm.sh/release-name` и `release-namespace`, вывод про миграцию с `kubectl apply` на Helm без простоя, флаг `--take-ownership`.\n\n**Красный флаг:** `--force-replace` (раньше `--force`) без понимания, что он пересоздаёт объекты."
   },
   {
    "id": "o05-09-08",
@@ -103,7 +103,7 @@
    "tags": [
     "middle"
    ],
-   "q": "`helm install` падает с `cannot re-use a name that is still in use`. Что делаешь?",
+   "q": "`helm install` падает с `cannot reuse a name that is still in use`. Что делаешь?",
    "answer": "Релиз с таким именем уже есть в этом namespace, часто в статусе `failed` после неудачной первой установки. Смотрю `helm list -A --all`, затем `helm uninstall` или `helm upgrade --install`. В CI всегда пишу `upgrade --install`.\n\n**Что хотят услышать:** `--all` показывает failed и pending, релиз привязан к namespace.\n\n**Красный флаг:** удаляет Secret релиза руками."
   },
   {

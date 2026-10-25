@@ -159,7 +159,7 @@
         {
           "id": "c",
           "text": "В инвентаре неправильно записан отступ в YAML-файле группы",
-          "why": "Ошибка отступа выдаёт `Unable to parse`, а не `MODULE FAILURE`."
+          "why": "Ошибка отступа в инвентаре даёт предупреждение `Unable to parse`, а не `MODULE FAILURE`."
         },
         {
           "id": "d",
@@ -277,7 +277,7 @@
       "skill": "отступы",
       "kind": "диагностика",
       "type": "multiple",
-      "text": "Что ломается чаще всего в YAML?",
+      "text": "Что чаще всего ломается в YAML? Выбери все подходящее",
       "options": [
         {
           "id": "a",
@@ -612,7 +612,7 @@
       "skill": "два понятия",
       "kind": "понимание",
       "type": "multiple",
-      "text": "Что верно про `become` и `ansible_user`?",
+      "text": "Какие утверждения про `become` и `ansible_user` верны?",
       "options": [
         {
           "id": "a",

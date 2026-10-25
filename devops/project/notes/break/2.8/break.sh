@@ -143,7 +143,7 @@ fix_all() {
   fi
 }
 
-msg="Поломка включена. Ты не знаешь, какая. Проверь: curl -v https://notes.lab/"
+msg="Поломка включена. Ты не знаешь, какая. Проверь: curl -v --cacert /etc/notes/tls/notes.crt https://notes.lab/"
 
 case "${1:-}" in
   1|2|3|4|5)

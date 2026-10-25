@@ -769,7 +769,7 @@
    "correct": [
     "b"
    ],
-   "explain": "Без этого правила Prometheus пошёл бы прямо на цель с путём /probe.",
+   "explain": "Без этого правила в __address__ остался бы адрес проверяемой цели, и Prometheus отбросил бы такую цель как некорректную, а до blackbox дело бы не дошло.",
    "section": "Relabeling: как Prometheus ходит на blackbox"
   },
   {

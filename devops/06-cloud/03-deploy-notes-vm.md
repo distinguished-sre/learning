@@ -10,6 +10,32 @@ time: "4 ч"
 
 Пока «Заметки» живут на твоём ноутбуке, это не сервис, а учебный макет. Настоящая работа начинается, когда у приложения есть публичный адрес, валидный сертификат (документ, по которому браузер верит, что перед ним настоящий сервер: как печать нотариуса на бумаге; без него браузер пугает красной страницей, а данные идут открытым текстом, см. [урок 2.6](../02-network/06-tls.md)) и выкладка новой версии (**деплой**, deploy: доставка новой версии программы на сервер, где она работает), которая не требует заходить на сервер руками.
 
+Вот как выглядит выкладка, которая не удалась, и что с ней делает скрипт деплоя. На ВМ работает версия `0.3.0`, ты выкатываешь `0.4.1`:
+
+```text
+deploy@notes-vm:/opt/notes$ ./deploy/vm/deploy.sh 0.4.1
+[+] Pulling 1/1
+ ✔ notes Pulled                                   3.8s
+[+] Running 3/3
+ ✔ Container notes-db-1     Running               0.0s
+ ✔ Container notes-notes-1  Started               1.1s
+ ✔ Container notes-proxy-1  Running               0.0s
+curl: (22) The requested URL returned error: 502
+curl: (22) The requested URL returned error: 502
+curl: (22) The requested URL returned error: 502
+...
+FAIL: версия 0.4.1 не прошла проверку
+Откат на 0.3.0
+[+] Running 3/3
+ ✔ Container notes-db-1     Running               0.0s
+ ✔ Container notes-notes-1  Started               1.0s
+ ✔ Container notes-proxy-1  Running               0.0s
+deploy@notes-vm:/opt/notes$ echo $?
+1
+```
+
+Новая версия запустилась, но проверочный запрос к адресу `/healthz` (там сервис отвечает «жив») 15 раз подряд, с паузой 2 секунды, получил `502`: так отвечает сервер, когда не может достучаться до приложения. Скрипт сам вернул `0.3.0`, поэтому сбой длился около 30 секунд, а не до утра, и закончил работу с кодом `1`, чтобы любая автоматика и человек сразу увидели: выкладка не удалась.
+
 На работе это делается каждую неделю: запустить сервис на облачной машине, привязать к нему имя сайта, включить `https://`, а потом обновлять его так, чтобы при неудаче всё вернулось назад само (**откат**, rollback: вернуть прошлую рабочую версию, как кнопка «отменить» в редакторе; без него сломанное обновление держит сайт лежащим, пока ты ищешь ошибку). На собеседовании просят описать именно этот путь: от git-тега до HTTPS, откат, что будет, если ВМ упадёт.
 
 В этом уроке ты пройдёшь весь путь на ВМ из [урока 6.2](02-vm-network-storage.md): поставишь Docker, привяжешь домен, получишь сертификат Let's Encrypt (бесплатная организация, которая выдаёт сертификаты автоматически, как бесплатный нотариус с окошком без очереди), напишешь скрипт деплоя с откатом и подключишь GitHub Actions (автоматизацию на серверах GitHub: по событию, например выходу релиза, она сама запускает твои команды; [урок 3.4](../03-git-ci/04-quality-security-ci.md)), чтобы релиз сам выкатывался на сервер.
@@ -431,20 +457,20 @@ flowchart LR
 |---|---|---|
 | Виртуальная машина | Compute Cloud, `notes-vm` | EC2 |
 | Домен и A-запись | Cloud DNS | Route 53 |
-| Сертификат | Let's Encrypt + certbot на ВМ; Certificate Manager | ACM (только с ALB, CloudFront) |
+| Сертификат | Let's Encrypt + certbot на ВМ; Certificate Manager | ACM (бесплатный: ALB, CloudFront; экспортируемый: платный) |
 | Правила входа 22, 80, 443 | Security group | Security group |
 | Хранение SSH-ключа CI | GitHub Secrets | GitHub Secrets / Secrets Manager |
 | Деплой по SSH | `deploy.sh` по ssh | SSM Run Command / CodeDeploy |
 | Внешний uptime | внешняя проверка, Monitoring | Route 53 health checks, CloudWatch Synthetics |
 
-Отличие для собеседования: сертификат ACM бесплатен, но выдаётся только для сервисов AWS (ALB, CloudFront), на ВМ его не поставишь. На EC2 ставят certbot так же, как у нас.
+Отличие для собеседования: обычный сертификат ACM бесплатен, но привязывается к интегрированным сервисам AWS (ALB, CloudFront и др.). Есть платный экспортируемый сертификат: его выгружают и ставят на EC2 сами. Бесплатный путь для EC2: certbot, так же, как у нас.
 
 > **Прикинь сам:** тебе нужен сертификат для сайта на обычной ВМ EC2. Подойдёт ли ACM, как у AWS для балансировщика?
 {: .predict}
 
-Нет: сертификат ACM выдаётся только для сервисов AWS (ALB, CloudFront), на ВМ его не поставишь. На EC2 ставят certbot, как в этом уроке.
+Нет, не напрямую: обычный бесплатный сертификат ACM привязывается к интегрированным сервисам AWS (ALB, CloudFront), к ВМ EC2 его не привяжешь. Платный экспортируемый можно выгрузить и поставить вручную, но бесплатно на EC2 ставят certbot, как в этом уроке.
 
-> **Главное:** у каждого шага урока есть аналог в AWS: EC2, Route 53, ACM (только для сервисов AWS), Security group, SSM или CodeDeploy.
+> **Главное:** у каждого шага урока есть аналог в AWS: EC2, Route 53, ACM (бесплатный только для интегрированных сервисов AWS), Security group, SSM или CodeDeploy.
 {: .key}
 
 ## Практика
@@ -615,12 +641,12 @@ sudo install -d /var/www/certbot
 sudo apt-get install -y certbot
 sudo certbot certonly --webroot -w /var/www/certbot -d notes.example.com \
   --agree-tos -m you@example.com --no-eff-email \
-  --deploy-hook "docker compose -f /opt/notes/compose.yml -f /opt/notes/compose.prod.yml --project-directory /opt/notes exec -T proxy nginx -s reload"
+  --deploy-hook "docker exec notes-proxy-1 nginx -s reload"
 ```
 
 Отладку лучше начинать с ключа `--dry-run`, чтобы не упереться в лимиты.
 
-Разбор: `export COMPOSE_FILE=a:b` говорит `docker compose`, какие файлы читать (двоеточие разделяет), а `NOTES_TAG` подставляется в `image:` из `compose.prod.yml` (без неё `${NOTES_TAG:?...}` остановит запуск). `certonly` значит «только получить сертификат, ничего не настраивать»; `--webroot -w /var/www/certbot` положить токен туда; `-d` домен; `--agree-tos` согласие с условиями; `-m` почта для уведомлений об истекающем сертификате; `--no-eff-email` не подписываться на рассылку. `--deploy-hook "..."` команда после успешной выдачи и каждого продления: `exec -T proxy nginx -s reload` заходит в контейнер `proxy` и просит nginx перечитать конфиг и сертификаты (`-T` отключает терминал, он не нужен в автоматике).
+Разбор: `export COMPOSE_FILE=a:b` говорит `docker compose`, какие файлы читать (двоеточие разделяет), а `NOTES_TAG` подставляется в `image:` из `compose.prod.yml` (без неё `${NOTES_TAG:?...}` остановит запуск). `certonly` значит «только получить сертификат, ничего не настраивать»; `--webroot -w /var/www/certbot` положить токен туда; `-d` домен; `--agree-tos` согласие с условиями; `-m` контактная почта для регистрации аккаунта (писем об истечении срока Let's Encrypt с 4 июня 2025 не шлёт, поэтому срок сертификата отслеживай своим алертом); `--no-eff-email` не подписываться на рассылку. `--deploy-hook "..."` команда после успешной выдачи и каждого продления: `docker exec notes-proxy-1 nginx -s reload` заходит в контейнер `proxy` (имя `notes-proxy-1` как в уроке 4.6) и просит nginx перечитать конфиг и сертификаты. Хук нарочно без `docker compose`: certbot запускает его без твоего окружения (из `sudo` и позже из `certbot.timer`), там нет `NOTES_TAG`, и Compose остановился бы с ошибкой `required variable NOTES_TAG is missing a value`.
 
 **Как читать вывод certbot:** в конце должно быть `Successfully received certificate` и пути `Certificate is saved at: .../fullchain.pem` и `Key is saved at: .../privkey.pem`, а также дата окончания. Если вместо этого `Challenge failed for domain`, смотри «Типичные ошибки».
 
@@ -664,25 +690,26 @@ ssh -i ~/.ssh/notes-deploy deploy@203.0.113.10 'cd /opt/notes && export COMPOSE_
 ```bash
 curl -sS -o /dev/null -w '%{http_code}\n' https://notes.example.com/healthz
 echo | openssl s_client -connect notes.example.com:443 -servername notes.example.com 2>/dev/null | openssl x509 -noout -issuer -dates
-sudo certbot renew --dry-run
+sudo certbot renew --dry-run --run-deploy-hooks
 ```
 
-Разбор: `curl -sS -o /dev/null -w '%{http_code}\n'` скачивает страницу, выбрасывает тело (`-o /dev/null`) и печатает только код ответа (`-w`). `echo |` подаёт пустой ввод, чтобы `openssl s_client` не ждал ввода: он подключается к 443 и выводит сертификат (`-servername` сообщает имя сайта, как это делает браузер). Всё это передаётся в `openssl x509 -noout -issuer -dates`: показать, кто выдал (`-issuer`) и сроки (`-dates`), без самого текста сертификата. `certbot renew --dry-run` имитирует продление на тестовом сервере, ничего не меняя.
+Разбор: `curl -sS -o /dev/null -w '%{http_code}\n'` скачивает страницу, выбрасывает тело (`-o /dev/null`) и печатает только код ответа (`-w`). `echo |` подаёт пустой ввод, чтобы `openssl s_client` не ждал ввода: он подключается к 443 и выводит сертификат (`-servername` сообщает имя сайта, как это делает браузер). Всё это передаётся в `openssl x509 -noout -issuer -dates`: показать, кто выдал (`-issuer`) и сроки (`-dates`), без самого текста сертификата. `certbot renew --dry-run` имитирует продление на тестовом сервере, не меняя сертификат; без `--run-deploy-hooks` хук в этом режиме не вызывается, а с флагом выполняется (так проверяется `nginx -s reload`).
 
 **Что должно получиться:** код 200, издатель Let's Encrypt, дата окончания через около 90 дней, тестовое продление проходит.
 
 ```text
 200
-issuer=C = US, O = Let's Encrypt, CN = E7
+issuer=C = US, O = Let's Encrypt, CN = YE1
 notBefore=Sep 29 10:12:01 2026 GMT
 notAfter=Dec 28 10:12:00 2026 GMT
+Running deploy-hook command: docker exec notes-proxy-1 nginx -s reload
 Congratulations, all simulated renewals succeeded:
   /etc/letsencrypt/live/notes.example.com/fullchain.pem (success)
 ```
 
-Имя издателя (`E7`) и даты у тебя будут другие: центр сертификации меняет промежуточные сертификаты, это нормально.
+Имя издателя (`YE1`) и даты у тебя будут другие: это может быть `YE1`, `YE2` (ECDSA) или `YR1`, `YR2` (RSA), центр сертификации меняет промежуточные сертификаты, это нормально.
 
-**Как читать вывод:** `200` значит, что запрос прошёл весь путь (DNS, TLS, nginx, приложение). `issuer=... O = Let's Encrypt` показывает, что сертификат настоящий, а не самоподписанный. Разница между `notBefore` и `notAfter` около 90 дней. Последние две строки говорят, что тестовое продление сработало: certbot умеет войти в свой каталог, пройти проверку и вызвать deploy-hook.
+**Как читать вывод:** `200` значит, что запрос прошёл весь путь (DNS, TLS, nginx, приложение). `issuer=... O = Let's Encrypt` показывает, что сертификат настоящий, а не самоподписанный. Разница между `notBefore` и `notAfter` около 90 дней. Строка `Running deploy-hook command` значит, что с флагом `--run-deploy-hooks` хук выполнился; последние строки говорят, что certbot прошёл проверку ACME на тестовом сервере. Без этого флага `--dry-run` хук не вызывает и о `nginx -s reload` ничего не говорит.
 
 **Объясни себе:**
 - Зачем `/etc/letsencrypt` подключён в nginx только на чтение?
@@ -887,11 +914,11 @@ jobs:
 git add compose.prod.yml deploy .github/workflows/deploy.yml
 git commit -m "ci: деплой на ВМ по релизу"
 git push
-gh release create v0.4.1 --title "0.4.1" --notes "Деплой по релизу"
+gh release create v0.4.1 --verify-tag --title "0.4.1" --notes "Деплой по релизу"
 gh run watch
 ```
 
-Если релиз для тега `v0.4.1` уже создан в уроке 3.5, опубликуй следующий тег своей нумерации: событие `published` наступает при публикации нового релиза.
+Флаг `--verify-tag` останавливает команду, если тега ещё нет: без него `gh release create` сам создал бы тег от последнего коммита, `image.yml` (запуск по тегу) и `deploy.yml` (запуск по релизу) стартовали бы одновременно, а деплой упал бы на `docker compose pull` образа, который ещё не собран (`manifest unknown`). Если релиз для тега `v0.4.1` уже создан в уроке 3.5, выпусти новый тег: `git tag v0.4.2 && git push origin v0.4.2`, дождись зелёного `image.yml` (`gh run watch`), затем `gh release create v0.4.2 --verify-tag --title "0.4.2" --notes "Деплой по релизу"`: событие `published` наступает при публикации нового релиза, и `deploy.sh` получит готовый образ.
 
 5. Подключи внешнюю проверку: в бесплатном uptime-сервисе создай HTTPS-проверку `https://notes.example.com/healthz` раз в минуту с оповещением на почту. Останови `proxy` (`docker compose stop proxy`) на 3 минуты, получи оповещение и запусти обратно (`docker compose start proxy`).
 
@@ -1074,7 +1101,7 @@ SLA 99.9% за 30 дней. За месяц было три неудачных �
 - [ ] умею поставить Docker Engine на ВМ из официального apt-репозитория и создать отдельного пользователя для деплоя
 - [ ] умею привязать домен к IP ВМ и проверить запись `dig` двумя резолверами
 - [ ] умею получить сертификат Let's Encrypt через webroot и проверить его `openssl s_client`
-- [ ] умею настроить автопродление и проверить его `certbot renew --dry-run` с перезагрузкой nginx
+- [ ] умею настроить автопродление и проверить его `certbot renew --dry-run --run-deploy-hooks` с перезагрузкой nginx
 - [ ] умею написать идемпотентный `deploy.sh` со smoke-test и откатом на предыдущий тег
 - [ ] умею собрать workflow, который выкатывает релиз по SSH с ключом из секретов
 - [ ] умею объяснить, почему одна ВМ это SPOF, и посчитать простой для SLA 99.9%

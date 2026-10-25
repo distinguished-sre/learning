@@ -36,7 +36,7 @@ cd "$REPO"
 if [[ ! -f .github/workflows/ci.yml ]] \
   || ! grep -q '^  secrets:' .github/workflows/ci.yml \
   || ! grep -q '^  trivy-fs:' .github/workflows/ci.yml; then
-  echo "В .github/workflows/ci.yml нет jobs secrets и trivy-fs. Сначала выполни задание 4 урока 3.4 и влей PR в main." >&2
+  echo "В .github/workflows/ci.yml нет jobs secrets и trivy-fs. Сначала выполни задание 5 урока 3.4 и влей PR в main." >&2
   exit 1
 fi
 current=$(git branch --show-current)

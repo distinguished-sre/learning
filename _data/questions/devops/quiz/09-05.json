@@ -602,7 +602,7 @@
       "skill": "First Point of Recoverability",
       "kind": "применение",
       "type": "single",
-      "text": "Поле `First Point of Recoverability` пустое. Что это значит?",
+      "text": "В поле `First Point of Recoverability` стоит `Not Available`. Что это значит?",
       "options": [
         {
           "id": "a",
@@ -800,7 +800,7 @@
       "skill": "диск и пулы",
       "kind": "понимание",
       "type": "multiple",
-      "text": "Что верно про диск и пулы соединений в CNPG?",
+      "text": "Какие утверждения про диск и пулы соединений в CNPG верны?",
       "options": [
         {
           "id": "a",
@@ -871,7 +871,7 @@
       "skill": "три уровня проверки",
       "kind": "применение",
       "type": "multiple",
-      "text": "Что входит в проверку, что бэкап настоящий?",
+      "text": "Что входит в проверку, что бэкап настоящий? Выбери все подходящее",
       "options": [
         {
           "id": "a",

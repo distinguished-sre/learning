@@ -29,7 +29,7 @@ need_docker() {
   fi
 }
 
-# Нужны контейнер, том, сеть и образ из задания 5 урока 4.3.
+# Нужны контейнер, том, сеть и образ из задания 7 урока 4.3.
 need_lesson() {
   local missing=0
   docker container inspect "$APP" >/dev/null 2>&1 || { echo "Нет контейнера $APP." >&2; missing=1; }
@@ -37,7 +37,7 @@ need_lesson() {
   docker network inspect "$NET" >/dev/null 2>&1 || { echo "Нет сети $NET." >&2; missing=1; }
   docker image inspect "$IMAGE" >/dev/null 2>&1 || { echo "Нет образа $IMAGE." >&2; missing=1; }
   if [[ $missing -eq 1 ]]; then
-    echo "Сначала пройди задание 5 урока 4.3 (сервис с томом $VOL в сети $NET)." >&2
+    echo "Сначала пройди задание 7 урока 4.3 (сервис с томом $VOL в сети $NET)." >&2
     exit 1
   fi
 }
@@ -57,7 +57,7 @@ wait_healthy() {
   return 1
 }
 
-# Запуск «Заметок» ровно так, как в задании 5, с томом $1.
+# Запуск «Заметок» ровно так, как в задании 7, с томом $1.
 run_app() {
   docker rm -f "$APP" >/dev/null 2>&1 || true
   docker run -d --name "$APP" --network "$NET" \
@@ -125,7 +125,7 @@ fix() {
     docker rm -f "$CLIENT" >/dev/null
     echo "Контейнер $CLIENT удалён."
   fi
-  echo "Состояние после задания 5 восстановлено."
+  echo "Состояние после задания 7 восстановлено."
 }
 
 case "${1:-}" in

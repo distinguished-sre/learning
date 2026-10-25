@@ -76,7 +76,7 @@
    "skill": "что даёт catch_response",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про `catch_response=True` в Locust?",
+   "text": "Какие утверждения про `catch_response=True` в Locust верны?",
    "options": [
     {
      "id": "a",
@@ -314,7 +314,7 @@
    "skill": "правила текста failure",
    "kind": "применение",
    "type": "multiple",
-   "text": "Как правильно составлять текст для `response.failure(...)`?",
+   "text": "Какие правила верны для текста в `response.failure(...)`?",
    "options": [
     {
      "id": "a",
@@ -347,7 +347,7 @@
    "skill": "кто виноват: 503",
    "kind": "применение",
    "type": "single",
-   "text": "В Failures появилась ошибка `POST /api/orders: 503 database pool timeout`. К какому из трёх видов ошибок она относится?",
+   "text": "В Failures появилась ошибка `POST /api/orders: код 503, ожидался 201` (магазин отвечает 503, когда в пуле нет свободных соединений с базой). К какому из трёх видов ошибок она относится?",
    "options": [
     {
      "id": "a",
@@ -452,7 +452,7 @@
    "kind": "чтение",
    "type": "single",
    "text": "В конце теста на вкладке Failures такие строки. Известно, что в строке 401 токен не передавали, а в 404 запрошенного товара нет в базе. Какая из строк результат теста о магазине?",
-   "code": "Method  Name                 Error                          Occurrences\nPOST    /api/cart/items      401 Unauthorized                        48\nPOST    /api/orders          503 database pool timeout               12\nGET     /api/products/[id]   код 404, ожидался 200                   30",
+   "code": "Method  Name                 Error                          Occurrences\nPOST    /api/cart/items      код 401, ожидался 201                   48\nPOST    /api/orders          код 503, ожидался 201                   12\nGET     /api/products/[id]   код 404, ожидался 200                   30",
    "options": [
     {
      "id": "a",
@@ -477,7 +477,7 @@
    "correct": [
     "b"
    ],
-   "explain": "503 `database pool timeout` значит, что магазин не справился. 401 и 404 это поломка самого теста, чинить надо его.",
+   "explain": "Код 503 значит, что магазин не справился (например, не хватило соединений с базой). 401 и 404 это поломка самого теста, чинить надо его.",
    "section": "Три вида ошибок"
   },
   {
@@ -486,15 +486,15 @@
    "kind": "чтение",
    "type": "multiple",
    "text": "Смотри на таблицу Failures из предыдущего вопроса. Известно, что в строке 401 токен не передавали, а в 404 запрошенного товара нет в базе. Какие строки говорят, что сценарий написан неверно?",
-   "code": "Method  Name                 Error                          Occurrences\nPOST    /api/cart/items      401 Unauthorized                        48\nPOST    /api/orders          503 database pool timeout               12\nGET     /api/products/[id]   код 404, ожидался 200                   30",
+   "code": "Method  Name                 Error                          Occurrences\nPOST    /api/cart/items      код 401, ожидался 201                   48\nPOST    /api/orders          код 503, ожидался 201                   12\nGET     /api/products/[id]   код 404, ожидался 200                   30",
    "options": [
     {
      "id": "a",
-     "text": "`POST /api/cart/items`: 401 Unauthorized"
+     "text": "`POST /api/cart/items`: код 401, ожидался 201"
     },
     {
      "id": "b",
-     "text": "`POST /api/orders`: 503 database pool timeout",
+     "text": "`POST /api/orders`: код 503, ожидался 201",
      "why": "Это ответ перегруженного сервиса, а не ошибка в тесте."
     },
     {
@@ -677,7 +677,7 @@
    "correct": [
     "b"
    ],
-   "explain": "Ключи словаря берутся из первой строки файла, поэтому заголовок в CSV обязателен: без него будет `KeyError: 'email'`.",
+   "explain": "Ключи словаря берутся из первой строки файла, поэтому заголовок в CSV обязателен: без него магазин ответит 422, потому что в теле запроса не будет поля `email`.",
    "section": "Тестовые данные: откуда брать пользователей и товары"
   },
   {
@@ -718,7 +718,7 @@
    "skill": "симптомы общих аккаунтов",
    "kind": "диагностика",
    "type": "multiple",
-   "text": "В `users.csv` оставили 10 записей, а запустили 100 пользователей (20 покупателей). Какие строки ожидаются в Failures?",
+   "text": "В `users.csv` оставили 10 записей, а запустили 100 пользователей (около 20 покупателей). Какие строки ожидаются в Failures?",
    "options": [
     {
      "id": "a",
@@ -751,7 +751,7 @@
    "skill": "где читать CSV",
    "kind": "применение",
    "type": "multiple",
-   "text": "Что плохого в чтении `users.csv` внутри `on_start` для 500 пользователей?",
+   "text": "Какие проблемы создаёт чтение `users.csv` внутри `on_start` для 500 пользователей?",
    "options": [
     {
      "id": "a",
@@ -984,7 +984,7 @@
    "skill": "fixed_count и constant_pacing",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про класс `Auth` с `fixed_count = 4` и `wait_time = constant_pacing(2)`?",
+   "text": "Какие утверждения про класс `Auth` с `fixed_count = 4` и `wait_time = constant_pacing(2)` верны?",
    "options": [
     {
      "id": "a",

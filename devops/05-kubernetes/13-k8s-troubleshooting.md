@@ -10,6 +10,19 @@ time: "3 ч"
 
 В два часа ночи алерт (автоматическое сообщение мониторинга «что-то сломалось», обычно звонок или сообщение в мессенджер) говорит «под не работает», а не «у тебя опечатка в теге образа». **Под** (pod) это запущенный контейнер приложения, минимальная единица Kubernetes ([урок 5.2](02-pods-deployments.md)). Кто ищет причину наугад, тратит час; кто идёт по одному и тому же алгоритму, находит её за пять минут. Почти любая поломка в Kubernetes видна в четырёх местах: статус пода (короткое слово в `kubectl get pods`: `Running`, `Pending` и так далее), события (events: записи кластера «что с этим объектом произошло», как журнал вахтёра), описание (describe: подробная карточка объекта) и логи (то, что сама программа пишет о своей работе). Подробно каждое разберём ниже. Умение пройти их по порядку проверяют на собеседованиях фразой «под не стартует, твои действия».
 
+```text
+$ kubectl get pods -n notes
+NAME                     READY   STATUS             RESTARTS   AGE
+notes-7d9f6c8b4-h5j2k    0/1     ImagePullBackOff   0          3m
+
+$ kubectl describe pod notes-7d9f6c8b4-h5j2k -n notes | tail -4
+Events:
+  Warning  Failed   2m   kubelet  Failed to pull image "ghcr.io/dev/notes:0.4.O": not found
+  Warning  Failed   2m   kubelet  Error: ErrImagePull
+```
+
+В статусе только `ImagePullBackOff`, а причина лежит в событиях: в теге образа вместо нуля стоит буква `O`. Статус говорит, где болит, события говорят, почему.
+
 Шаг проекта: в «Заметках» появляется `docs/runbooks/k8s-triage.md`, короткий алгоритм разбора пода для дежурного. Код и манифесты проекта не меняются.
 
 ## Что нужно знать
@@ -208,7 +221,7 @@ flowchart TD
 - `0`: завершился штатно;
 - `1`: общая ошибка приложения, смотри логи;
 - `2`: часто неверные аргументы или файл не найден (интерпретатор Python выдаёт 2, если не может открыть скрипт);
-- `126` / `127`: команда не исполняемая или не найдена (ошибка в `command`);
+- `128` с `Reason: StartError`: бинарь из `command` не найден или не запускается (контейнер даже не создан; так в containerd, который использует kind). `126` / `127` увидишь, только если команда запущена через оболочку (`sh -c`): файл не исполняемый / не найден;
 - `137`: убит сигналом 9 (SIGKILL): чаще `OOMKilled` (память) или kill по `livenessProbe` после таймаута;
 - `143`: остановлен сигналом 15 (SIGTERM): при выкатке это нормально.
 
@@ -232,7 +245,7 @@ flowchart TD
 
 </details>
 
-> **Главное:** код `128 + номер сигнала`: 137 это SIGKILL (чаще `OOMKilled`), 143 это SIGTERM; `126` и `127` ошибка в `command`.
+> **Главное:** код `128 + номер сигнала`: 137 это SIGKILL (чаще `OOMKilled`), 143 это SIGTERM; `128` (`StartError`) это ошибка в `command`, а `126` и `127` бывают при запуске через `sh -c`.
 {: .key}
 
 Причина самого падения лежит в логах прошлого запуска.
@@ -277,7 +290,7 @@ flowchart LR
 
 Проверки по порядку:
 
-1. `kubectl get endpoints notes -n notes`: пусто значит selector не совпал с метками подов или нет Ready-подов.
+1. `kubectl get endpoints notes -n notes`: пусто значит selector не совпал с метками подов или нет Ready-подов. Объект Endpoints объявлен устаревшим, kubectl напечатает об этом предупреждение, но команда работает и показывает только готовые адреса (урок [5.3](03-services-dns.md)).
 2. `kubectl get svc notes -n notes -o wide` и `kubectl get pods -n notes --show-labels`: сравни selector и метки глазами.
 3. `kubectl port-forward svc/notes 8080:8080 -n notes` и `curl http://127.0.0.1:8080/readyz` (`port-forward` пробрасывает порт с твоей машины прямо в кластер в обход Gateway). Если так работает, проблема выше по пути: Gateway или HTTPRoute.
 4. `kubectl get gateway,httproute -n notes`: условия `Accepted` и `Programmed`.
@@ -581,7 +594,7 @@ Warning  Failed  kubelet  Failed to pull image "ghcr.io/<github-user>/notes:9.9.
 
 ```text
 notes-7c6b9d4f8-q5r2s   0/1   Pending   0   15s
-0s   Warning   FailedScheduling   pod/notes-7c6b9d4f8-q5r2s   0/3 nodes are available: 1 node(s) had untolerated taint {node-role.kubernetes.io/control-plane: }, 2 Insufficient cpu, 2 Insufficient memory.
+0s   Warning   FailedScheduling   pod/notes-7c6b9d4f8-q5r2s   0/3 nodes are available: 1 node(s) had untolerated taint(s), 2 Insufficient cpu, 2 Insufficient memory. preemption: 0/3 nodes are available: 1 Preemption is not helpful for scheduling, 2 No preemption victims found for incoming pod.
 ```
 
 ```text
@@ -640,7 +653,7 @@ Error: couldn't find key NO_SUCH_KEY in Secret notes/notes-db
 
 ```text
 NAME                     READY   STATUS             RESTARTS      AGE
-notes-6d59f5c7b8-hd9wz   0/1     CrashLoopBackOff   3 (28s ago)   62s
+notes-6d59f5c7b8-hd9wz   0/1     CrashLoopBackOff   2 (14s ago)   47s
 ```
 
 ```text
@@ -650,7 +663,7 @@ python: can't open file '/no/such/app.py': [Errno 2] No such file or directory
       Exit Code:    2
 ```
 
-**Как читать вывод:** `CrashLoopBackOff` и `RESTARTS 3 (28s ago)` показывают: контейнер уже три раза перезапускался, последний раз 28 секунд назад. Причина в первой строке лога: файла нет. `Exit Code: 2` и `Reason: Error` значит ошибка приложения, не память. Старые поды при этом продолжают работать.
+**Как читать вывод:** `CrashLoopBackOff` и `RESTARTS 2 (14s ago)` показывают: контейнер уже два раза перезапускался, последний раз 14 секунд назад (числа примерные, у тебя будут другими). Причина в первой строке лога: файла нет. `Exit Code: 2` и `Reason: Error` значит ошибка приложения, не память. Старые поды при этом продолжают работать.
 
 **Объясни себе:**
 
@@ -699,6 +712,7 @@ Endpoints станут `<none>`, поды останутся `Running` и `Ready
 **Что должно получиться:**
 
 ```text
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
 NAME    ENDPOINTS   AGE
 notes   <none>      2h
 ```
@@ -945,8 +959,9 @@ kubectl get svc notes -n notes -o wide
 
 - Проверено командами: `shellcheck` для `break.sh` без замечаний (скрипт на кластере не запускался).
 - Не прогонялось: кластер kind не запускался. Вывод `kubectl`, `describe`, события и коды ответов написаны по документации и предыдущей редакции урока; хеши, возраст и число узлов у тебя будут другими.
-- kind: версия не закреплена, проверь актуальную версию на странице проекта
-- kubectl: версия не закреплена, проверь актуальную версию на странице проекта
+- kind: v0.33.0
+- kubectl: 1.37.1, Kubernetes (образ узла kindest/node): 1.36.4
+- Helm: v4.3.0 (флаг `--rollback-on-failure` есть в Helm 4; `--atomic` устарел)
 - Envoy Gateway: v1.9.2
 - PostgreSQL: 18
 - Python (образ приложения): 3.13

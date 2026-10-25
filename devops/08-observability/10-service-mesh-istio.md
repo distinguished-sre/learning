@@ -10,6 +10,17 @@ time: "3.5 ч"
 
 В кластере десятки сервисов, и каждая команда пишет по-своему: один сервис шифрует трафик, другой нет, у третьего нет таймаутов, а кто кому вообще разрешено ходить, никто не помнит. Проверять это в коде каждого сервиса дорого и ненадёжно.
 
+```text
+$ kubectl exec -n default deploy/tester -- curl -s -o /dev/null -w "%{http_code}\n" http://notes.notes:8080/notes
+200            (до политики: пускают всех)
+
+$ kubectl apply -f authz-notes.yaml          (разрешён только gateway)
+$ kubectl exec -n default deploy/tester -- curl -s http://notes.notes:8080/notes
+RBAC: access denied      (код 403: сетка отказала, до приложения запрос не дошёл)
+```
+
+Код приложения не менялся, а ответ изменился: правило «кому можно» теперь проверяет сетка. Такой отказ приходит от инфраструктуры, поэтому в логах «Заметок» его не найти.
+
 Сервисная сетка (service mesh) выносит шифрование, проверку «кто ты» и телеметрию (данные о том, что происходит в системе: метрики, журналы) из кода в инфраструктуру: приложение не меняется, а трафик между подами получает шифрование, правила доступа и метрики. Это как единая служба безопасности в бизнес-центре вместо охранников в каждой фирме: правила одни на всех, фирмы ничего не переделывают. Без неё каждая команда реализует защиту по-своему, и где-то её не будет совсем. Цена: лишние компоненты, ресурсы и новый класс поломок. Подробно разберём ниже.
 
 На собеседованиях спрашивают именно про это: что даёт mesh, чем ambient отличается от sidecar и что делать, когда после включения политики сервис отвечает 503 (код ответа «сервис недоступен», [урок 2.4](../02-network/04-http.md)).
@@ -210,7 +221,7 @@ sequenceDiagram
 > **Прикинь сам:** политика запрещает `DELETE /notes/1`, но waypoint не создан. Сработает ли она?
 {: .predict}
 
-Нет. Метод и путь это L7, а ztunnel понимает только L4. Политику с L7-условиями пишут для waypoint: без него она не будет применена как задумано. Это частая причина «политика есть, а трафик идёт».
+Нет. Метод и путь это L7, а ztunnel понимает только L4. Политику с L7-условиями (метод, путь) привязывают к waypoint (`targetRefs`). Если такая политика нацелена на ztunnel (через `selector`), ztunnel не умеет проверить метод и действует на всякий случай строже: правило «запретить DELETE» превратится в запрет всего подходящего трафика, а ALLOW-правило с методом не пропустит ничего. Это частая причина «политика написана верно, а трафик режется».
 
 Осторожно, тут часто путают. Что ambient «без прокси». Прокси есть, но он не внутри пода: на узле и, при необходимости, в отдельном Deployment.
 
@@ -531,7 +542,6 @@ ztunnel-9wq5d             1/1     Running   0          40s
 
 **Типичные ошибки:**
 
-- `Error: failed to install manifests: ... no matches for kind "Gateway"`: нет CRD Gateway API. Проверь `kubectl get crd gateways.gateway.networking.k8s.io`; они приходят с манифестом Envoy Gateway (урок 5.4).
 - `sha256sum: WARNING: 1 computed checksum did NOT match`: архив скачался не полностью. Удали файл и скачай заново.
 - `ztunnel ... CrashLoopBackOff` и в логах `too many open files`: у узла (контейнера kind) мало inotify-лимитов. Подними `sudo sysctl fs.inotify.max_user_instances=512` на хосте.
 
@@ -597,7 +607,7 @@ kubectl -n mesh-lab exec curl-ok -- curl -s http://notes.notes:8080/
 4. Проверь, что трафик идёт через HBONE, и найди identity в логе ztunnel. `istioctl ztunnel-config workload` показывает, каких рабочих нагрузок ztunnel знает и каким протоколом с ними ходит. `kubectl logs ds/ztunnel` читает лог DaemonSet, `grep` оставляет строки про соединения, `tail -n 2` берёт две последние:
 
 ```bash
-istioctl ztunnel-config workload -n notes
+istioctl ztunnel-config workload --workload-namespace notes
 kubectl -n istio-system logs ds/ztunnel --tail=200 | grep 'dst.workload' | tail -n 2
 ```
 
@@ -609,7 +619,7 @@ NAMESPACE POD NAME       ADDRESS     NODE          WAYPOINT PROTOCOL
 notes     notes-7d9f8b6c5-x2k4p 10.244.0.15 notes-control-plane None     HBONE
 ```
 
-**Как читать вывод:** `Notes service v0.7.0` это ответ приложения (версия может выглядеть иначе, сверь по ответу своего приложения). В таблице колонка `PROTOCOL`: `HBONE` значит, что нагрузка в mesh, `TCP` значит, что нет. `WAYPOINT None` пока waypoint не создан. Формат строк и набор колонок зависят от версии `istioctl`, важен смысл: нужная нагрузка есть и идёт по `HBONE`.
+**Как читать вывод:** `--workload-namespace notes` оставляет только нагрузки namespace `notes` (флаг `-n` здесь не подходит: он указывает, где искать сам ztunnel). `Notes service v0.7.0` это ответ приложения (версия может выглядеть иначе, сверь по ответу своего приложения). В таблице колонка `PROTOCOL`: `HBONE` значит, что нагрузка в mesh, `TCP` значит, что нет. `WAYPOINT None` пока waypoint не создан. Формат строк и набор колонок зависят от версии `istioctl`, важен смысл: нужная нагрузка есть и идёт по `HBONE`.
 
 В логе ztunnel видны поля `src.identity="spiffe://cluster.local/ns/mesh-lab/sa/curl-ok"` и `dst.service`. Число подов в `notes` и число контейнеров в них прежнее.
 
@@ -777,7 +787,7 @@ spec:
 kubectl apply -f k8s/mesh/waypoint.yaml
 kubectl -n notes wait --for=condition=Programmed gateway/waypoint --timeout=90s
 kubectl label namespace notes istio.io/use-waypoint=waypoint --overwrite
-istioctl ztunnel-config service -n notes | grep -E 'NAME|notes '
+istioctl ztunnel-config service --service-namespace notes
 time kubectl -n mesh-lab exec curl-ok -- curl -s -o /dev/null -w '%{http_code}\n' 'http://notes.notes:8080/slow?sec=5'
 ```
 
@@ -801,6 +811,7 @@ real    0m2.1s
 
 **Типичные ошибки:**
 
+- `no matches for kind "Gateway" in version "gateway.networking.k8s.io/v1"` при `kubectl apply -f k8s/mesh/waypoint.yaml`: нет CRD Gateway API. Проверь `kubectl get crd gateways.gateway.networking.k8s.io`; они приходят с манифестом Envoy Gateway (урок 5.4).
 - `The HTTPRoute "notes-mesh" is invalid: spec.rules[0].retry: Invalid value`: в CRD Gateway API нет экспериментального поля. Убери блок `retry`, таймаут останется рабочим.
 - `WAYPOINT` пустой в списке сервисов: не выставлена метка `istio.io/use-waypoint` на namespace или сервис.
 - Запрос на `/slow?sec=5` возвращает 200 за 5 секунд: трафик идёт мимо waypoint. Проверь, что клиент в ambient namespace и вызывает имя сервиса, а не IP пода.
@@ -900,8 +911,8 @@ bash /tmp/break-8.10.sh 1
 ```bash
 kubectl get authorizationpolicy -A
 kubectl get ns notes envoy-gateway-system --show-labels
-istioctl ztunnel-config workload -n notes
-istioctl ztunnel-config service -n notes
+istioctl ztunnel-config workload --workload-namespace notes
+istioctl ztunnel-config service --service-namespace notes
 kubectl -n notes get gateway waypoint
 kubectl -n istio-system logs ds/ztunnel --tail=50 | grep -iE 'rejection|denied'
 ```

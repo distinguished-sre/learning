@@ -10,6 +10,10 @@ time: "3 ч"
 
 Тревога сработала, график показал `/api/orders`, лог назвал ошибку: `payment failed`. Хорошо, но у другого заказа лог пишет просто «запрос шёл 2 секунды» и никакой ошибки нет. Где ушли эти две секунды? Заказ сходил в Redis, четыре раза в PostgreSQL, потом вызвал сервис оплаты, который сам сходил куда-то ещё. Строка лога знает только итог: «всё заняло 2 секунды». Метрика знает ещё меньше.
 
+<div class="viz" data-viz="mon-trace" data-title="Tempo: медленный заказ на 2 секунды" data-trace-id="5d2f8a1c7e3b4096a1b2c3d4e5f60718" data-focus="p1" data-explain="Почти всё время заказа занимает один спан POST /pay в сервисе payment." data-spans='[{"id":"r0","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":2050,"status":"ok","attrs":{"http.method":"POST","http.route":"/api/orders","http.status_code":201}},{"id":"a1","parent":"r0","service":"shop","name":"SELECT","start":6,"dur":4,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"a2","parent":"r0","service":"shop","name":"INSERT","start":12,"dur":5,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"c1","parent":"r0","service":"shop","name":"POST","start":24,"dur":1990,"status":"ok","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":200}},{"id":"p1","parent":"c1","service":"payment","name":"POST /pay","start":27,"dur":1984,"status":"ok","attrs":{"http.route":"/pay","http.status_code":200}}]'></div>
+
+На трейсе виден путь запроса: базе хватило десятка миллисекунд, а почти две секунды из двух ушли на вызов оплаты. Строка лога показала бы только итог в 2050 мс, а здесь видно, какой шаг его съел.
+
 Я столкнулся с этим на первой же распродаже. Два сервиса ссылались друг на друга: «я ждал оплату» и «я думал две секунды». Было непонятно, одно это событие или два, ведь у каждого сервиса свои часы и свои записи. Помог общий номер, который сервисы передавали друг другу вместе с запросом. С ним картина складывалась в одну линию, и виновник нашёлся за пять минут.
 
 Сегодня ты прочитаешь путь одного запроса «Магазина» через все его части, найдёшь медленный шаг и пройдёшь по всей цепочке «метрика, лог, трейс». Это последний урок курса.
@@ -63,7 +67,7 @@ sequenceDiagram
 ```text
 POST /api/orders                      94 мс  (корень, shop)
 ├─ SELECT / UPDATE (корзина, склад)   30 мс  (shop, PostgreSQL)
-└─ POST /pay                          58 мс  (shop -> payment)
+└─ POST                               58 мс  (клиент, shop -> payment)
    └─ POST /pay                       55 мс  (payment, сам сервис)
 ```
 
@@ -87,7 +91,7 @@ POST /api/orders                      94 мс  (корень, shop)
 trace_id 9c1d5a7e3b2f4c8d9e0a1b2c3d4e5f60
 
 POST /api/orders   span_id 3f9a1c07d2e84b56   parent: нет (корень)
-└─ POST /pay       span_id b7ad6b7169203331   parent: 3f9a1c07d2e84b56
+└─ POST            span_id b7ad6b7169203331   parent: 3f9a1c07d2e84b56
    └─ POST /pay    span_id 5e2c8a90f14d7b13   parent: b7ad6b7169203331
 ```
 
@@ -398,9 +402,9 @@ curl -s localhost:3200/ready
 **Что должно получиться** (пример):
 
 ```text
-NAME             IMAGE                    COMMAND   SERVICE   STATUS          PORTS
-shop-alloy-1     grafana/alloy:v1.20.1    ...       alloy     Up 2 minutes    127.0.0.1:12345->12345/tcp
-shop-tempo-1     grafana/tempo:2.10.8     ...       tempo     Up 2 minutes    127.0.0.1:3200->3200/tcp
+NAME             IMAGE                    COMMAND   SERVICE   CREATED         STATUS          PORTS
+shop-alloy-1     grafana/alloy:v1.20.1    ...       alloy     2 minutes ago   Up 2 minutes    127.0.0.1:12345->12345/tcp
+shop-tempo-1     grafana/tempo:2.10.8     ...       tempo     2 minutes ago   Up 2 minutes    127.0.0.1:3200->3200/tcp
 ready
 ```
 
@@ -416,10 +420,9 @@ Alloy уже знаком по логам из урока 4.1. Для трейс
 
 Почему порта два? Потому что в цепочке две передачи, и каждая использует свой вариант OTLP. `shop` и `payment` шлют по HTTP на `http://alloy:4318` (адрес из `OTEL_EXPORTER_OTLP_ENDPOINT`): стенд использует Python-экспортёр для HTTP, и приёмник Alloy настроен только на HTTP. А Tempo принимает по gRPC на `4317`, поэтому Alloy переводит данные из одного варианта в другой. Порты не взаимозаменяемы: gRPC и HTTP говорят на разных «языках».
 
-Что будет, если перепутать, например указать сервисам `http://alloy:4317`? Заказы пойдут как обычно, но трейсов в Tempo не появится: сервис не достучится до приёмника, а его ошибки экспорта на стенде не пишутся в лог. Поэтому ищи не в `shop`, а ниже по цепочке: красные карточки на экране Alloy (`http://localhost:12345`), строки с ошибкой в `docker compose logs alloy` и пустой результат в Explore по Tempo. Для проверки порта изнутри сети достаточно `docker compose exec shop python -c "import socket; socket.create_connection(('alloy', 4318), 3)"`: без ошибки значит, порт слушают.
+Что будет, если перепутать, например указать сервисам `http://alloy:4317`? Заказы пойдут как обычно, но трейсов в Tempo не появится: сервис не достучится до приёмника, а его ошибки экспорта на стенде не пишутся в лог. Alloy при этом ничего не получит и ошибок не покажет: карточки на его экране (`http://localhost:12345`) зелёные, а в Explore по Tempo пусто. Причину ищи проверкой порта изнутри сети: `docker compose exec shop python -c "import socket; socket.create_connection(('alloy', 4318), 3)"`. Без ошибки значит, порт слушают, а с портом 4317 она падает с ошибкой соединения.
 
-Версию Tempo бери из `compose.yaml` стенда: там закреплена `grafana/tempo:2.10.8`. Тот же `2.10` указан и в `CLAUDE.md` курса load-tester, расхождения по смыслу нет.
-
+Версию Tempo бери из `compose.yaml` стенда: там закреплена `grafana/tempo:2.10.8`.
 ### 2. Сделай заказ и найди его `trace_id`
 
 ```bash
@@ -448,13 +451,13 @@ docker compose logs shop --no-log-prefix | grep '"/api/orders"' | tail -n 1 | jq
 
 **Типичные ошибки:**
 
-- `jq: error ... Cannot index string`: токен не получен (`echo $TOKEN` пуст). Проверь, что стенд работает и email верный.
+- `curl: (22) The requested URL returned error: 401` или `curl: (7) Failed to connect`, а затем пустой `echo $TOKEN`: стенд не запущен или email неверный. Проверь `curl -s localhost:8000/healthz`.
 - Пустой вывод последней команды: строка ещё не появилась, подожди секунду и повтори.
 - Код `400` вместо `201`: корзина пуста, повтори вторую команду.
 
 ### 3. Открой трейс в Grafana
 
-Открой `http://localhost:3000/explore`, источник **Tempo**, режим запроса по номеру трейса, вставь `trace_id` из шага 2 и выполни. Если трейс «не найден», подожди 10-15 секунд.
+Открой `http://localhost:3000/explore`, источник **Tempo**, тип запроса **TraceQL**, вставь `trace_id` из шага 2 в поле запроса и выполни. Если трейс «не найден», подожди 10-15 секунд.
 
 **Что должно получиться:** водопад: корневой `POST /api/orders` около 90 мс, под ним команды Redis (`GET`, `HGETALL`), `db.pool.getconn`, несколько `SELECT`/`INSERT`/`UPDATE`, затем `POST` к оплате и вложенный `POST /pay` из сервиса `payment`, в конце `DEL`. Точный набор у тебя может отличаться.
 
@@ -529,7 +532,7 @@ curl -sG localhost:3200/api/search --data-urlencode 'q={ name = "POST /api/order
   "traceID": "a41c7e90b3d2458f9e6a1c0b7d3f52e8",
   "rootServiceName": "shop",
   "rootTraceName": "POST /api/orders",
-  "startTimeUnixNano": "1759589718204000000",
+  "startTimeUnixNano": "1791118518204000000",
   "durationMs": 184
 }
 ```

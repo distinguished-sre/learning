@@ -10,6 +10,16 @@ time: "3 ч"
 
 Образ (готовый к запуску «слепок» приложения, [урок 4.2](../04-docker/02-dockerfile.md)) `notes:0.4.0` один, а окружений несколько: локально, в dev (тестовая среда разработчиков), в проде (боевая среда, где работают настоящие пользователи). Отличаются адрес базы данных, уровень логов (как подробно приложение пишет о своей работе), пароль. Если зашить это в образ, придётся собирать новый образ на каждое изменение, а пароль окажется в реестре образов (общем складе образов, откуда кластер их скачивает: например, `ghcr.io`), откуда его может скачать любой с доступом. Kubernetes отделяет настройки от образа: обычные лежат в ConfigMap, чувствительные (пароли, токены) в Secret.
 
+```text
+$ kubectl get secret notes-db -n notes -o jsonpath='{.data.password}'
+bm90ZXMtcHJvZC0yMDI2
+
+$ kubectl get secret notes-db -n notes -o jsonpath='{.data.password}' | base64 -d
+notes-prod-2026
+```
+
+Первая команда показывает «зашифрованный» пароль, вторая расшифровывает его одной стандартной утилитой без всякого ключа. Любой, кто может читать Secret, получает пароль целиком.
+
 На работе с этим сталкиваются каждый день: под не стартует из-за пропавшего ключа, конфиг поменяли, а приложение работает по-старому, пароль случайно попал в git. Отдельная ловушка: Secret выглядит зашифрованным, но это всего лишь base64. Base64 - способ записать любые данные обычными буквами и цифрами (так «пароль» превращается в `0L/QsNGA0L7Qu9GM`); это как написать слово задом наперёд: прочитать может любой, кто знает приём, и никакой ключ не нужен. Подробно разберём ниже.
 
 Шаг проекта: «Заметки» переходят с файла на PostgreSQL (`STORE=postgres`); обычные настройки берутся из ConfigMap `notes-config`, строка подключения `DATABASE_URL` из Secret `notes-db`. **ConfigMap** - объект кластера, в котором лежат обычные настройки в виде пар «ключ: значение». **Secret** - такой же объект, но для паролей и токенов. **Строка подключения** - одна строка с адресом базы, именем пользователя и паролем, например `postgresql://notes:пароль@db:5432/notes`: по ней приложение находит базу и входит в неё.
@@ -676,7 +686,7 @@ file: debug
 
 **Типичные ошибки:**
 
-- `Error from server (AlreadyExists): configmaps "demo-config" already exists`: объект уже есть, удали `kubectl -n notes delete configmap demo-config` или используй `apply`.
+- `error: failed to create configmap: configmaps "demo-config" already exists`: объект уже есть, удали `kubectl -n notes delete configmap demo-config` или используй `apply`.
 - Файл не обновился через 10 секунд: kubelet синхронизирует тома с задержкой, подожди до двух минут. Ещё причина: если монтировать ключ через `subPath`, файл не обновляется вообще.
 
 ### Задание 2. Secret: base64 это не шифрование
@@ -914,8 +924,8 @@ POSTGRES_PASSWORD:  48 bytes
 deployment "notes" successfully rolled out
 postgres
 info
-{"id":2}
-[{"id":1,"text":"первая заметка в кластере","created_at":"2026-09-29T09:41:07.512348+00:00"},{"id":2,"text":"first in postgres","created_at":"2026-09-29T10:00:00.123456+00:00"}]
+{"id": 2}
+[{"id": 1, "text": "первая заметка в кластере", "created_at": "2026-09-29T09:41:07.512348+00:00"}, {"id": 2, "text": "first in postgres", "created_at": "2026-09-29T10:00:00.123456+00:00"}]
 info
 deployment "notes" successfully rolled out
 debug
@@ -934,7 +944,7 @@ debug
 **Типичные ошибки:**
 
 - `Error: couldn't find key DATABASE_URL in Secret notes/notes-db` (статус пода `CreateContainerConfigError`): в Secret нет ключа `DATABASE_URL`. Повтори шаг 2.
-- `psycopg.OperationalError: connection failed: FATAL:  password authentication failed for user "notes"`: в `DATABASE_URL` не тот пароль, что внутри БД. Возьми пароль из `POSTGRES_PASSWORD` (шаг 2), а не придумывай новый.
+- `ERROR ошибка хранилища: connection failed: connection to server at "10.96.0.12", port 5432 failed: FATAL:  password authentication failed for user "notes"` (в `kubectl logs deploy/notes`): в `DATABASE_URL` не тот пароль, что внутри БД. Возьми пароль из `POSTGRES_PASSWORD` (шаг 2), а не придумывай новый.
 - Пароль содержит `/`, `@` или `+`: такой символ ломает разбор URL. Генерируй пароли `openssl rand -hex`: только цифры и буквы `a-f`.
 - `The Deployment "notes" is invalid: spec.selector: Invalid value ... field is immutable`: в Deployment изменили `selector`. Верни `app.kubernetes.io/name: notes`, как в уроке 5.2.
 - `curl: (7) Failed to connect to localhost port 8080`: `port-forward` ещё не успел запуститься или уже завершён. Запусти его заново и подожди пару секунд.
@@ -1088,7 +1098,7 @@ Error: couldn't find key DATABASE_URL in Secret notes/notes-db
 
 Не прогонялось в кластере kind, вывод команд `kubectl` взят из предыдущей редакции урока и сверен по знанию формата (значения `AGE`, `uid`, время в `created_at` и `id` у тебя будут другими):
 
-- kind: v0.33.0, Kubernetes: 1.37.1 (образ узла `kindest/node` из `kind/kind.yaml`), kubectl: 1.37.1;
+- kind: v0.33.0, Kubernetes: 1.36.4 (образ узла `kindest/node:v1.36.4` с дайджестом из релиза kind v0.33.0), kubectl: 1.37.1;
 - PostgreSQL: 18 (образ `postgres:18`), Python: 3.13 (образ `python:3.13-slim`);
 - приложение «Заметки»: v4, образ `notes:0.4.0`.
 

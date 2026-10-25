@@ -574,7 +574,7 @@
    "skill": "Как Prometheus узнаёт о подах: service discovery",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про список подов у Prometheus?",
+   "text": "Какие утверждения про список подов у Prometheus верны?",
    "options": [
     {
      "id": "a",

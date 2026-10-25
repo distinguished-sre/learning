@@ -10,6 +10,19 @@ time: "2 ч"
 
 Плейбук (playbook, файл с описанием настройки сервера, [урок 7.5](05-ansible-playbooks.md)) на 200 строк, в котором смешаны установка Docker, конфиги, пароли и запуск приложения, никто не хочет читать и никто не осмеливается менять. Это как рецепт, в котором на одной странице и покупка продуктов, и готовка, и сервировка: найти нужный кусок трудно, а повторить только его невозможно.
 
+Вот как выглядит такой «монолит» и его главная опасность.
+
+```text
+$ wc -l site.yml
+214 site.yml
+$ grep -c "^    - name:" site.yml
+38
+$ grep -n "password" site.yml
+117:      notes_db_password: "qwerty-notes-2026"
+```
+
+Один файл на 214 строк и 38 задач, а на строке 117 пароль базы лежит открытым текстом, и вместе с файлом он попадёт в Git.
+
 На работе такое разбирают на роли (roles). Роль это готовый «модуль знаний» об одном деле: «поставить Docker», «развернуть приложение». Каждая лежит в своей папке, у каждой понятная структура, и её можно взять на десятки серверов, не копируя текст. Без ролей каждый новый сервер означает копипасту плейбука, а через месяц копии расходятся.
 
 Вторая проблема: пароль базы данных (БД) нужно где-то хранить. Держать его в открытом виде в git нельзя ([урок 3.4](../03-git-ci/04-quality-security-ci.md)), а без него приложение не запустится. Поэтому секреты шифруют: как письмо в запертом сейфе, которое можно хранить в общей комнате, а открыть может только владелец кода. Инструмент называется Ansible Vault (подробно разберём в теории).
@@ -698,8 +711,8 @@ notes-vm                   : ok=9    changed=0    unreachable=0    failed=0    s
 
 **Типичные ошибки:**
 
-- `E: The repository 'https://download.docker.com/linux/ubuntu resolute Release' does not have a Release file.`: у Docker ещё нет каталога для нового релиза Ubuntu. Проверь актуальный список на странице установки Docker и временно укажи предыдущий LTS в переменной `docker_apt_release` вместо факта.
-- `fatal: [notes-vm]: FAILED! => {"msg": "Missing sudo password"}`: забыт `become: true` или на ВМ нет `NOPASSWD`. Проверь урок 7.4.
+- `E: The repository 'https://download.docker.com/linux/ubuntu <кодовое_имя> Release' does not have a Release file.`: у Docker нет каталога для кодового имени твоего релиза Ubuntu (бывает сразу после выхода нового релиза). Посмотри список на https://download.docker.com/linux/ubuntu/dists/ и временно укажи последний поддержанный LTS в переменной `docker_apt_release` вместо факта.
+- `Task failed: Missing sudo password` (в старых версиях `FAILED! => {"msg": "Missing sudo password"}`): забыт `become: true` или на ВМ нет `NOPASSWD`. Проверь урок 7.4.
 - `changed=1` на каждом запуске у задачи «Архитектура dpkg»: забыт `changed_when: false`. Команда только читает, но Ansible про это не знает.
 - `This module requires the python3-debian package`: задача с `python3-debian` стоит после репозитория или удалена. Модуль `deb822_repository` сам использует эту библиотеку на ВМ.
 
@@ -738,7 +751,7 @@ notes-vm                   : ok=9    changed=0    unreachable=0    failed=0    s
    ```bash
    mkdir -p group_vars/all
    printf '# Секреты из vault.yml через префикс vault_\nnotes_db_password: "%s"\n' '{{ vault_notes_db_password }}' > group_vars/all/vars.yml
-   printf 'vault_notes_db_password: "%s"\n' "$(openssl rand -base64 24)" > group_vars/all/vault.yml
+   printf 'vault_notes_db_password: "%s"\n' "$(openssl rand -hex 24)" > group_vars/all/vault.yml
    ansible-vault encrypt group_vars/all/vault.yml
    ```
 {% endraw %}
@@ -766,7 +779,7 @@ vault_notes_db_password: "***"
 
 **Разбор команд:**
 
-- `openssl rand -base64 24`: берёт 24 случайных байта и печатает их в виде текста (base64); это и есть пароль. Вывод уходит в файл через `>`, поэтому на экране его нет.
+- `openssl rand -hex 24`: берёт 24 случайных байта и печатает их шестнадцатеричными знаками (48 символов 0-9a-f). Так в пароле нет `/`, `+`, `=`, которые ломают разбор адреса `postgresql://...` в `DATABASE_URL`; это и есть пароль. Вывод уходит в файл через `>`, поэтому на экране его нет.
 - `chmod 700` и `chmod 600`: права только для владельца (каталог и файл соответственно, [урок 1.3](../01-linux/03-users-permissions.md)).
 - `ansible-vault encrypt файл`: заменяет содержимое файла зашифрованным (файл перезаписывается на месте). Пароль берёт из `vault_password_file`.
 - `head -n 2`: первые две строки файла, этого хватает, чтобы увидеть заголовок.
@@ -776,8 +789,8 @@ vault_notes_db_password: "***"
 
 **Типичные ошибки:**
 
-- `ERROR! Attempting to decrypt but no vault secrets found`: в `ansible.cfg` нет `vault_password_file` и не передан `--ask-vault-pass`. Добавь строку из шага 2.
-- `ERROR! Decryption failed (no vault secrets were found that could decrypt)`: пароль в файле не тот, которым шифровали. Восстанови верный пароль или зашифруй файл заново.
+- `[ERROR]: Attempting to decrypt but no vault secrets found.`: в `ansible.cfg` нет `vault_password_file` и не передан `--ask-vault-pass`. Добавь строку из шага 2.
+- `[ERROR]: Decryption failed (no vault secrets were found that could decrypt).`: пароль в файле не тот, которым шифровали. Восстанови верный пароль или зашифруй файл заново.
 - `Vault format unhexlify error: Odd-length string`: файл повреждён при правке вручную. Верни из git прежнюю версию.
 
 ### Задание 3. Роль notes: compose и .env из vault
@@ -930,12 +943,12 @@ vault_notes_db_password: "***"
 **Что должно получиться:** запуск заканчивается `failed=0`, а на ВМ:
 
 ```text
-$ ansible notes -a "stat -c '%a %U:%G' /etc/notes/notes.env"
+$ ansible notes --become -a "stat -c '%a %U:%G' /etc/notes/notes.env"
 notes-vm | CHANGED | rc=0 >>
 640 root:notes
 ```
 
-Проверка сайта: `curl -s http://<IP ВМ>/healthz` печатает `ok`. Повторный запуск с `--check --diff` даёт `changed=0` (`--check` ничего не меняет на сервере, `--diff` показывает, что изменилось бы, по строкам).
+Проверка сайта: `curl -s http://<IP ВМ>/healthz` печатает `ok`. Повторный `ansible-playbook site.yml` даёт `changed=0`. `--check --diff` здесь нулей не обещает: `command` в нём пропускается, `architectures` приходит пустым, и репозиторий Docker помечается `changed` (`--check` ничего не меняет на сервере, `--diff` показывает, что изменилось бы, по строкам).
 
 **Разбор ключевого:**
 
@@ -957,8 +970,8 @@ notes-vm | CHANGED | rc=0 >>
 
 **Типичные ошибки:**
 
-- `fatal: [notes-vm]: FAILED! => {"msg": "The task includes an option with an undefined variable. The error was: 'notes_db_password' is undefined"}`: не подхватился `group_vars/all/vars.yml`. Каталог `group_vars` должен лежать рядом с inventory или плейбуком.
-- `ERROR! couldn't resolve module/action 'community.docker.docker_compose_v2'`: не установлена коллекция. Выполни `ansible-galaxy collection install community.docker:==5.0.0`.
+- `[ERROR]: Task failed: 'notes_db_password' is undefined` (строка `fatal:` скрыта: у задачи `no_log: true`): не подхватился `group_vars/all/vars.yml`. Каталог `group_vars` должен лежать рядом с inventory или плейбуком.
+- `[ERROR]: couldn't resolve module/action 'community.docker.docker_compose_v2'. ...`: не установлена коллекция. Выполни `ansible-galaxy collection install community.docker:==5.0.0`.
 - `manifest unknown`: образа с таким тегом нет в реестре. Проверь `notes_image` и `notes_tag`.
 
 ### Задание 4. Шаг проекта: «Заметки» одним запуском на чистой ВМ
@@ -1018,38 +1031,42 @@ notes-vm                   : ok=15   changed=0    unreachable=0    failed=0    s
 
 ## Сломай и почини
 
-Запусти скрипт из клона курса и не читай его: `bash <клон-курса>/project/notes/break/7.6/break.sh random` (или номер 1-3). Он вносит одну из трёх поломок в `~/notes/infra/ansible`.
+Запусти скрипт из клона курса и не читай его: `bash <клон-курса>/devops/project/notes/break/7.6/break.sh 1` (или `2`, `3`). Он вносит одну поломку в `~/notes/infra/ansible`; вернуть всё как было: `bash <клон-курса>/devops/project/notes/break/7.6/break.sh fix`.
 
 ### Симптом
 
-После запуска `ansible-playbook site.yml` падает. В выводе одна из картин: ошибка про vault («Decryption failed»), «is undefined» в задаче шаблона, или Compose-задача падает потому, что Docker на ВМ ещё не поставлен.
+После запуска `ansible-playbook site.yml` падает или показывает не то, что ты ждёшь. Одна из картин: ошибка про vault («Decryption failed»), «is undefined» в задаче шаблона, или тихо подменённое значение (в `--check --diff` другой тег образа, ошибки нет).
 
 ### Гипотезы
 
-- Роли выстроены в неверном порядке, зависимость `docker` потеряна.
 - Файл vault зашифрован другим паролем или в `ansible.cfg` указан не тот файл пароля.
 - В шаблоне опечатка в имени переменной либо переменная не объявлена.
+- Переменную перекрыло значение с более высоким приоритетом (например, `roles/notes/vars/main.yml`).
+- Дополнительно: потеряна зависимость `docker` в `meta/main.yml`, и Compose идёт раньше установки Docker.
 
 ### Проверки
 
+{% raw %}
 ```bash
 ansible-playbook site.yml --syntax-check
 ansible-playbook site.yml --list-tasks
 ansible-vault view group_vars/all/vault.yml >/dev/null && echo vault-ok
-ansible -m debug -a "var=notes_db_password" notes
+ansible -m debug -a "msg={{ notes_db_password | length }}" notes
 grep -rn "dependencies" roles/notes/meta/main.yml
 ```
+{% endraw %}
 
-Порядок в `--list-tasks` показывает, идёт ли `docker` до `notes`. Вывод `vault-ok` подтверждает пароль. Отсутствие переменной в `debug` указывает на `group_vars`.
+Порядок в `--list-tasks` показывает, идёт ли `docker` до `notes`. Вывод `vault-ok` подтверждает пароль. Число вместо ошибки `is undefined` значит, что переменная пришла из `group_vars`; значение пароля в терминал не печатаем, смотрим только длину.
 
 ### Исправление
 
 <details markdown="1">
 <summary>Разбор всех сценариев</summary>
 
-1. Неверный порядок ролей: в `meta/main.yml` роли `notes` снова допиши `dependencies: [{role: docker}]` либо переставь роли в `site.yml`. Задачи Compose теперь идут после установки Docker.
-2. Неверный пароль vault: проверь `vault_password_file` в `ansible.cfg` и файл `~/.notes-secrets/ansible-vault-pass`. Если пароль потерян, файл `vault.yml` пересоздают заново и шифруют новым паролем, а пароль БД на ВМ меняют.
-3. Шаблон Jinja2 без переменной: найди имя в ошибке `'xxx' is undefined`, сверь с `defaults/main.yml` и `group_vars`. Обычно опечатка в шаблоне или пропавшая строка в `vars.yml`.
+1. Неверный пароль vault: проверь `vault_password_file` в `ansible.cfg` и файл `~/.notes-secrets/ansible-vault-pass`. Если пароль потерян, файл `vault.yml` пересоздают заново и шифруют новым паролем, а пароль БД на ВМ меняют.
+2. Шаблон Jinja2 без переменной: найди имя в ошибке `'xxx' is undefined`, сверь с `defaults/main.yml` и `group_vars`. Обычно опечатка в шаблоне или пропавшая строка в `vars.yml`.
+3. Переменная перекрыта: ошибки нет, а `ansible-playbook site.yml --check --diff` показывает тег `0.0.1` вместо `0.4.1`. Ищи `notes_tag` по приоритету переменных: удали лишний `roles/notes/vars/main.yml`.
+4. Дополнительно, если Compose падает раньше установки Docker: в `meta/main.yml` роли `notes` допиши `dependencies: [{role: docker}]` либо переставь роли в `site.yml`.
 
 Профилактика: `ansible-lint`, `--syntax-check` и `--check --diff` перед каждым прогоном.
 

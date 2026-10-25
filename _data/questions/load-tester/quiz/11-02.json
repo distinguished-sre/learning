@@ -179,7 +179,7 @@
    "options": [
     {
      "id": "a",
-     "text": "Cost записан в самом сохранённом хеше, `$2b$12$...`, и проверка идёт по нему"
+     "text": "Cost записан в самом сохранённом хеше, `$2a$12$...`, и проверка идёт по нему"
     },
     {
      "id": "b",
@@ -308,7 +308,7 @@
    "skill": "зачем хеш паролей делают медленным",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Почему для паролей выбирают намеренно медленный хеш вроде bcrypt, а не быстрый?",
+   "text": "Какие причины объясняют, почему для паролей выбирают намеренно медленный хеш вроде bcrypt, а не быстрый?",
    "options": [
     {
      "id": "a",
@@ -474,7 +474,7 @@
    "kind": "чтение",
    "type": "multiple",
    "text": "Под нагрузкой на вход ты снял `py-spy dump --pid 1`. Какие выводы верны?",
-   "code": "Thread 1 (idle): \"MainThread\"\n    run (uvicorn/server.py:73)\nThread 17 (active): \"AnyIO worker thread\"\n    login (app/main.py:157)\n    run (concurrent/futures/thread.py:59)\nThread 18 (active): \"AnyIO worker thread\"\n    login (app/main.py:157)\n    run (concurrent/futures/thread.py:59)\nThread 19 (active): \"AnyIO worker thread\"\n    login (app/main.py:157)\n    run (concurrent/futures/thread.py:59)\nThread 20 (idle): \"AnyIO worker thread\"",
+   "code": "Thread 1 (idle): \"MainThread\"\n    run (uvicorn/server.py:73)\nThread 17 (active): \"AnyIO worker thread\"\n    login (app/main.py:157)\n    run (anyio/_backends/_asyncio.py:1097)\nThread 18 (active): \"AnyIO worker thread\"\n    login (app/main.py:157)\n    run (anyio/_backends/_asyncio.py:1097)\nThread 19 (active): \"AnyIO worker thread\"\n    login (app/main.py:157)\n    run (anyio/_backends/_asyncio.py:1097)\nThread 20 (idle): \"AnyIO worker thread\"",
    "options": [
     {
      "id": "a",
@@ -521,7 +521,7 @@
     {
      "id": "c",
      "text": "Он останавливает процесс на каждой строке, как отладчик",
-     "why": "py-spy не отладчик и ничего не останавливает."
+     "why": "py-spy не отладчик: он не ставит процесс на паузу на каждой строке, а лишь на микросекунды при каждом снимке."
     },
     {
      "id": "d",
@@ -742,7 +742,7 @@
    "kind": "чтение",
    "type": "multiple",
    "text": "Итог k6 для 4 входов в секунду. Какие выводы верны?",
-   "code": "http_req_duration{name:/api/login}\n  p(50)=2.6s\n  p(95)=4.8s\nhttp_req_failed: rate=0.00%\ndropped_iterations: 31   0.8/s\niterations: 129          3.2/s",
+   "code": "http_req_duration{name:/api/login}\n  p(50)=2.6s\n  p(95)=4.8s\nhttp_req_failed: rate=0.00%\niterations: 160          3.2/s",
    "options": [
     {
      "id": "a",
@@ -750,12 +750,12 @@
     },
     {
      "id": "b",
-     "text": "`iterations` 3.2/с при просимых 4/с значит, что сервис выдал меньше, чем просили"
+     "text": "p95 4,8 с при p50 2,6 с и нулевых ошибках: входы долго стоят в очереди, а не падают"
     },
     {
      "id": "c",
      "text": "`dropped_iterations` это 500-е ответы сервера",
-     "why": "Это входы, которые k6 даже не смог начать, ответов сервера в них нет."
+     "why": "Это итерации, которые k6 не начал из-за нехватки свободных VU, ответов сервера в них нет."
     },
     {
      "id": "d",
@@ -767,7 +767,7 @@
     "a",
     "b"
    ],
-   "explain": "Перегрузка по процессору выглядит как рост задержки при нулевых ошибках. По `iterations` и `dropped_iterations` видно, что запросов выдано меньше запрошенного.",
+   "explain": "Перегрузка по процессору выглядит как рост задержки при нулевых ошибках. Пропусков нет, а `iterations` 3.2/с при просимых 4/с получилось из-за хвоста: последние входы закончились после 40-й секунды.",
    "section": "1. Базовая линия входа"
   },
   {
@@ -809,7 +809,7 @@
    "kind": "чтение",
    "type": "single",
    "text": "После прогрева ты проверил хеши. Какой вывод верен для теста, который входит пользователями с 1 по 50?",
-   "code": "        email         |  left\n----------------------+---------\n user0001@shop.lab    | $2b$04$\n user0050@shop.lab    | $2b$04$\n user0051@shop.lab    | $2b$12$\n(3 rows)",
+   "code": "        email         |  left\n----------------------+---------\n user0001@shop.lab    | $2b$04$\n user0050@shop.lab    | $2b$04$\n user0051@shop.lab    | $2a$12$\n(3 rows)",
    "options": [
     {
      "id": "a",
@@ -822,7 +822,7 @@
     },
     {
      "id": "c",
-     "text": "Хеши с `$2b$12$` проверяются быстрее хешей с `$2b$04$`, раз цифра больше",
+     "text": "Хеши с `$2a$12$` проверяются быстрее хешей с `$2b$04$`, раз цифра больше",
      "why": "Наоборот, cost 12 дороже cost 4 в 256 раз."
     },
     {
@@ -834,7 +834,7 @@
    "correct": [
     "b"
    ],
-   "explain": "`$2b$04$` это cost 4. Хеш пересчитывается только при успешном входе пользователя, поэтому у не входившего остаётся прежний.",
+   "explain": "`$2b$04$` это cost 4, а `$2a$12$` у не входившего: его хеш посчитал PostgreSQL (вариант 2a), приложение пишет 2b. Хеш пересчитывается только при успешном входе пользователя, поэтому у не входившего остаётся прежний.",
    "section": "5. Верное исправление: дешевле хеш"
   },
   {

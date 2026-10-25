@@ -10,6 +10,19 @@ time: "3.5 ч"
 
 В команде магазина решили: тебе нужна своя копия «Магазина», на которой можно ломать что угодно. В [уроке 5.1](01-containers.md) ты запускал готовые образы: nginx, PostgreSQL. Но образа «Магазина» на Docker Hub нет: он **собирается на твоей машине** при первом `docker compose up --build` (Compose разберём в [уроке 5.3](03-compose-shop.md)). Флаг `--build` велит собрать образ из исходников. Помнишь, в 2.1 стенд поднимался несколько минут? Это шла сборка.
 
+```text
+$ docker compose up -d --build shop
+ => [shop 1/7] FROM python:3.14.8-slim                         0.0s
+ => [shop 2/7] WORKDIR /app                                    0.0s
+ => [shop 3/7] COPY requirements.txt .                         0.1s
+ => [shop 4/7] RUN pip install --no-cache-dir -r requirements  94.3s
+ => [shop 5/7] COPY app ./app                                  0.1s
+ => [shop 6/7] COPY entrypoint.sh .                            0.0s
+ => [shop 7/7] RUN chmod +x entrypoint.sh                      0.2s
+```
+
+Это сборка образа «Магазина»: каждая строка Dockerfile превращается в один шаг. Дольше всего идёт установка библиотек (94 секунды из примерно 95), и именно поэтому порядок строк в рецепте важен.
+
 Я работаю с нагрузкой давно и сижу рядом, как коллега за соседним столом. Расскажу, почему сам научился читать рецепт сборки образа. Однажды я поправил код, пересобрал образ, прогнал тест и порадовался: задержка упала вдвое. Потом выяснилось, что контейнер запущен из старого образа. Весь час я мерил старый код и уже сочинял отчёт о победе. Хорошо, что заметил вовремя. С тех пор сначала проверяю, из чего собран образ.
 
 Этот рецепт называется `Dockerfile`, и для тебя он рабочий инструмент. Не понимая, как образ собирается, ты будешь либо ждать лишние минуты, либо тестировать **старый** код, думая, что он новый. К тому же рецепт документирует сервис: версию Python, библиотеки, команду запуска. На вопрос «на какой версии проверяли» ответ лежит там. Он же отвечает на фразу «а у меня работало»: рецепт один, образ у всех одинаковый.
@@ -285,7 +298,7 @@ drwxr-xr-x 3 student student 4096 Oct  3 11:02 app
 docker build -t shop-lab:exp .
 ```
 
-Разбор: `docker build` собирает образ; `-t shop-lab:exp` даёт ему имя `shop-lab` и тег `exp`; точка в конце это **контекст сборки**: текущая папка. Не забудь точку: без неё будет ошибка `requires exactly 1 argument`.
+Разбор: `docker build` собирает образ; `-t shop-lab:exp` даёт ему имя `shop-lab` и тег `exp`; точка в конце это **контекст сборки**: текущая папка. Не забудь точку: без неё будет ошибка `requires 1 argument`.
 
 ```text
 [+] Building 74.3s (12/12) FINISHED                              docker:default
@@ -316,7 +329,7 @@ docker build -t shop-lab:exp .
 Проверь результат:
 
 ```bash
-docker image ls shop-lab
+{% raw %}docker image ls shop-lab --format 'table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}'{% endraw %}
 ```
 
 ```text
@@ -324,12 +337,14 @@ REPOSITORY   TAG   IMAGE ID       CREATED          SIZE
 shop-lab     exp   5e8c1a2d93b7   40 seconds ago   262MB
 ```
 
+Без `--format` Docker 29 печатает другой, компактный вид (колонки IMAGE, ID, DISK USAGE, CONTENT SIZE, EXTRA, без времени создания); формат выше возвращает привычную таблицу.
+
 Размер 262 МБ: основа (131 МБ) плюс библиотеки (около 130 МБ) и несколько килобайт кода.
 
 **Типичные ошибки:**
 
 - `ERROR: failed to solve: failed to read dockerfile: open Dockerfile: no such file or directory`: ты не в той папке. `pwd` и `ls`: в текущем каталоге должен лежать `Dockerfile`.
-- `docker buildx build requires exactly 1 argument`: забыта точка (контекст) в конце команды.
+- `docker: 'docker buildx build' requires 1 argument`: забыта точка (контекст) в конце команды.
 - `ERROR: Could not find a version that satisfies the requirement ...` во время pip: нет интернета или опечатка в `requirements.txt`. Проверь `curl -I https://pypi.org`.
 - `failed to fetch anonymous token ... dial tcp: lookup registry-1.docker.io: no such host`: Docker не достучался до реестра, проверь сеть и DNS ([урок 1.4](../01-linux/04-network-cli.md)).
 
@@ -456,7 +471,7 @@ docker run --rm --entrypoint python shop-lab:exp -c "import fastapi; print(fasta
 
 ```bash
 docker tag shop-lab:exp shop-lab:v1
-docker image ls shop-lab
+{% raw %}docker image ls shop-lab --format 'table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}'{% endraw %}
 ```
 
 ```text
@@ -503,11 +518,11 @@ git push
 | Текст ошибки | Причина | Что делать |
 |---|---|---|
 | `failed to read dockerfile: open Dockerfile: no such file or directory` | ты не в папке с `Dockerfile` | `cd` в нужную папку или `-f путь/к/Dockerfile` |
-| `"docker buildx build" requires exactly 1 argument` | не указан контекст (точка) | добавь `.` в конце |
+| `docker: 'docker buildx build' requires 1 argument` | не указан контекст (точка) | добавь `.` в конце |
 | `COPY failed: file not found in build context` или `"/entrypoint.sh": not found` | файла нет в папке контекста или он указан неверно | проверь `ls` в папке контекста и написание в `COPY` |
 | `exec ./entrypoint.sh: no such file or directory` при **запуске** образа | в скрипте символы конца строки Windows (CRLF) или нет оболочки из `#!` | `file entrypoint.sh` покажет `CRLF`; `sed -i.bak 's/\r$//' entrypoint.sh && rm entrypoint.sh.bak`, пересобрать |
 | `exec ./entrypoint.sh: permission denied` | у скрипта нет права на выполнение | `chmod +x entrypoint.sh`, поэтому в Dockerfile стоит `RUN chmod +x` |
-| образ собрался, а в контейнере старый код | собирал не тот каталог, или запустил старый образ/контейнер | `docker image ls`: время создания; пересобери и **пересоздай** контейнер |
+| образ собрался, а в контейнере старый код | собирал не тот каталог, или запустил старый образ/контейнер | {% raw %}`docker image inspect -f '{{.Created}}' shop-lab:exp` или `docker image ls --format '{{.Tag}} {{.CreatedSince}}'`{% endraw %}: время создания; пересобери и **пересоздай** контейнер |
 | `ERROR: No matching distribution found for ...` | опечатка или версии нет на PyPI | проверь строку в `requirements.txt` |
 
 ## Сломай и почини
@@ -575,7 +590,7 @@ time docker stop noexec
 ```
 {: .wrap}
 
-**Проверь ответ:** примени одно предложение за раз и пересобери, сверяя размер в `docker images`. Нейросети советуют `alpine` как универсальное решение, но библиотеки с C-расширениями на нём могут не собраться: проверяй сборкой, а не верой.
+**Проверь ответ:** примени одно предложение за раз и пересобери, сверяя размер (колонка `SIZE`, в Docker 29 без `--format` `DISK USAGE`, в `docker image ls`). Нейросети советуют `alpine` как универсальное решение, но библиотеки с C-расширениями на нём могут не собраться: проверяй сборкой, а не верой.
 
 Если в Dockerfile или `docker history` попали пароли и токены (`ARG`, `ENV`), замени их на `<секрет>`: слои хранят их навсегда.
 
@@ -622,6 +637,6 @@ Ubuntu 24.04 LTS, Docker Engine 29.x с BuildKit и Buildx, базовый об�
 - [ ] Объяснить кэш слоёв и доказать на опыте, что порядок `COPY requirements.txt` и `COPY app` влияет на время сборки.
 - [ ] Посмотреть слои `docker history` и проверить версию библиотеки внутри образа через `--entrypoint`.
 - [ ] Поставить тег на образ и объяснить, почему два тега не удваивают размер.
-- [ ] Расшифровать ошибки: `no such file or directory`, `requires exactly 1 argument`, `permission denied` при запуске скрипта.
+- [ ] Расшифровать ошибки: `no such file or directory`, `requires 1 argument`, `permission denied` при запуске скрипта.
 
 Дальше: [урок 5.3. Docker Compose: поднимаем «Магазин» с базой и кэшем](03-compose-shop.md), где образы, которые ты теперь умеешь собирать, объединяются в целый стенд.

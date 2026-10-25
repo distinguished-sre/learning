@@ -148,7 +148,7 @@
    "skill": "прочитать блок on",
    "kind": "чтение",
    "type": "multiple",
-   "text": "Что запускает workflow с таким блоком `on:`?",
+   "text": "Что из этого запускает workflow с таким блоком `on:`? Выбери все подходящие.",
    "code": "on:\n  push:\n  pull_request:\n  workflow_dispatch:",
    "options": [
     {
@@ -393,7 +393,7 @@
    "skill": "зачем persist-credentials false",
    "kind": "понимание",
    "type": "multiple",
-   "text": "В шагах `checkout` стоит `persist-credentials: false`. Что верно про этот параметр?",
+   "text": "В шагах `checkout` стоит `persist-credentials: false`. Какие утверждения про этот параметр верны?",
    "options": [
     {
      "id": "a",
@@ -563,7 +563,7 @@
    "kind": "чтение",
    "type": "multiple",
    "text": "Шаг `pytest` вернул код 1. Какие из следующих шагов выполнятся?",
-   "code": "- name: Прогнать тесты\n  run: python -m pytest -v --junitxml=junit.xml\n- name: Сохранить отчёт\n  if: always()\n  uses: actions/upload-artifact@v4\n- name: Логи стенда\n  if: failure()\n  run: docker compose logs --tail=200\n- name: Сообщить об успехе\n  run: echo \"всё хорошо\"",
+   "code": "- name: Прогнать тесты\n  run: python -m pytest -v --junitxml=junit.xml\n- name: Сохранить отчёт\n  if: always()\n  uses: actions/upload-artifact@v7.0.2\n- name: Логи стенда\n  if: failure()\n  run: docker compose logs --tail=200\n- name: Сообщить об успехе\n  run: echo \"всё хорошо\"",
    "options": [
     {
      "id": "a",
@@ -917,7 +917,7 @@
    "skill": "свойства запуска по расписанию",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про запуск тестов по `schedule`?",
+   "text": "Какие утверждения про запуск тестов по `schedule` верны?",
    "options": [
     {
      "id": "a",
@@ -1023,7 +1023,7 @@
    "skill": "зачем кэш pip",
    "kind": "применение",
    "type": "single",
-   "text": "В шаге `actions/setup-python@v6` стоит `cache: pip`. Что это даёт?",
+   "text": "В шаге `actions/setup-python@v7.1.0` стоит `cache: pip`. Что это даёт?",
    "options": [
     {
      "id": "a",

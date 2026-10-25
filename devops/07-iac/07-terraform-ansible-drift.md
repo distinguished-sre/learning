@@ -10,6 +10,30 @@ time: "2 ч"
 
 Terraform умеет создать виртуальную машину (ВМ), но не знает, что внутри должен работать Docker и «Заметки». Ansible умеет настроить ВМ, но не знает, откуда она взялась и какой у неё адрес. Это как строитель и отделочник: первый возводит коробку дома, второй делает внутри ремонт. Пока они не договорились, в каком порядке работать и как передать друг другу адрес, стройка стоит.
 
+Вот ночная проверка, которая поймала «четвёртое окно»: кто-то в консоли открыл порт 22 для всего интернета.
+
+```text
+$ terraform plan -detailed-exitcode
+yandex_vpc_security_group.notes: Refreshing state... [id=enp3k8v1q0x2r7m5ahtn]
+
+Terraform will perform the following actions:
+
+  # yandex_vpc_security_group.notes will be updated in-place
+  ~ resource "yandex_vpc_security_group" "notes" {
+      - ingress {
+          - port           = 22
+          - protocol       = "TCP"
+          - v4_cidr_blocks = ["0.0.0.0/0"]
+        }
+    }
+
+Plan: 0 to add, 1 to change, 0 to destroy.
+$ echo $?
+2
+```
+
+В коде такого правила нет, поэтому Terraform хочет его убрать, а код выхода 2 означает «есть расхождение»: по нему CI поднимет тревогу.
+
 Нужна связка: одна команда строит сервер с нуля, вторая настраивает его, а по ночам автоматическая проверка смотрит, не поправил ли кто-то что-то руками. Такое расхождение называется drift (дрейф конфигурации, «уплывание»): код описывает одну инфраструктуру, а в облаке уже другая. Представь, что в инструкции к офису написано «три окна», а сосед прорубил четвёртое и никому не сказал. Без ночной проверки ты узнаешь об этом на аварии: через полгода код описывает одно, а работает другое, и восстановить сервер по коду уже нельзя.
 
 Проверки мы запустим через CI (continuous integration, автоматический прогон проверок после каждого изменения кода, [урок 3.3](../03-git-ci/03-actions-ci.md)), а команды соберём в `Makefile` (файл, где короткие имена вроде `make infra-up` заменяют длинные цепочки команд, [урок 1.6](../01-linux/06-bash-basics.md)).
@@ -155,7 +179,7 @@ Terraform считает ВМ созданной, когда API облака с
 
 План квартиры в БТИ и реальная квартира: сосед снёс перегородку, а в плане она осталась. При следующей продаже или перепланировке выяснится, что документы врут. Регулярный обход инспектора выявляет расхождения вовремя. Оговорка: в отличие от БТИ, Terraform сам может привести реальность к плану, но делать это вслепую не нужно.
 
-Drift (дрейф) это расхождение между кодом и реальной инфраструктурой. Причины: ручная правка в консоли, автомасштабирование, метка от провайдера, удалённый руками ресурс. Terraform в каждом `plan` делает refresh: спрашивает облако о реальном состоянии, обновляет сведения в state и сравнивает их с кодом. Поэтому обычный `terraform plan` уже ловит drift. Для автоматики важен флаг `-detailed-exitcode`, он делает код выхода осмысленным:
+Drift (дрейф) это расхождение между кодом и реальной инфраструктурой. Причины: ручная правка в консоли, автомасштабирование, метка от провайдера, удалённый руками ресурс. Terraform в каждом `plan` делает refresh: спрашивает облако о реальном состоянии, держит сведения в памяти и сравнивает их с кодом (файл state при этом не меняется; записать обновлённые сведения можно командой `terraform apply -refresh-only`). Поэтому обычный `terraform plan` уже ловит drift. Для автоматики важен флаг `-detailed-exitcode`, он делает код выхода осмысленным:
 
 | Код выхода | Значение |
 |---|---|
@@ -326,7 +350,7 @@ flowchart LR
 
 Ничего: `plan` ничего не применяет. Job станет красным, придёт уведомление, а решение примет человек.
 
-Осторожно: Расписание `schedule` работает только на ветке по умолчанию и может запаздывать на несколько минут при нагрузке GitHub. Это нормально для ночной проверки.
+Осторожно: Расписание `schedule` работает только на ветке по умолчанию и может запаздывать на несколько минут при нагрузке GitHub. Это нормально для ночной проверки. В публичном репозитории расписание отключается после 60 дней без активности.
 
 > **Главное:** `schedule` с `cron` запускает проверку регулярно, `-detailed-exitcode` превращает расхождение в красный job, а `needs: static` не пускает к облаку, пока код не прошёл проверки.
 {: .key}
@@ -350,7 +374,7 @@ flowchart LR
 
 Порядок из четырёх шагов.
 
-1. Прочитать diff в `plan`: что именно и на каком ресурсе изменилось. Знак `~` правка на месте, `+` ресурса нет в облаке, `-` ресурс есть в облаке, но нет в коде (Terraform хочет удалить), `-/+` пересоздание.
+1. Прочитать diff в `plan`: что именно и на каком ресурсе изменилось. Знак `~` правка на месте, `+` ресурса нет в облаке, `-` ресурс есть в state, но его блок убран из кода (Terraform хочет удалить), `-/+` пересоздание.
 2. Выяснить автора и причину: журнал аудита облака (Audit Trails в Yandex Cloud, CloudTrail в AWS) показывает, кто и когда менял, и через что (консоль, API).
 3. Решить. Правка была ошибкой или баловством: `apply` возвращает реальность к коду. Правка нужна: переносишь её в код через pull request, после чего `plan` покажет 0 изменений. Ресурс создан руками и должен жить: описываешь его в коде и подключаешь командой `terraform import` ([урок 7.3](03-terraform-state-modules.md)).
 4. Закрыть причину: ограничить права на ручные правки в консоли (у людей только чтение, изменения через CI), чтобы drift не повторялся.
@@ -384,7 +408,7 @@ flowchart TD
 <details markdown="1">
 <summary>Ответ</summary>
 
-Не применять: `apply` удалит ресурс. Выясняю, кто и зачем его создал. Если ресурс нужен, описываю его в коде и подключаю через `terraform import`, после чего `plan` покажет 0 изменений.
+Не применять: `apply` удалит ресурс. Выясняю, кто и зачем убрал блок из кода. Если ресурс нужен под управлением Terraform, возвращаю блок в код (revert), и `plan` покажет 0 изменений. Если он должен жить вне Terraform, убираю его из state (`terraform state rm <адрес>`, урок 7.3, либо блок `removed` с `lifecycle { destroy = false }`). `import` нужен для ресурса, созданного руками: его в state нет, и `plan` его не показывает.
 
 </details>
 
@@ -482,7 +506,7 @@ flowchart TD
 
 Если падает шаг 2, смотри ошибки провайдера и прав (урок 7.2). Если падает шаг 5, у ВМ нет SSH: проверь группу безопасности и ключ. Если падает шаг 6, смотри по цепочке из урока 7.6 (vault, переменные, Docker). На втором запуске `apply` даёт `0 added, 0 changed` (Terraform идемпотентен), а Ansible `changed=0`. Всё, что показывает изменения на втором запуске, это ошибка в коде и повод для разбора.
 
-> **Прикинь сам:** Какой шаг цепочки упал, если в выводе `UNREACHABLE ... Connection timed out`?
+> **Прикинь сам:** Какой шаг цепочки упал, если в выводе `FAILED! ... timed out waiting for ping module test: ... Connection timed out`?
 {: .predict}
 
 Шаг 5, ожидание SSH: группа безопасности не пускает на порт 22 или ключ не тот. До плейбука дело не дошло.
@@ -607,7 +631,7 @@ notes-vm                   : ok=14   changed=0    unreachable=0    failed=0    s
 **Типичные ошибки:**
 
 - `Makefile:9: *** missing separator.  Stop.`: в командах пробелы вместо табуляции: замени отступ на Tab.
-- `UNREACHABLE! => {"msg": "Failed to connect to the host via ssh: ssh: connect to host 203.0.113.10 port 22: Connection timed out"}`: SSH ещё не поднялся или закрыт группой безопасности: увеличь `timeout`, проверь правило 22 из урока 7.2.
+- `FAILED! => {"changed": false, "elapsed": 180, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: ssh: connect to host 203.0.113.10 port 22: Connection timed out"}`: SSH не поднялся за `timeout` или закрыт группой безопасности: увеличь `timeout`, проверь правило 22 из урока 7.2. (`UNREACHABLE` вместо этого ты увидишь, если запустить обычный модуль или плейбук без `wait_for_connection`.)
 - `Error: No value for required variable`: не заданы переменные Terraform: `terraform.tfvars` или `TF_VAR_...` из урока 7.2.
 
 ### Задание 2. Ловим drift руками
@@ -663,7 +687,7 @@ No changes. Your infrastructure matches the configuration.
 После ручной правки:
 
 ```text
-  # yandex_compute_instance.notes will be updated in-place
+  # module.notes_vm.yandex_compute_instance.notes will be updated in-place
   ~ resource "yandex_compute_instance" "notes" {
       ~ labels = {
           ~ "env" = "manual" -> "dev"
@@ -671,7 +695,7 @@ No changes. Your infrastructure matches the configuration.
     }
 
 Plan: 0 to add, 1 to change, 0 to destroy.
-make: *** [Makefile:6: infra-plan] Error 2
+make: *** [Makefile:9: infra-plan] Error 2
 код выхода: 2
 ```
 
@@ -808,7 +832,7 @@ Success! The configuration is valid.
 **Типичные ошибки:**
 
 - `Error: Backend initialization required, please run "terraform init"`: не было `init`: выполни шаг 2.
-- `Terraform exited with code 3.`: `fmt -check` нашёл неформатированные файлы: `terraform fmt -recursive`.
+- `код: 3` и имена файлов в выводе: `fmt -check` нашёл неформатированные файлы, исправь `terraform fmt -recursive`. (В логе Actions та же ошибка выглядит как `Error: Terraform exited with code 3.`: эту строку добавляет обёртка setup-terraform.)
 - `FATAL	Fatal error	config scan error: scan error: scan failed`: неверный путь к каталогу: проверь, что запускаешь из `~/notes`.
 
 ### Задание 5. Шаг проекта: workflow с ночной проверкой drift
@@ -820,7 +844,7 @@ Success! The configuration is valid.
 <details markdown="1">
 <summary>Ответ</summary>
 
-Шаг с plan вернёт ненулевой код, job станет красным, GitHub пришлёт уведомление о падении запланированного workflow владельцу. Ничего не применяется и не откатывается: мы получили сигнал, разбираться будет человек.
+Шаг с plan вернёт ненулевой код, job станет красным, GitHub пришлёт уведомление о падении запланированного workflow пользователю, который последним менял строку `cron` в файле (не всей команде, поэтому в реальной работе добавляют ещё оповещение в чат). Ничего не применяется и не откатывается: мы получили сигнал, разбираться будет человек.
 
 </details>
 
@@ -858,7 +882,7 @@ Success! The configuration is valid.
              terraform -chdir=infra/terraform/envs/dev init -backend=false
              terraform -chdir=infra/terraform/envs/dev validate
          - name: trivy config
-           uses: aquasecurity/trivy-action@0.33.1
+           uses: aquasecurity/trivy-action@v0.36.0
            with:
              scan-type: config
              scan-ref: infra/terraform
@@ -932,7 +956,7 @@ yaml ok
 
 Выбери один из трёх сценариев.
 
-1. После пересоздания ВМ (`terraform apply -replace=module.notes_vm.yandex_compute_instance.notes`) `make infra-up` падает: `UNREACHABLE! ... Permission denied (publickey)` или `Connection timed out`.
+1. После пересоздания ВМ (`terraform apply -replace=module.notes_vm.yandex_compute_instance.notes`) `make infra-up` падает: `FAILED! ... timed out waiting for ping module test: ... Permission denied (publickey)` или `... Connection timed out`.
 2. Ты прервал `apply` посередине (`kill -9`), и следующий запуск пишет `Error acquiring the state lock`.
 3. Ночная проверка красная, но в коде за неделю никто ничего не менял. В plan видно, что `ingress` группы безопасности отличается от кода.
 
@@ -993,7 +1017,7 @@ yaml ok
 | Термин | Простыми словами |
 |---|---|
 | drift (дрейф) | Расхождение между кодом и реальной инфраструктурой, например ручная правка в консоли. |
-| refresh | Шаг `plan`: спросить облако о реальном состоянии и обновить сведения в state. |
+| refresh | Шаг `plan`: спросить облако о реальном состоянии и сверить его с кодом (state не меняется). |
 | `-detailed-exitcode` | Флаг `plan`: код выхода 0 нет изменений, 1 ошибка, 2 есть изменения. |
 | `terraform output -raw` | Печать значения output без кавычек для подстановки в скрипты. |
 | inventory (генерируемый) | Файл серверов Ansible, который создаётся из `terraform output`, а не правится руками. |
@@ -1036,7 +1060,7 @@ yaml ok
 - провайдер `yandex-cloud/yandex`: 0.232.0 (`~> 0.232`, как в уроке 7.2)
 - ansible-core 2.21.4 (как в уроках 7.4 и 7.5)
 - Trivy: версия не закреплена, проверь актуальную версию на странице проекта
-- GitHub Actions `hashicorp/setup-terraform`: v3, `aquasecurity/trivy-action`: проверь актуальную версию на странице проекта
+- GitHub Actions `hashicorp/setup-terraform`: v3, `aquasecurity/trivy-action`: v0.36.0 (проверена по странице релизов)
 - «Заметки»: образ 0.4.1
 - Ubuntu: 26.04 LTS или 24.04
 - Выводы `plan` и `make` в заданиях сокращены; смотри на выделенные в тексте строки (`~`, `Plan: ...`, `Error 2`, `changed=0`).

@@ -622,7 +622,7 @@
       "skill": "отличия dev-режима",
       "kind": "понимание",
       "type": "multiple",
-      "text": "Что верно про dev-режим Vault?",
+      "text": "Какие утверждения про dev-режим Vault верны?",
       "options": [
         {
           "id": "a",
@@ -993,7 +993,7 @@
       "kind": "чтение",
       "type": "single",
       "text": "В выводе после `docker restart vault-prod` ты видишь строки ниже. Что это значит?",
-      "code": "Sealed          true\nError reading secret/data/notes/db: ... Vault is sealed",
+      "code": "Sealed          true\nError making API request.\n\nURL: GET http://127.0.0.1:8200/v1/sys/internal/ui/mounts/secret\nCode: 503. Errors:\n\n* Vault is sealed",
       "options": [
         {
           "id": "a",

@@ -10,6 +10,10 @@ time: "3.5 ч"
 
 Я занимаюсь нагрузкой давно и буду рядом весь курс: объяснять то, что сам когда-то учил с нуля. Представь первую неделю на работе в интернет-магазине. До большой распродажи месяц, в прошлом году сайт на ней упал. Приходит жалоба: «сайт долго открывается». Между кликом и страницей на экране есть цепочка обменов. Начнём с первого звена: как одна программа спрашивает, а другая отвечает.
 
+<div class="viz" data-viz="request-path" data-net="30" data-app="45" data-db="120"></div>
+
+Так выглядит один клик по каталогу «Магазина»: запрос идёт по сети к приложению, приложение спрашивает базу, ответ возвращается тем же путём. Жалоба «долго открывается» складывается из этих трёх отрезков, и по цифрам видно, какой из них самый длинный.
+
 Однажды я принёс команде отчёт теста: «ошибок 3%, почти ничего». Коллега спросил: «А каких?». Я не знал. Все 3% оказались «такого товара нет»: мой скрипт просил номера, которых в магазине не было, а сам магазин работал исправно. Могло быть и наоборот: три процента «магазин сломался», и тогда команда не спала бы ночь. Цифра одна, смысл противоположный. С тех пор я смотрю не сколько ошибок, а какие.
 
 Нагрузочный тест это тысячи одинаковых обращений, и у каждого есть исход. Генератор нагрузки (программа, которая изображает много пользователей) записывает, сколько обращений вернулось с кодом 200, сколько с 500 и сколько длилось каждое. Не зная, что такое запрос, ответ и код, ты не прочтёшь отчёт «ошибок 3%».
@@ -273,7 +277,7 @@ sequenceDiagram
 
 ### Когда ответа нет вовсе
 
-Иногда не приходит ничего. Это ошибка соединения, а не HTTP, и чинится она в другом месте. Если вместо кода ты видишь сообщение самого `curl`, причин три. `curl: (7) Failed to connect to localhost port 8000 ... Connection refused`: по этому адресу и порту никто не слушает, сервис остановлен или ты ошибся портом. Отказ приходит мгновенно: «здесь никого нет». `curl: (28) Operation timed out`: сервер не ответил за отведённое время. В отличие от (7), он, возможно, жив и просто занят. `curl: (6) Could not resolve host`: не удалось превратить имя в IP-адрес (DNS или опечатка в имени).
+Иногда не приходит ничего. Это ошибка соединения, а не HTTP, и чинится она в другом месте. Если вместо кода ты видишь сообщение самого `curl`, причин три. `curl: (7) Failed to connect to localhost port 8000 after 0 ms: Couldn't connect to server`: по этому адресу и порту никто не слушает, сервис остановлен или ты ошибся портом (с флагом `-v` причина видна прямо: `connect to ::1 port 8000 failed: Connection refused`). Отказ приходит мгновенно: «здесь никого нет». `curl: (28) Operation timed out`: сервер не ответил за отведённое время. В отличие от (7), он, возможно, жив и просто занят. `curl: (6) Could not resolve host`: не удалось превратить имя в IP-адрес (DNS или опечатка в имени).
 
 Код выхода последней команды лежит в `$?` ([урок 1.5](../01-linux/05-bash-scripts.md)): `0` успех, а у ошибок `curl` он равен их номеру, при отказе будет `7`.
 
@@ -367,8 +371,8 @@ docker run --rm hello-world
 ```
 
 ```text
-Docker version 29.0.1, build 3f5a7c2
-Docker Compose version v2.40.3
+Docker version 29.9.2, build 3f5a7c2
+Docker Compose version v5.6.1
 Unable to find image 'hello-world:latest' locally
 latest: Pulling from library/hello-world
 ...
@@ -423,7 +427,7 @@ curl -s localhost:8000/readyz
 {"status":"ready"}
 ```
 
-`/readyz` («готов ли ты работать») магазин проверяет сам: он обращается к базе и к Redis, и только если оба ответили, возвращает `ready`. Теперь можно впервые запустить на настоящем «Магазине» свой скрипт из [урока 1.5](../01-linux/05-bash-scripts.md): `~/perf-lab/scripts/check-stand.sh`. До этого он проверял учебный сервер из файлов, теперь на каждой из пяти строк должно быть `OK`, а код выхода 0 (`echo $?`). Если в одной из них `SLOW`, это холодный старт, повтори запуск.
+`/readyz` («готов ли ты работать») магазин проверяет сам: он обращается к базе и к Redis, и только если оба ответили, возвращает `ready`. Теперь можно впервые запустить на настоящем «Магазине» свой скрипт из [урока 1.5](../01-linux/05-bash-scripts.md): `~/perf-lab/scripts/check-stand.sh`. До этого он проверял учебный сервер из файлов, теперь на каждой из шести строк должно быть `OK`, а код выхода 0 (`echo $?`). Если в одной из них `SLOW`, это холодный старт, повтори запуск.
 
 Посмотреть все запущенные сервисы:
 
@@ -432,11 +436,11 @@ docker compose ps
 ```
 
 ```text
-NAME               IMAGE            COMMAND                  SERVICE    STATUS                   PORTS
-shop-payment-1     shop-payment     "uvicorn main:app ..."   payment    Up 3 minutes (healthy)   127.0.0.1:8001->8001/tcp
-shop-postgres-1    postgres:18.6    "docker-entrypoint.s…"   postgres   Up 3 minutes (healthy)   5432/tcp
-shop-redis-1       redis:8.10.2     "docker-entrypoint.s…"   redis      Up 3 minutes (healthy)   6379/tcp
-shop-shop-1        shop-shop        "./entrypoint.sh"        shop       Up 3 minutes (healthy)   127.0.0.1:8000->8000/tcp
+NAME               IMAGE            COMMAND                  SERVICE    CREATED         STATUS                   PORTS
+shop-payment-1     shop-payment     "uvicorn main:app ..."   payment    3 minutes ago   Up 3 minutes (healthy)   127.0.0.1:8001->8001/tcp
+shop-postgres-1    postgres:18.6    "docker-entrypoint.s…"   postgres   4 minutes ago   Up 3 minutes (healthy)   5432/tcp
+shop-redis-1       redis:8.10.2     "docker-entrypoint.s…"   redis      4 minutes ago   Up 3 minutes (healthy)   6379/tcp
+shop-shop-1        shop-shop        "./entrypoint.sh"        shop       3 minutes ago   Up 3 minutes (healthy)   127.0.0.1:8000->8000/tcp
 ```
 
 **Как читать вывод:** четыре сервиса, у каждого `(healthy)`. В колонке `PORTS` видно, какой порт машины ведёт к какому сервису: `127.0.0.1:8000->8000` значит «порт 8000 твоей машины это порт 8000 внутри сервиса». Ты стучишься на `localhost:8000`, а попадаешь в «Магазин».
@@ -447,7 +451,7 @@ shop-shop-1        shop-shop        "./entrypoint.sh"        shop       Up 3 min
 - `Bind for 127.0.0.1:8000 failed: port is already allocated` (или `address already in use`): порт занят другой программой. Найди её: `sudo ss -ltnp 'sport = :8000'`, в последней колонке будет имя процесса. Останови его или освободи порт. Чаще всего это старый запуск стенда: `docker ps` покажет, и тогда `docker compose down` в его каталоге.
 - `no space left on device`: закончилось место. Проверь `df -h /` (команда из [урока 1.1](../01-linux/01-workstation-terminal.md)). Освободи минимум 10 ГБ, старые образы можно удалить `docker system prune`, это безопасно для стенда.
 - `docker compose up` ждёт и падает по времени, а `shop-postgres-1` остаётся `starting`: база ещё заполняется данными, на медленном диске это до нескольких минут. Подожди, повтори `docker compose up -d --wait`. Прогресс видно в логах: `docker compose logs -f postgres` (выйти: `Ctrl+C`).
-- `curl: (7) Failed to connect ... Connection refused` сразу после запуска: сервис ещё стартует. Подожди 10 секунд и повтори.
+- `curl: (7) Failed to connect ... Couldn't connect to server` сразу после запуска: сервис ещё стартует. Подожди 10 секунд и повтори.
 
 Остановить стенд: `docker compose down` (данные базы сохранятся). Остановить и стереть всё, включая данные: `docker compose down -v`. Следующий запуск после `down -v` снова будет долгим, потому что база заполняется заново. Команды выполняются из `~/learning/load-tester/project/shop`.
 
@@ -564,7 +568,7 @@ x-request-id: 0b6e4c2d91a84f3aa7d2e5b8c1f09a64
 
 ```bash
 curl -i http://localhost:8000/api/products/
-curl -iL http://localhost:8000/api/products/ | head -n 12
+curl -iL http://localhost:8000/api/products/ | head -n 16
 ```
 
 Первая команда покажет `307 Temporary Redirect` и заголовок `location: http://localhost:8000/api/products`, тела нет (`content-length: 0`). Вторая с `-L` (follow, «иди по перенаправлению») сама сходит по новому адресу и покажет оба ответа подряд: сначала 307, затем 200 с каталогом.
@@ -627,11 +631,9 @@ curl -s -w '\nвход: %{http_code}\n' localhost:8000/api/login -H 'Content-Typ
 
 ```text
 healthz: 200
-
 {"detail":{"unavailable":["redis"]}}
 readyz: 503
 товар: 200
-
 {"detail":"internal server error"}
 вход: 500
 ```
@@ -671,7 +673,7 @@ curl -s -o /dev/null -w 'код: %{http_code}\n' localhost:8000/healthz; echo "c
 curl вышел с кодом 7
 ```
 
-(`curl -s` скрывает текст ошибки, но код выхода остаётся.) Код `000` значит: HTTP-кода нет, потому что ответа не было. Выход `7`: «Connection refused», по адресу никто не слушает. Это не ошибка HTTP, а отсутствие сервера. В предыдущей поломке сервер отвечал и объяснял проблему кодом 503, здесь он молчит.
+(`curl -s` скрывает текст ошибки, но код выхода остаётся.) Код `000` значит: HTTP-кода нет, потому что ответа не было. Выход `7`: «Couldn't connect to server» (в `curl -v` это `Connection refused`), по адресу никто не слушает. Это не ошибка HTTP, а отсутствие сервера. В предыдущей поломке сервер отвечал и объяснял проблему кодом 503, здесь он молчит.
 
 Чини и проверяй:
 
@@ -740,7 +742,7 @@ curl -s localhost:8000/readyz
 
 ## Проверено на версиях
 
-Ubuntu 24.04, Docker Engine 29, Docker Compose 2.40, curl 8.5, стенд «Магазин» из `project/shop` (FastAPI 0.142, Uvicorn 0.54, PostgreSQL 18.6, Redis 8.10). Октябрь 2026.
+Ubuntu 24.04, Docker Engine 29, Docker Compose 5.x, curl 8.5, стенд «Магазин» из `project/shop` (FastAPI 0.142, Uvicorn 0.54, PostgreSQL 18.6, Redis 8.10). Октябрь 2026.
 
 ## Итог урока: ты умеешь
 

@@ -25,7 +25,7 @@ check_env() {
 # Исправное состояние Service: selector и порты из k8s/base/20-service.yaml.
 fix_service() {
   "${K[@]}" -n notes patch svc notes --type merge \
-    -p '{"spec":{"selector":{"app":"notes"},"ports":[{"name":"http","port":8080,"targetPort":8080}]}}' >/dev/null
+    -p '{"spec":{"selector":{"app.kubernetes.io/name":"notes"},"ports":[{"name":"http","port":8080,"targetPort":8080}]}}' >/dev/null
 }
 
 case "${1:-}" in
@@ -34,8 +34,8 @@ case "${1:-}" in
     ;;
   1)
     check_env
-    # merge-patch по ключу app заменяет значение: селектор перестаёт совпадать с метками подов
-    "${K[@]}" -n notes patch svc notes --type merge -p '{"spec":{"selector":{"app":"note"}}}' >/dev/null
+    # merge-patch меняет значение метки app.kubernetes.io/name: селектор перестаёт совпадать с метками подов
+    "${K[@]}" -n notes patch svc notes --type merge -p '{"spec":{"selector":{"app.kubernetes.io/name":"note"}}}' >/dev/null
     echo "Сценарий готов. Проверь из пода tmp: curl -sS -m 3 http://notes:8080/healthz"
     ;;
   2)
@@ -48,7 +48,7 @@ case "${1:-}" in
     check_env
     # Клиент в другом namespace ходит на короткое имя: под уже есть, тогда ничего не пересоздаём
     if ! "${K[@]}" -n default get pod notes-client >/dev/null 2>&1; then
-      "${K[@]}" -n default run notes-client --restart=Never --image=nicolaka/netshoot:v0.14 -- \
+      "${K[@]}" -n default run notes-client --restart=Never --image=nicolaka/netshoot:v0.16 -- \
         sh -c 'while true; do curl -sS -m 3 http://notes:8080/healthz; echo; sleep 5; done' >/dev/null
     fi
     echo "Сценарий готов. Смотри: kubectl -n default logs notes-client (подожди 10-20 секунд)"
@@ -57,7 +57,7 @@ case "${1:-}" in
     check_env
     fix_service
     "${K[@]}" -n default delete pod notes-client --ignore-not-found --wait=false >/dev/null
-    echo "Всё возвращено: Service notes с selector app=notes и targetPort 8080, под notes-client удалён."
+    echo "Всё возвращено: Service notes с selector app.kubernetes.io/name=notes и targetPort 8080, под notes-client удалён."
     ;;
   *)
     echo "Использование: bash $0 1|2|3|random|fix" >&2

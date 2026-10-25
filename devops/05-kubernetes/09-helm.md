@@ -12,6 +12,20 @@ time: "4 ч"
 
 К этому уроку приложение «Заметки» живёт в четырёх отдельных файлах-манифестах: Deployment, Service, ConfigMap и HTTPRoute. **Манифест** (manifest) это YAML-файл с описанием объекта Kubernetes: «вот такой Deployment, вот столько реплик, вот такой образ». Ты писал их в уроках 5.2, 5.3, 5.4 и 5.6.
 
+```text
+$ helm list -n notes
+NAME    NAMESPACE   REVISION   STATUS     CHART        APP VERSION
+notes   notes       3          deployed   notes-0.2.0  0.4.1
+
+$ helm history notes -n notes
+REVISION   STATUS       CHART        DESCRIPTION
+1          superseded   notes-0.1.0  Install complete
+2          superseded   notes-0.1.0  Upgrade complete
+3          deployed     notes-0.2.0  Upgrade complete
+```
+
+Helm помнит каждую выкладку как ревизию: сейчас в кластере третья, две прежние сохранены. Если новая версия окажется плохой, вернуться можно командой на одну из старых.
+
 Теперь представь, что нужно второе окружение, например `dev` рядом с `prod`. Самый простой путь: скопировать файлы и поправить три строки (хост, число реплик, тег образа). Через месяц копий будет три, правки разойдутся, и никто не вспомнит, чем `prod` отличается от `dev` намеренно, а чем случайно. Helm (по-русски «штурвал»; это программа, которая собирает YAML из шаблонов и отправляет его в кластер) решает это так: манифест превращается в **шаблон** (template) с пропусками, как бланк в канцелярии, а значения пропусков лежат в отдельном маленьком файле. **Тег образа** (image tag) это метка версии у образа контейнера, например `0.4.1`: по ней кластер понимает, какую именно сборку приложения запускать (подробно в [уроке 6.3](../06-cloud/03-deploy-notes-vm.md) и дальше по курсу).
 
 Второе, что даёт Helm и чего нет у `kubectl apply`: **история установок** и откат одной командой. Откат (rollback) это возврат к предыдущей рабочей версии, как «отменить» в редакторе: без него после неудачного выпуска ты в панике ищешь вчерашние файлы. Выкатил плохую версию, набрал `helm rollback`, и через минуту всё как было.
@@ -120,7 +134,7 @@ helm/notes/
 
 - `Chart.yaml` обязателен. В нём `apiVersion: v2` (формат чарта, актуальный для Helm 3 и 4), `name` (имя чарта), `version` (версия самого чарта) и `appVersion` (версия приложения, о разнице ниже).
 - `values.yaml` тоже обязателен по смыслу: здесь лежат все настройки с разумными умолчаниями.
-- `templates/` содержит файлы манифестов с пропусками. Всё, что лежит в этом каталоге и не начинается с `_`, Helm считает манифестом и отправляет в кластер.
+- `templates/` содержит файлы манифестов с пропусками. Всё, что лежит в этом каталоге и не начинается с `_`, Helm считает манифестом и отправляет в кластер. Исключение: `NOTES.txt` (он есть в дереве, которое создаёт `helm create`). Это не манифест, а текст-подсказка, Helm печатает его после установки; увидеть его можно через `helm install --dry-run=client`.
 - Файл, имя которого начинается с подчёркивания (`_helpers.tpl`), манифестом не является. В нём хранятся именованные «кусочки», их подключают в других шаблонах (подробнее в разделе про `include`).
 - `values-dev.yaml` не читается автоматически. Его нужно явно передать флагом `-f`.
 
@@ -155,7 +169,7 @@ appVersion: "0.4.1"                            # версия приложени
 
 </details>
 
-> **Главное:** в чарте обязательны `Chart.yaml` и `values.yaml`, а в кластер уходит всё из `templates/`, что не начинается с `_`.
+> **Главное:** в чарте обязательны `Chart.yaml` и `values.yaml`, а в кластер уходит всё из `templates/`, что не начинается с `_` (кроме `NOTES.txt`).
 {: .key}
 
 Теперь посмотрим, как значения из `values.yaml` складываются в итог.
@@ -338,7 +352,7 @@ spec:                       уровень 0
 
 Обрати внимание: ключи вывелись по алфавиту (`limits` раньше `requests`), потому что `toYaml` сортирует ключи. Порядок в YAML ничего не меняет.
 
-Осторожно, путаница: неверное число в `nindent` самая частая поломка шаблонов. Что важно: результат может остаться формально верным YAML, но с неправильным смыслом. Мы проверили на этом уроке: при `nindent 8` вместо 12 `helm template` молча отработал, а `kubeconform` в задании 5 пожаловался на `additional properties 'limits', 'requests' not allowed`: ключи `requests` и `limits` оказались на уровне контейнера. Поэтому в связке нужны обе проверки: `helm template` и валидатор схемы.
+Осторожно, путаница: неверное число в `nindent` самая частая поломка шаблонов. Что важно: результат может остаться формально верным YAML, но с неправильным смыслом. Мы проверили на этом уроке: при `nindent 10` вместо 12 `helm template` молча отработал, а `kubeconform` в задании 5 пожаловался на `additional properties 'limits', 'requests' not allowed`: ключи `requests` и `limits` оказались на уровне контейнера. Поэтому в связке нужны обе проверки: `helm template` и валидатор схемы.
 
 > **Прикинь сам:** в `values.yaml` нет `gateway.host`. Что сделает `required "нужен gateway.host" .Values.gateway.host` и чем это лучше `default`?
 {: .predict}
@@ -485,21 +499,21 @@ helm rollback notes 2                ревизия 3  superseded   ревизи
 - `--timeout 3m`: сколько ждать, по умолчанию 5 минут;
 - `--rollback-on-failure`: если обновление не удалось, автоматически откатить на прошлую рабочую ревизию. Включает ожидание `--wait`. В Helm 3 и в старых статьях этот флаг называется `--atomic`; в Helm 4 старое имя ещё принимается, но печатает предупреждение об устаревании.
 
-Это самая полезная команда отладки. Ты видишь, что уедет в кластер, ничего не меняя. Вывод начинается с комментария `# Source: notes/templates/configmap.yaml`, он подсказывает, из какого шаблона взят блок. Блоки разделены строкой `---`. Если YAML сломан, добавь флаг `--debug`: он напечатает результат рендера даже неправильный, и по номеру строки в ошибке ты найдёшь место.
+`helm template notes helm/notes -n notes` самая полезная команда отладки. Ты видишь, что уедет в кластер, ничего не меняя. Вывод начинается с комментария `# Source: notes/templates/configmap.yaml`, он подсказывает, из какого шаблона взят блок. Блоки разделены строкой `---`. Если YAML сломан, добавь флаг `--debug`: он напечатает результат рендера даже неправильный, и по номеру строки в ошибке ты найдёшь место.
 
 Осторожно, путаница: `helm lint` не запускает шаблоны на реальных значениях и не сверяет их со схемой Kubernetes. Он пропустит неверную `apiVersion` или лишнее поле. Поэтому схему проверяет отдельная утилита `kubeconform`, которую ты будешь запускать над выводом `helm template`.
 
 > **Прикинь сам:** зачем в CI пишут `helm upgrade --install`, а не отдельные `install` и `upgrade`?
 {: .predict}
 
-Одна команда работает и когда релиза нет, и когда он уже есть. Обычный `install` при существующем релизе падает с `cannot re-use a name that is still in use`.
+Одна команда работает и когда релиза нет, и когда он уже есть. Обычный `install` при существующем релизе падает с `cannot reuse a name that is still in use`.
 
 > **Проверь понимание:** зачем в CI пишут `helm upgrade --install`, а не отдельные `install` и `upgrade`?
 
 <details markdown="1">
 <summary>Ответ</summary>
 
-Так одна команда работает и когда релиза ещё нет, и когда он уже есть. Иначе скрипту пришлось бы сначала проверять наличие релиза. Обычный `helm install` при существующем релизе падает с `cannot re-use a name that is still in use`.
+Так одна команда работает и когда релиза ещё нет, и когда он уже есть. Иначе скрипту пришлось бы сначала проверять наличие релиза. Обычный `helm install` при существующем релизе падает с `cannot reuse a name that is still in use`.
 
 </details>
 
@@ -581,19 +595,19 @@ helm rollback notes 2                ревизия 3  superseded   ревизи
 
 Без понимания порядка шагов непонятно, почему Helm иногда «молчит» и ничего не меняет, а иногда ругается на чужие объекты. Порядок короткий, его полезно держать в голове.
 
-Ремонтная бригада с прорабом. Прораб берёт новый чертёж, сверяет его со старым чертежом и с тем, что реально стоит на объекте, и посылает рабочим только разницу. Оговорка: рабочие (Kubernetes) сами решают, как выполнить задание, прораб (Helm) им не диктует.
+Ремонтная бригада с прорабом. Прораб берёт новый чертёж, сверяет его со старым чертежом и с тем, что реально стоит на объекте, и отдаёт рабочим новый чертёж целиком, а что именно переделывать, определяют сами рабочие. Оговорка: рабочие (Kubernetes) сами решают, как выполнить задание, прораб (Helm) им не диктует.
 
 Команда проходит шаги по порядку:
 
 1. Helm читает чарт и значения (`values.yaml`, `-f`, `--set`) и делает рендер в итоговый YAML.
 2. Достаёт из кластера манифест текущей ревизии (из Secret `sh.helm.release...`) и сравнивает с новым.
-3. Отправляет в API-сервер только те объекты, которые изменились или появились.
+3. Применяет в API-сервер все объекты нового манифеста (Helm 4 делает это через server-side apply). API-сервер меняет только отличающиеся поля, а объекты, которые исчезли из манифеста, удаляются.
 4. Записывает новую ревизию в новый Secret, а предыдущей ставит статус `superseded`.
 5. Если указан `--wait` (или `--rollback-on-failure`), ждёт, пока поды станут готовы, и только потом возвращает управление.
 
-Ты поменял в `values.yaml` тег образа с `0.4.1` на `0.4.2` и запустил `helm upgrade`. Рендер даст Deployment с новым образом, а Service, ConfigMap и HTTPRoute не изменились. Helm отправит в кластер только Deployment, Kubernetes начнёт rolling update, а в истории появится ревизия 2. Service при этом никто не трогал.
+Ты поменял в `values.yaml` тег образа с `0.4.1` на `0.4.2` и запустил `helm upgrade`. Рендер даст Deployment с новым образом, а Service, ConfigMap и HTTPRoute не изменились. Helm применит все объекты, но API-сервер найдёт отличие только в Deployment: Kubernetes начнёт rolling update, а в истории появится ревизия 2. У Service, ConfigMap и HTTPRoute ничего не изменится.
 
-Осторожно, путаница: думают, что `helm upgrade` без правок перезапустит поды. Нет: манифест не изменился, отправлять нечего, новая ревизия появится, а поды останутся как были. Чтобы поды перезапустились при смене ConfigMap, в шаблон кладут контрольную сумму файла как аннотацию пода, тогда манифест Deployment меняется сам (этот приём разбирается в практике).
+Осторожно, путаница: думают, что `helm upgrade` без правок перезапустит поды. Нет: манифест не изменился, API-серверу менять нечего, новая ревизия появится, а поды останутся как были. Чтобы поды перезапустились при смене ConfigMap, в шаблон кладут контрольную сумму файла как аннотацию пода, тогда манифест Deployment меняется сам (этот приём разбирается в практике).
 
 > **Прикинь сам:** ты запустил `helm upgrade` с теми же значениями, что в текущей ревизии. Что произойдёт с подами?
 {: .predict}
@@ -609,7 +623,7 @@ helm rollback notes 2                ревизия 3  superseded   ревизи
 
 </details>
 
-> **Главное:** Helm сравнивает новый манифест с манифестом текущей ревизии и отправляет только разницу; ревизия растёт, даже если разницы нет.
+> **Главное:** Helm применяет все объекты нового манифеста (в Helm 4 через server-side apply), а меняет только разницу API-сервер; ревизия растёт, даже если разницы нет.
 {: .key}
 
 Остаётся решить, что вообще класть в чарт.
@@ -625,7 +639,7 @@ helm rollback notes 2                ревизия 3  superseded   ревизи
 - PostgreSQL (`40-postgres.yaml`): база живёт годами, приложение выпускается ежедневно;
 - CronJob бэкапа (`60-pg-backup-cronjob.yaml`).
 
-Разбери это на вопросе: «что случится при `helm uninstall notes`?» Если в чарте лежит Postgres, он удалится вместе с данными. Поэтому объекты с чужим и более долгим жизненным циклом в релиз не входят.
+Разбери это на вопросе: «что случится при `helm uninstall notes`?» Если в чарте лежит Postgres, `helm uninstall` удалит StatefulSet и Pod базы, то есть будет простой. Данные в PVC из `volumeClaimTemplates` останутся (StatefulSet их не удаляет, урок 5.5), но вместе с данными удалился бы отдельный PVC, лежащий в манифесте чарта. Поэтому объекты с чужим и более долгим жизненным циклом в релиз не входят.
 
 **Секреты вне чарта.** Пароль, записанный в `values.yaml`, попадёт в git, в вывод `helm get values` и в Secret релиза. Чарт вместо этого ссылается на готовый Secret по имени (`existingSecret: notes-db`), а сам Secret создаётся отдельно командой (как в уроке 5.6; правильный способ хранить секреты разберём в уроке 9.2).
 
@@ -686,7 +700,10 @@ Helm удаляет только объекты, которые сам созд�
    tar -xzf helm-v4.3.0-linux-amd64.tar.gz
    sudo install linux-amd64/helm /usr/local/bin/helm
    helm version --short
+   cd ~/notes
    ```
+
+   Последняя строка возвращает тебя в репозиторий: дальше все пути (`helm/notes/...`) считаются от `~/notes`.
 
 2. Посмотри, что генерирует `helm create`. Команда создаёт заготовку чарта (`helm create имя`), `find ... | sort` печатает все файлы каталога по алфавиту:
 
@@ -700,7 +717,7 @@ Helm удаляет только объекты, которые сам созд�
 
 ```text
 helm-v4.3.0-linux-amd64.tar.gz: OK
-v4.3.0
+v4.3.0+gbec5b06
 ```
 
 ```text
@@ -718,7 +735,7 @@ v4.3.0
 /tmp/demo/values.yaml
 ```
 
-**Как читать вывод:** `OK` после имени архива значит, что отпечаток совпал. Строка `v4.3.0` это версия Helm; после неё в `helm version` без `--short` бывает ещё хэш сборки. Если ты на ARM (Mac на Apple Silicon с Linux в ВМ), качай `arm64`.
+**Как читать вывод:** `OK` после имени архива значит, что отпечаток совпал. Строка `v4.3.0+gbec5b06` это версия Helm, а часть после `+` хеш сборки. Полный `helm version` без `--short` печатает структуру `version.BuildInfo{...}`. Если ты на ARM (Mac на Apple Silicon с Linux в ВМ), качай `arm64`.
 
 **Объясни себе:**
 
@@ -957,7 +974,7 @@ kind: HTTPRoute
 
 **Типичные ошибки:**
 
-- `Error: template: notes/templates/deployment.yaml:8:11: executing "notes/templates/deployment.yaml" at <.Values.replicaCount>: nil pointer evaluating interface {}.replicaCount`: пропущен или неверно назван ключ. Сверь `values.yaml`, имена чувствительны к регистру.
+- `Error: notes/templates/deployment.yaml:27:28` и дальше строки `executing "notes/templates/deployment.yaml" at <.Values.image.repository>:` и `nil pointer evaluating interface {}.repository`: пропал целый блок (здесь `image`), а шаблон берёт у него вложенный ключ. Сверь `values.yaml`, имена чувствительны к регистру. Если пропал одиночный верхнеуровневый ключ (например `replicaCount`), ошибки не будет: Helm молча подставит пустое значение (`replicas:` без числа). Для обязательных значений используй `required`.
 - `Error: parse error at (notes/templates/deployment.yaml:5): unexpected "}" in operand`: в шаблоне лишняя или потерянная скобка `}}`.
 - `Error: YAML parse error on notes/templates/deployment.yaml: error converting YAML to JSON: yaml: line 12: did not find expected key`: сдвиг после `nindent` неверный, сравни число пробелов с уровнем вложенности.
 
@@ -1036,9 +1053,9 @@ replicaCount: 2
 
 **Типичные ошибки:**
 
-- `Error: INSTALLATION FAILED: Unable to continue with install: Deployment "notes" in namespace "notes" exists and cannot be imported into the current release: invalid ownership metadata`: старые объекты не удалены. Удали их (шаг 1) или усынови.
-- `Error: UPGRADE FAILED: context deadline exceeded`: Pod'ы не стали готовыми за 3 минуты. `--rollback-on-failure` откатит сам, причину ищи в `kubectl -n notes describe pod` (обычно неверный образ или пустой Secret).
-- `Error: INSTALLATION FAILED: no matches for kind "HTTPRoute" in version "gateway.networking.k8s.io/v1"`: не установлены CRD Gateway API (урок 5.4).
+- `Error: INSTALLATION FAILED: unable to continue with install: Deployment "notes" in namespace "notes" exists and cannot be imported into the current release: invalid ownership metadata; label validation error: missing key "app.kubernetes.io/managed-by": must be set to "Helm"; ...` (дальше идут ещё аннотации `meta.helm.sh/...`): старые объекты не удалены. Удали их (шаг 1) или усынови.
+- `Error: UPGRADE FAILED: release notes failed, and has been rolled back due to rollback-on-failure being set: resource Deployment/notes/notes not ready ...` (в конце будет `context deadline exceeded`): Pod'ы не стали готовыми за 3 минуты. `--rollback-on-failure` откатит сам, причину ищи в `kubectl -n notes describe pod` (обычно неверный образ или пустой Secret).
+- `Error: INSTALLATION FAILED: unable to build kubernetes objects from release manifest: resource mapping not found for name: "notes" namespace: "notes" from "": no matches for kind "HTTPRoute" in version "gateway.networking.k8s.io/v1"` и строка `ensure CRDs are installed first`: не установлены CRD Gateway API (урок 5.4).
 
 ### Задание 4. Откат и hooks
 
@@ -1061,7 +1078,7 @@ replicaCount: 2
 
    ```bash
    helm upgrade notes helm/notes -n notes -f helm/notes/values-dev.yaml --set image.tag=9.9.9
-   kubectl -n notes get pods
+   kubectl -n notes get pods -l app.kubernetes.io/name=notes
    curl -sk https://notes.lab/healthz
    ```
 
@@ -1100,7 +1117,7 @@ REVISION  UPDATED                   STATUS      CHART        APP VERSION  DESCRI
 
 **Типичные ошибки:**
 
-- `Error: no revision for release "notes"`: указан номер ревизии, которой нет в `helm history`.
+- `Error: release has no 99 version` (для `helm rollback notes 99`): указан номер ревизии, которой нет в `helm history`.
 
 ### Задание 5. Шаг проекта: чарт в репозитории
 
@@ -1117,21 +1134,43 @@ REVISION  UPDATED                   STATUS      CHART        APP VERSION  DESCRI
 
 **Шаги:**
 
-1. Проверь чарт на схему Kubernetes. `kubeconform` сверяет YAML со схемами объектов Kubernetes (`-strict` ругается на лишние поля, `-summary` печатает итог, `-ignore-missing-schemas` пропускает объекты, схемы которых он не знает); читает он из stdin, поэтому вывод `helm template` передаётся через `|`:
+1. Поставь `kubeconform` (отдельная небольшая программа, в Helm она не входит). Скачиваем архив и файл контрольных сумм релиза v0.8.0, `grep linux-amd64` оставляет из файла только строку нашего архива, `sha256sum -c -` проверяет её (`-` значит «читай строки из потока»), дальше распаковка и установка, как с Helm в задании 1 (для ARM замени `amd64` на `arm64`; на macOS проще `brew install kubeconform`):
+
+   ```bash
+   cd /tmp
+   curl -fsSLO https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+   curl -fsSLO https://github.com/yannh/kubeconform/releases/download/v0.8.0/CHECKSUMS
+   grep linux-amd64 CHECKSUMS | sha256sum -c -
+   tar -xzf kubeconform-linux-amd64.tar.gz
+   sudo install kubeconform /usr/local/bin/
+   kubeconform -v
+   cd ~/notes
+   ```
+
+   Ожидаемо: строка `kubeconform-linux-amd64.tar.gz: OK` и версия `v0.8.0`.
+
+2. Проверь чарт на схему Kubernetes. `kubeconform` сверяет YAML со схемами объектов Kubernetes (`-strict` ругается на лишние поля, `-summary` печатает итог, `-ignore-missing-schemas` пропускает объекты, схемы которых он не знает); читает он из stdin, поэтому вывод `helm template` передаётся через `|`:
 
    ```bash
    helm template notes helm/notes -n notes | kubeconform -strict -ignore-missing-schemas -summary
    ```
 
-2. Проверь состав `k8s/base/`, зафиксируй в git и убедись, что в чарте нет секретов:
+3. Проверь состав `k8s/base/`, зафиксируй в git и убедись, что в чарте нет секретов:
 
    ```bash
    ls k8s/base/
    git add helm/notes k8s/base && git commit -m "helm: чарт notes 0.1.0, приложение переехало из k8s/base"
-   grep -rn "password\|DATABASE_URL" helm/notes || echo "секретов в чарте нет"
+   grep -rniE "password|postgres(ql)?://" helm/notes || echo "секретов в чарте нет"
    ```
 
+   Команда ищет слово `password` и адреса вида `postgresql://`, то есть настоящие значения. Имя ключа `DATABASE_URL` в чарте есть (это ссылка на Secret), поэтому по нему не ищем: оно не означает утечку.
+
 **Что должно получиться:**
+
+```text
+kubeconform-linux-amd64.tar.gz: OK
+v0.8.0
+```
 
 ```text
 Summary: 4 resources found parsing stdin - Valid: 3, Invalid: 0, Errors: 0, Skipped: 1
@@ -1158,7 +1197,7 @@ Summary: 4 resources found parsing stdin - Valid: 3, Invalid: 0, Errors: 0, Skip
 
 **Типичные ошибки:**
 
-- `Error: validating ...: chart.metadata.version is required`: в `Chart.yaml` нет `version`, сверь с заданием 2.
+- `Error: validation: chart.metadata.version is required` (`helm lint` добавит `[ERROR] Chart.yaml: version is required`): в `Chart.yaml` нет `version`, сверь с заданием 2.
 
 > Нейросеть может предложить флаг Helm, которого нет в твоей версии. Сверь любой флаг с helm upgrade --help и прогони helm template и kubeconform до установки.
 {: .ai}
@@ -1210,7 +1249,7 @@ helm list -A --all                                  # релизы всех name
 2. Вместо `nindent 12` стоит `indent 12`, и перед блоком `resources` нет перевода строки. Ошибка:
 
    ```text
-   Error: YAML parse error on notes/templates/deployment.yaml: error converting YAML to JSON: yaml: line 51: did not find expected key
+   Error: YAML parse error on notes/templates/deployment.yaml: error converting YAML to JSON: yaml: line 56: did not find expected key
    ```
 
    Номер строки относится к **готовому** YAML, а не к шаблону. Найди место через `helm template --debug`: блок `requests` склеился со строкой `resources:`. Верни `{{- toYaml .Values.resources | nindent 12 }}`.
@@ -1223,7 +1262,7 @@ helm list -A --all                                  # релизы всех name
 
    Это сообщение из твоего же `required`: так и задумано, рендер остановился до обращения к кластеру. Задай `gateway.host` в `values.yaml` или через `--set gateway.host=notes.lab`.
 
-Отдельный частый случай без скрипта: `Error: INSTALLATION FAILED: cannot re-use a name that is still in use`. Релиз `notes` уже существует, в том числе в статусе `failed`. Смотри `helm list -A --all`, затем либо `helm upgrade --install`, либо `helm uninstall notes -n notes`.
+Отдельный частый случай без скрипта: `Error: INSTALLATION FAILED: cannot reuse a name that is still in use`. Релиз `notes` уже существует, в том числе в статусе `failed`. Смотри `helm list -A --all`, затем либо `helm upgrade --install`, либо `helm uninstall notes -n notes`.
 
 Общий приём: `helm lint`, затем `helm template --debug`, `kubeconform`, и только потом `install`.
 
@@ -1309,7 +1348,7 @@ helm upgrade --install вернул ошибку: <вставь текст ош�
 - kubeconform v0.8.0: `helm template ... | kubeconform -strict -ignore-missing-schemas -summary`.
 - Скрипт `break.sh`: `shellcheck` без замечаний, сценарии 1, 2, 3 и `fix` (по два запуска подряд) прогнаны на копии чарта.
 
-Не прогонялось (кластер не запускался): `helm install`, `upgrade`, `rollback`, `history`, `list`, `get values`, `kubectl` из практики и их вывод, скачивание и установка Helm. Формат этого вывода взят из документации Helm и прежней редакции урока. Версии kind v0.33.0, kubectl 1.37.1, Gateway API v1.6.2, Envoy Gateway v1.9.2, образ приложения 0.4.1 взяты из прежних уроков темы и не перепроверялись.
+Не прогонялось (кластер не запускался): `helm install`, `upgrade`, `rollback`, `history`, `list`, `get values`, `kubectl` из практики и их вывод, скачивание и установка Helm. Формат этого вывода взят из документации Helm и прежней редакции урока. Версии kind v0.33.0, kubectl 1.37.1, Gateway API v1.6.1, Envoy Gateway v1.9.2, образ приложения 0.4.1 взяты из прежних уроков темы и не перепроверялись.
 
 ## Итог урока: ты умеешь
 
@@ -1322,7 +1361,7 @@ helm upgrade --install вернул ошибку: <вставь текст ош�
 - [ ] умею смотреть `history`, `get values` и откатываться через `rollback`
 - [ ] умею развести значения по окружениям через `-f` и объяснить, почему `--set` хуже
 - [ ] умею объяснить, что входит в чарт, а что остаётся платформой, и почему секрет вне чарта
-- [ ] умею читать ошибки `nil pointer`, `YAML parse error`, `cannot re-use a name`, `invalid ownership metadata`
+- [ ] умею читать ошибки `nil pointer`, `YAML parse error`, `cannot reuse a name`, `invalid ownership metadata`
 
 {% endraw %}
 

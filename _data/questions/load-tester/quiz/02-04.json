@@ -423,7 +423,7 @@
    "skill": "прочитать JOIN позиций заказа",
    "kind": "чтение",
    "type": "multiple",
-   "text": "Что верно про этот запрос?",
+   "text": "Какие утверждения про этот запрос верны?",
    "code": "SELECT oi.order_id, p.name, oi.qty, oi.price\nFROM order_items oi\nJOIN products p ON p.id = oi.product_id\nWHERE oi.order_id = 1;",
    "options": [
     {
@@ -738,7 +738,7 @@
    "skill": "отличить cost от времени",
    "kind": "чтение",
    "type": "multiple",
-   "text": "Что верно про строки плана `EXPLAIN ANALYZE`?",
+   "text": "Какие утверждения про строки плана `EXPLAIN ANALYZE` верны?",
    "code": "Seq Scan on orders  (cost=0.00..3871.00 rows=200 width=26) (actual time=0.031..19.812 rows=200.00 loops=1)\n  Rows Removed by Filter: 199801\n  Buffers: shared hit=1371\nExecution Time: 19.874 ms",
    "options": [
     {
@@ -877,7 +877,7 @@
    "skill": "понять, зачем ходить по разным страницам",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Почему сценарий нагрузочного теста должен запрашивать разные страницы каталога, а не только первую?",
+   "text": "Какие причины объясняют, почему сценарий нагрузочного теста должен запрашивать разные страницы каталога, а не только первую?",
    "options": [
     {
      "id": "a",
@@ -1020,7 +1020,7 @@
    "skill": "прочитать описание таблицы orders",
    "kind": "чтение",
    "type": "multiple",
-   "text": "Ты выполнил `\\d orders` и увидел фрагмент вывода. Что из него следует?",
+   "text": "Ты выполнил `\\d orders` и увидел фрагмент вывода. Что следует из этого вывода? Выбери все подходящие.",
    "code": "Indexes:\n    \"orders_pkey\" PRIMARY KEY, btree (id)\nForeign-key constraints:\n    \"orders_user_id_fkey\" FOREIGN KEY (user_id) REFERENCES users(id)\nReferenced by:\n    TABLE \"order_items\" CONSTRAINT \"order_items_order_id_fkey\" FOREIGN KEY (order_id) REFERENCES orders(id)",
    "options": [
     {

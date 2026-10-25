@@ -301,7 +301,7 @@
   var STEPS = [
     { n: 'git push в perf-lab', s: 'событие <code>on: push</code>', t: 1, tip: 'Всё начинается с твоего <code>git push</code>. GitHub видит новый коммит и ищет в <code>.github/workflows/</code> файлы, которые просят запуск на <code>push</code>.' },
     { n: 'Runner: чистая виртуалка', s: 'runs-on: ubuntu-latest', t: 6, tip: 'GitHub выдаёт на время запуска пустую виртуальную машину с Ubuntu и Docker. Ничего твоего на ней нет, поэтому всё нужное придётся поставить в шагах.' },
-    { n: 'Забрать код тестов', s: 'actions/checkout', t: 3, tip: 'Шаг <code>uses: actions/checkout@v5</code> клонирует твой репозиторий perf-lab на runner.' },
+    { n: 'Забрать код тестов', s: 'actions/checkout', t: 3, tip: 'Шаг <code>uses: actions/checkout@v7.0.1</code> клонирует твой репозиторий perf-lab на runner.' },
     { n: 'Забрать код стенда', s: 'checkout load-tester в stand/', t: 4, tip: 'Стенд «Магазин» живёт в репозитории курса. Второй <code>checkout</code> с параметрами <code>repository</code> и <code>path</code> кладёт его рядом.' },
     { n: 'Python и зависимости', s: 'setup-python, pip install', t: 22, tip: 'Ставим Python и <code>pip install -r requirements.txt</code>: тот же файл, что и на твоём ноутбуке.' },
     { n: 'Поднять стенд', s: 'docker compose up -d --build --wait', t: 150, tip: 'Сборка образов и запуск «Магазина», PostgreSQL, Redis и оплаты. Флаг <code>--wait</code> ждёт, пока все проверки здоровья станут зелёными: без него тесты побегут в ещё не готовый сервис.' },

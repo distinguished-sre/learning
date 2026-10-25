@@ -909,7 +909,7 @@
       "skill": "шаг сбоя",
       "kind": "диагностика",
       "type": "single",
-      "text": "`plan` остановился с `No value for required variable` для модуля. На каком шаге это произошло?",
+      "text": "`plan` остановился с `Missing required argument` для модуля. На каком шаге это произошло?",
       "options": [
         {
           "id": "a",

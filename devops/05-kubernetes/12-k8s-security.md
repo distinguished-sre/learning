@@ -10,6 +10,19 @@ time: "3.5 ч"
 
 По умолчанию в Kubernetes любой под (запущенный контейнер приложения, [урок 5.2](02-pods-deployments.md)) может обратиться к любому другому поду, запуститься от имени root (администратора внутри контейнера: он может менять любые файлы и ставить любые программы) и прочитать «пропуск» для API кластера (API это «приёмная», через которую проходят все команды управлением кластером), который лежит у него в файловой системе. **Уязвимость** это ошибка в программе, которой можно воспользоваться, как незапертым окном в доме. Одна уязвимость в приложении, и атакующий получает плоскую открытую сеть (где все подключены ко всем) и учётку внутри кластера. На работе это проверяют на аудитах и после инцидентов: «почему из пода фронтенда достучались до базы».
 
+```text
+$ kubectl exec frontend-6f5d8c7b9-k2m4n -n notes -- id
+uid=0(root) gid=0(root) groups=0(root)
+
+$ kubectl exec frontend-6f5d8c7b9-k2m4n -n notes -- ls /var/run/secrets/kubernetes.io/serviceaccount
+ca.crt  namespace  token
+
+$ kubectl exec frontend-6f5d8c7b9-k2m4n -n notes -- nc -zv postgres 5432
+postgres (10.96.88.14:5432) open
+```
+
+Из пода фронтенда видно сразу три дыры: процесс работает от root, внутри лежит токен для API кластера, а порт базы `5432` открыт. Ровно эти три вещи и закрывает урок.
+
 Три рычага закрывают основное:
 
 - **RBAC** (Role-Based Access Control, доступ по ролям): кто и что может делать через API кластера, как пропуска с разными правами в бизнес-центре;
@@ -251,7 +264,7 @@ subjects:                      # кому выдаём
 
 Чтобы понять, что запрещает Pod Security, нужно знать, что вообще может процесс в Linux (урок [1.3](../01-linux/03-users-permissions.md)).
 
-- **root** это пользователь с uid 0, которому разрешено почти всё. По умолчанию процесс в контейнере работает от root, если образ не задал другого. Root внутри контейнера не равен root на хосте, но при уязвимости контейнерной изоляции (побег из контейнера) атакующий получает права root на узле. Поэтому приложение запускают от обычного пользователя, например uid 10001.
+- **root** это пользователь с uid 0, которому разрешено почти всё. По умолчанию процесс в контейнере работает от root, если образ не задал другого. Это тот же uid 0, что и на хосте, только процесс заперт в контейнере и получил урезанный набор прав (capabilities), поэтому при побеге из контейнера атакующий получает root на узле. Отделить root контейнера от root хоста можно user namespaces (`hostUsers: false` в спецификации пода), но по умолчанию так не делается. Поэтому приложение запускают от обычного пользователя, например uid 10001.
 - **Linux capabilities** (возможности): привилегии root, разложенные на отдельные кусочки. Вместо «всё или ничего» процесс может иметь, скажем, право менять сетевые настройки (`NET_ADMIN`) и больше ничего. Обычному приложению они не нужны, поэтому все убирают командой `drop: [ALL]`.
 - **Повышение привилегий** (privilege escalation): способ получить больше прав, чем у родителя, например запуск программы с битом setuid (программа работает от имени владельца, обычно root). `allowPrivilegeEscalation: false` его запрещает.
 - **seccomp** (secure computing): фильтр системных вызовов (обращений программы к ядру: открыть файл, создать процесс, сменить время). `RuntimeDefault` включает стандартный список запретов из рантайма контейнеров: опасные и редко нужные вызовы блокируются.
@@ -675,7 +688,7 @@ no
 **Типичные ошибки:**
 
 - `Error from server (Forbidden): pods is forbidden: User "..." cannot list resource "pods"`: нет привязки или она в другом namespace: проверь `kubectl -n notes get rolebinding`.
-- `error: failed to create rolebinding: ... serviceaccount must be in the format <namespace>:<name>`: в `--serviceaccount` забыт namespace: пиши `notes:viewer`.
+- `error: serviceaccount must be <namespace>:<name>`: в `--serviceaccount` забыт namespace: пиши `notes:viewer`.
 - `auth can-i` даёт `yes` для всего: ты запустил его от своего админа без `--as`.
 
 ### Задание 2. Pod Security: warn, потом enforce
@@ -701,13 +714,13 @@ kubectl label namespace notes \
   pod-security.kubernetes.io/audit=restricted --overwrite
 ```
 
-2. Проверь предупреждения без изменения кластера. `--dry-run=server` отправляет запрос на сервер, проходит настоящую проверку допуска, но объект не сохраняется:
+2. Проверь предупреждения без изменения кластера. `--dry-run=server` отправляет запрос на сервер, проходит настоящую проверку допуска, но объект не сохраняется. `kubectl patch` меняет объект частично: `-p` задаёт изменение, здесь это безобидная аннотация в шаблоне пода. Патч нужен только для проверки: из-за `--dry-run=server` ничего не сохранится (у `kubectl rollout restart` флага `--dry-run` нет, поэтому берём `patch`):
 
 ```bash
-kubectl -n notes rollout restart deployment/notes --dry-run=server
+kubectl -n notes patch deployment notes --dry-run=server -p '{"spec":{"template":{"metadata":{"annotations":{"check":"psa"}}}}}'
 ```
 
-Если поды «Заметок» пока без `securityContext` (так до задания 4), kubectl может напечатать предупреждение для пода Deployment. Если ничего не напечатал, это тоже нормально: главную проверку делает следующий шаг.
+Вывод заканчивается строкой `deployment.apps/notes patched (server dry run)`, а перед ней идёт `Warning: would violate PodSecurity ...`. Предупреждение появится, пока в шаблоне пода нет `securityContext` (до задания 4). Если ты уже добавил `securityContext`, предупреждения не будет: шаг 3 всё равно покажет полный список.
 
 3. Попробуй создать заведомо плохой под, чтобы увидеть полный список нарушений. `kubectl run bad --image=nginx:1.29` создаёт одиночный под, `--restart=Never` значит «не перезапускай»:
 
@@ -737,18 +750,18 @@ pod/bad created (server dry run)
 **Типичные ошибки:**
 
 - `Error from server (Forbidden): ... violates PodSecurity "restricted:latest"`: у тебя уже стоит `enforce`, а под не соответствует: добавь недостающие поля или временно верни `warn`.
-- `error: ... unknown flag: --dry-run=server`: слишком старый kubectl: обнови до версии, совпадающей с кластером (отклонение не более одной минорной).
+- `error: unknown flag: --dry-run`: эта подкоманда kubectl не умеет dry-run (так отвечает `rollout restart`). Используй `patch`, `apply` или `run` с `--dry-run=server`.
 
 ### Задание 3. NetworkPolicy: default deny и проверка, что CNI её выполняет
 
 **Цель:** убедиться, что политики в твоём kind реально работают, и запретить весь трафик в `notes`, кроме нужного.
 
-**Предскажи:** в namespace `notes` применена политика `default-deny` (ingress и egress для всех подов). Ответит ли приложение на `curl` из тестового пода? Разрешит ли под имя `db.notes.svc`?
+**Предскажи:** в namespace `notes` применена политика `default-deny` (ingress и egress для всех подов). Ответит ли приложение на `curl` из тестового пода? Разрешит ли тестовый под из `default` имя `db.notes.svc`?
 
 <details markdown="1">
 <summary>Ответ</summary>
 
-Нет на оба вопроса. Входящий трафик блокирован, а исходящий (включая DNS на порт 53) тоже: `curl` завершится по таймауту, а имя не разрешится (`Could not resolve host`).
+На `curl` нет: входящий трафик к подам `notes` закрыт `default-deny`, `curl` завершится по таймауту (`000`, код 28). Имя разрешится: тестовый под живёт в `default`, где политик нет, а CoreDNS в `kube-system` политиками `notes` не закрыт. DNS пропал бы у подов внутри `notes`, если бы в namespace не было `allow-dns`.
 
 </details>
 
@@ -858,7 +871,7 @@ command terminated with exit code 28
 
 Пока действует `default-deny`, входящий трафик к «Заметкам» закрыт для всех, включая Gateway: сайт `notes.lab` на время задания перестанет отвечать. В задании 4 чарт вернёт нужные проходы.
 
-Если и после политики пришло `200`, твой CNI не применяет NetworkPolicy. Запасной путь: пересоздай кластер с CNI, который их поддерживает. В `kind/kind.yaml` добавь в `networking` строку `disableDefaultCNI: true`, выполни `kind delete cluster --name notes && kind create cluster --config kind/kind.yaml`, затем поставь Calico по инструкции с сайта проекта (версия не закреплена, проверь актуальную версию на странице проекта) и повтори проверку. Учти, что все предыдущие объекты придётся применить заново.
+Если и после политики пришло `200`, сначала проверь, что политика применилась (`kubectl -n notes get networkpolicy`), что она в namespace `notes` и что метки подов совпадают. В kind от v0.24 стандартный сетевой плагин kindnet уже выполняет NetworkPolicy, а вот в старом kind или в другом кластере плагин мог их не поддерживать. Тогда запасной путь (это функция для опытных пользователей kind): пересоздай кластер с CNI, который их поддерживает. В `kind/kind.yaml` добавь в `networking` строку `disableDefaultCNI: true`, выполни `kind delete cluster --name notes && kind create cluster --config kind/kind.yaml`, затем поставь Calico по инструкции с сайта проекта (версия не закреплена, проверь актуальную версию на странице проекта) и повтори проверку. Учти, что все предыдущие объекты придётся применить заново.
 
 **Объясни себе:**
 
@@ -868,9 +881,9 @@ command terminated with exit code 28
 
 **Типичные ошибки:**
 
-- `curl: (28) Resolving timed out after 3000 milliseconds`: DNS заблокирован egress-политикой: добавь `allow-dns`.
+- `curl: (28) Resolving timed out after 3000 milliseconds`: для пода внутри `notes` без `allow-dns` DNS заблокирован egress-политикой: добавь `allow-dns`. Тестовый под из `default` так не ответит.
 - `error validating data: ... unknown field "namespaceSelectors"`: опечатка в имени поля: правильно `namespaceSelector`.
-- Политика применилась, но трафик проходит: CNI не поддерживает NetworkPolicy, см. запасной путь выше.
+- Политика применилась, но трафик проходит: политика не выбрала поды (метки, namespace) или CNI не поддерживает NetworkPolicy (редкость для kind от v0.24), см. запасной путь выше.
 
 ### Задание 4. Шаг проекта: чарт 0.2.0 с безопасностью
 
@@ -937,7 +950,7 @@ metadata:
                 capabilities: {drop: [ALL]}
 ```
 
-3. Файл `helm/notes/templates/serviceaccount.yaml`. Разбор: `include "notes.fullname" .` подставляет имя релиза из helpers (урок 5.9), а `automountServiceAccountToken: false` отключает монтирование токена:
+3. Файл `helm/notes/templates/serviceaccount.yaml`. Разбор: {% raw %}`{{ .Release.Name }}`{% endraw %} подставляет имя релиза (`notes`), а `automountServiceAccountToken: false` отключает монтирование токена:
 
 {% raw %}
 ```yaml
@@ -945,7 +958,7 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "notes.fullname" . }}
+  name: {{ .Release.Name }}
 automountServiceAccountToken: false
 ```
 {% endraw %}
@@ -959,7 +972,7 @@ automountServiceAccountToken: false
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "notes.fullname" . }}
+  name: {{ .Release.Name }}
 spec:
   podSelector:
     matchLabels:
@@ -985,12 +998,12 @@ spec:
 
 Эта политика выбирает поды по метке: хелпер `notes.selectorLabels` из урока 5.9 выдаёт ровно `app.kubernetes.io/name: notes`, то есть ту же метку, что стоит на подах и в selector Service `notes`. Если метка в подах и в политике разойдётся, политика молча не выберет ни одного пода и перестанет действовать. DNS для этого пода уже разрешён политикой `allow-dns` из задания 3 (разрешения складываются).
 
-5. В `helm/notes/templates/deployment.yaml` в шаблон пода добавь (хелперы `notes.fullname` и `notes.selectorLabels` из урока 5.9):
+5. В `helm/notes/templates/deployment.yaml` в шаблон пода добавь (хелпер `notes.selectorLabels` из урока 5.9):
 
 {% raw %}
 ```yaml
     spec:
-      serviceAccountName: {{ include "notes.fullname" . }}
+      serviceAccountName: {{ .Release.Name }}
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
@@ -1110,7 +1123,7 @@ kubectl auth can-i '<глагол>' '<ресурс>' --as='<субъект>' -n 
 <details markdown="1">
 <summary>Разбор всех сценариев</summary>
 
-1. **NetworkPolicy блокирует исходящий трафик, в том числе DNS.** Симптом: `Temporary failure in name resolution` или `could not translate host name "db"`. Проверка: `kubectl -n notes get networkpolicy` показывает лишнюю политику `break-egress-deny` без разрешения DNS; из тестового пода `nslookup` виснет. Исправление: удалить её (или добавить `allow-dns`: `kubectl apply -f k8s/base/70-netpol-default-deny.yaml`). Урок: egress deny без DNS ломает любое обращение по имени.
+1. **Нет разрешения на DNS при `default-deny`.** Скрипт удаляет политику `allow-dns` из задания 3. Симптом: `Temporary failure in name resolution` или `could not translate host name "db"`. Проверка: `kubectl -n notes get networkpolicy` не показывает `allow-dns`, `kubectl -n notes exec deploy/notes -- getent hosts db` не отвечает (или `nslookup` виснет). Исправление: `kubectl apply -f k8s/base/70-netpol-default-deny.yaml` (вернёт `allow-dns`) или `bash /tmp/break-5.12.sh fix`. Урок: `default-deny` без `allow-dns` ломает любое обращение по имени.
 2. **`violates PodSecurity`.** В Deployment включили `allowPrivilegeEscalation: true`. Симптом: `rollout status` ждёт, новых подов нет. Проверка: `describe replicaset` показывает `Error creating: pods ... is forbidden: violates PodSecurity "restricted:latest"` со списком полей. Исправление: вернуть `allowPrivilegeEscalation: false`, `helm upgrade`. Ошибка видна в ReplicaSet, а не в Deployment.
 3. **`readOnlyRootFilesystem` и запись падает.** В Deployment задана переменная `STORE=file`: приложение хочет писать заметки в файл `/var/lib/notes`, а корень только для чтения. Симптом: под не Ready (проба `/readyz` даёт 503), заметки не сохраняются. Проверка: `kubectl -n notes exec deploy/notes -- env | grep STORE`, `kubectl -n notes exec deploy/notes -- touch /x` даёт `Read-only file system`. Исправление: убрать лишнюю переменную (вернуть `STORE=postgres`), а если приложению правда нужна запись, смонтировать `emptyDir` в этот путь (не отключать read-only).
 4. **RBAC forbidden.** У Role `report-reader` только глагол `get`, а `kubectl get pods` требует `list`. Симптом: `Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:notes:report-bot" cannot list resource "pods"`. Проверка: `kubectl auth can-i list pods --as=system:serviceaccount:notes:report-bot -n notes`, `kubectl -n notes get role report-reader -o yaml`. Исправление: добавить глаголы `list` и `watch` в нужную роль, а не выдавать `cluster-admin`.

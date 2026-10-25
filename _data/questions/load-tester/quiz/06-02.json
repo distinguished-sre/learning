@@ -1037,7 +1037,7 @@
    "skill": "прочитать junit.xml",
    "kind": "чтение",
    "type": "multiple",
-   "text": "Ты открыл начало отчёта `junit.xml`. Что из него следует?",
+   "text": "Ты открыл начало отчёта `junit.xml`. Что из этого следует из него? Выбери все подходящие.",
    "code": "<testsuite name=\"pytest\" errors=\"1\" failures=\"1\" skipped=\"1\" tests=\"14\" time=\"2.841\">",
    "options": [
     {

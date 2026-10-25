@@ -10,6 +10,20 @@ time: "3.5 ч"
 
 В Compose ты говорил: «запусти этот контейнер». В Kubernetes ты говоришь: «хочу три копии приложения, всегда», и кластер сам следит, чтобы так и было. **Копия** (реплика, replica) - это один из одинаковых запущенных экземпляров приложения: три копии значит три одинаковых контейнера, и если один упадёт, остальные продолжат отвечать. **Под** (Pod) - обёртка, внутри которой в кластере запускается контейнер (подробно разберём в теории). Упал контейнер, умер узел (машина кластера, [урок 5.1](01-why-k8s-cluster.md)), кто-то случайно удалил под: копия вернётся без твоего участия. На работе с этого начинается любой деплой (выкатку новой версии приложения): манифест (manifest, описание объекта в YAML), `kubectl apply` и разбор статусов вроде `ImagePullBackOff` (кластер не может скачать образ, например, из-за опечатки в имени) и `CrashLoopBackOff` (контейнер запускается и сразу падает, кластер пробует снова и снова), которые видит каждый, кто хоть раз выкатывал сервис. `kubectl apply` - команда, которая отдаёт кластеру файл с описанием: «вот как должно быть». Подробно разберём в теории.
 
+```text
+$ kubectl delete pod notes-6d8f7c9b5-4xk2p -n notes
+pod "notes-6d8f7c9b5-4xk2p" deleted
+
+$ kubectl get pods -n notes
+NAME                     READY   STATUS              RESTARTS   AGE
+notes-6d8f7c9b5-4xk2p    1/1     Terminating         0          6m
+notes-6d8f7c9b5-9tq8m    1/1     Running             0          6m
+notes-6d8f7c9b5-m2r7v    1/1     Running             0          6m
+notes-6d8f7c9b5-x7h5c    0/1     ContainerCreating   0          2s
+```
+
+Я удалил один под, а Deployment уже создал замену `x7h5c`: желаемых копий три, и кластер доводит их число до трёх. Смотри на колонку `AGE`: у новой копии две секунды, у остальных шесть минут.
+
 Шаг проекта: в кластере kind появляется Deployment (объект, который держит нужное число копий и умеет обновлять версию без простоя) `notes` в namespace `notes`: 3 реплики образа `notes:0.4.0`, данные в `emptyDir` (временная пустая папка, которая живёт ровно столько, сколько жив под; после удаления пода заметки пропадают, это осознанный долг до урока 5.5), файл `k8s/base/10-deployment.yaml`.
 
 ## Что нужно знать
@@ -174,7 +188,7 @@ flowchart TD
 
 ReplicaSet хранит три вещи: сколько нужно копий (`replicas`), по какому признаку узнавать «свои» поды (**селектор**, selector: условие по меткам) и **шаблон пода** (template): как выглядит новая копия. Работает как цикл согласования из [урока 5.1](01-why-k8s-cluster.md): посчитал поды с подходящими метками, сравнил с `replicas`, добавил или убрал разницу. Каждому созданному поду он записывает себя в поле `ownerReferences` («мой владелец»). Оно нужно для порядка: при удалении владельца кластер убирает и то, чем он владел.
 
-`replicas: 3`, селектор `app.kubernetes.io/name=notes`.
+Отдельный ReplicaSet (без Deployment): `replicas: 3`, селектор `app.kubernetes.io/name=notes`.
 
 | Событие | Подходящих подов | Действие ReplicaSet |
 |---|---|---|
@@ -192,12 +206,12 @@ ReplicaSet хранит три вещи: сколько нужно копий (`
 
 Осторожно: не думай, что ReplicaSet создают руками. Почти никогда: его создаёт Deployment. Ещё путают: ReplicaSet следит за числом подов, но **не умеет обновлять** их образ. Для обновления нужен Deployment.
 
-> **Проверь понимание:** `replicas: 3`, а у тебя пять подов с меткой `app.kubernetes.io/name=notes`: три от Deployment и два запущены руками. Что сделает ReplicaSet?
+> **Проверь понимание:** у отдельного ReplicaSet (без Deployment) `replicas: 3` и селектор `app.kubernetes.io/name=notes`, а подходящих подов пять: три его и два запущены руками. Что он сделает?
 
 <details markdown="1">
 <summary>Ответ</summary>
 
-Удалит два лишних. Он считает все поды, подходящие под селектор, и не различает «свои» и «чужие» по происхождению. Поэтому метки нельзя раздавать случайным подам.
+Удалит два лишних. Он считает все поды, подходящие под селектор, и не различает «свои» и «чужие» по происхождению. Поэтому метки нельзя раздавать случайным подам. Если ReplicaSet создал Deployment, в его селекторе есть ещё `pod-template-hash`; у ручных подов этой метки нет, и ReplicaSet их не тронет.
 
 </details>
 
@@ -311,7 +325,7 @@ spec:
 <details markdown="1">
 <summary>Ответ</summary>
 
-Ошибку валидации: селектор не совпадает с метками шаблона (`selector does not match template labels`). API не принимает такой Deployment, потому что созданные им поды не подходили бы под его же селектор.
+Ошибку валидации: селектор не совпадает с метками шаблона (``` `selector` does not match template `labels` ```). API не принимает такой Deployment, потому что созданные им поды не подходили бы под его же селектор.
 
 </details>
 
@@ -514,18 +528,19 @@ flowchart TD
 
 Важно, что исполнители не разговаривают друг с другом напрямую. Каждый смотрит в API-сервер, находит «свою» работу и записывает результат обратно. Поэтому если один компонент на время остановился, остальные не ломаются: работа ждёт в API-сервере, пока исполнитель вернётся.
 
-Хочешь увидеть эту цепочку своими глазами: после `apply` выполни `kubectl -n notes get events --sort-by=.lastTimestamp`. Ты увидишь события примерно такого вида (возраст и хэши у тебя будут другие):
+Хочешь увидеть эту цепочку своими глазами: после `apply` выполни `kubectl -n notes get events --sort-by=.lastTimestamp -o wide`. Ты увидишь события примерно такого вида (колонки сокращены до LAST SEEN, TYPE, REASON, OBJECT, SOURCE, MESSAGE; возраст и хэши у тебя будут другие):
 
 ```text
-Normal  ScalingReplicaSet  deployment-controller  Scaled up replica set notes-6d8c9b7f5 from 0 to 3
-Normal  SuccessfulCreate   replicaset-controller  Created pod: notes-6d8c9b7f5-x2k7p
-Normal  Scheduled          default-scheduler      Successfully assigned notes/notes-6d8c9b7f5-x2k7p to notes-worker
-Normal  Pulled             kubelet                Container image "..." already present on machine
-Normal  Created            kubelet                Created container notes
-Normal  Started            kubelet                Started container notes
+LAST SEEN  TYPE    REASON              OBJECT                        SOURCE                 MESSAGE
+20s        Normal  ScalingReplicaSet   deployment/notes              deployment-controller  Scaled up replica set notes-6d8c9b7f5 from 0 to 3
+20s        Normal  SuccessfulCreate    replicaset/notes-6d8c9b7f5    replicaset-controller  Created pod: notes-6d8c9b7f5-x2k7p
+19s        Normal  Scheduled           pod/notes-6d8c9b7f5-x2k7p     default-scheduler      Successfully assigned notes/notes-6d8c9b7f5-x2k7p to notes-worker
+18s        Normal  Pulled              pod/notes-6d8c9b7f5-x2k7p     kubelet                Container image "..." already present on machine
+18s        Normal  Created             pod/notes-6d8c9b7f5-x2k7p     kubelet                Created container notes
+18s        Normal  Started             pod/notes-6d8c9b7f5-x2k7p     kubelet                Started container notes
 ```
 
-Колонка `From` называет исполнителя. Каждая строка соответствует шагу цепочки: `deployment-controller` это шаг 3, `replicaset-controller` шаг 4, `default-scheduler` шаг 5, `kubelet` шаги 6 и 7. Если последней строки нет, а под в `ContainerCreating`, беда на узле (образ, том). Если нет строки `Scheduled`, под висит в `Pending`, и виноват планировщик (мало ресурсов на узлах).
+Колонка `SOURCE` (видна с `-o wide`; в `describe` она называется `From`) называет исполнителя. Каждая строка соответствует шагу цепочки: `deployment-controller` это шаг 3, `replicaset-controller` шаг 4, `default-scheduler` шаг 5, `kubelet` шаги 6 и 7. Если последней строки нет, а под в `ContainerCreating`, беда на узле (образ, том). Если нет строки `Scheduled`, под висит в `Pending`, и виноват планировщик (мало ресурсов на узлах).
 
 > **Прикинь сам:** `apply` ответил `created` за долю секунды, а под запускается минуту. Почему так?
 {: .predict}
@@ -543,7 +558,7 @@ Normal  Started            kubelet                Started container notes
 
 </details>
 
-> **Главное:** цепочка идёт через API-сервер: каждый исполнитель сам видит свою работу, а по колонке `From` в событиях видно, на каком шаге остановка.
+> **Главное:** цепочка идёт через API-сервер: каждый исполнитель сам видит свою работу, а по колонке `SOURCE` в событиях видно, на каком шаге остановка.
 {: .key}
 
 Манифест, который мы применяем, это YAML, а в нём смысл задают пробелы.
@@ -719,9 +734,9 @@ pod/notes-6d8c9b7f5-x2k7p   1/1     Running   0          12s   10.244.1.3   note
 
 **Типичные ошибки:**
 
-- `error: the namespace from the provided object does not match the namespace "default"`: неверный флаг `-n` или контекст. Убери `-n` (namespace уже в манифесте) или поправь значение.
+- `error: the namespace from the provided object "notes" does not match the namespace "default". You must pass '--namespace=notes' to perform this operation.`: указан флаг `-n` с другим namespace. Убери `-n` (namespace уже в манифесте) или напиши `-n notes`.
 - `Error from server (NotFound): namespaces "notes" not found`: не создан namespace из урока 5.1. Выполни `kubectl apply -f k8s/base/00-namespace.yaml`.
-- `error validating data: ValidationError(Deployment.spec): missing required field "selector"`: забыт селектор или сломаны отступы в YAML. Проверь, что `selector` и `template` на одном уровне под `spec`.
+- `The Deployment "notes" is invalid: spec.selector: Required value`: забыт селектор или сломаны отступы в YAML. Проверь, что `selector` и `template` на одном уровне под `spec`.
 - Под в `ErrImagePull` и `ImagePullBackOff` сразу после apply: в манифесте остался `<github-user>` или пакет на ghcr.io приватный. Проверь `grep image k8s/base/10-deployment.yaml` и видимость пакета в настройках GitHub.
 
 ### Задание 2. Заглянуть в под: логи, exec, port-forward
@@ -1050,7 +1065,7 @@ kubectl -n notes create secret docker-registry ghcr-pull \
 ```
 {: .wrap}
 
-**Проверь ответ:** сверь с таблицей статусов из теории и колонкой `From` в событиях. Типичная ошибка: нейросеть советует «пересоздать кластер» или путает `ImagePullBackOff` (образ не скачан) с `CrashLoopBackOff` (процесс падает).
+**Проверь ответ:** сверь с таблицей статусов из теории и колонкой `SOURCE` (в `describe` это `From`) в событиях. Типичная ошибка: нейросеть советует «пересоздать кластер» или путает `ImagePullBackOff` (образ не скачан) с `CrashLoopBackOff` (процесс падает).
 
 **Задача:** найти ошибку в манифесте Deployment.
 
@@ -1119,7 +1134,7 @@ kubectl -n notes create secret docker-registry ghcr-pull \
 - Команда `{ wc -l < файл; } 2>/dev/null || echo 0` проверена в контейнере `alpine:3.22`.
 - kind: v0.33.0
 - kubectl: 1.37.1
-- Kubernetes (образ узла `kindest/node` из 5.1): 1.37.x
+- Kubernetes (образ узла `kindest/node` из 5.1): 1.36.4
 - Образ приложения: `ghcr.io/<github-user>/notes:0.4.0` (app v4)
 - Python в образе: 3.13 (`python:3.13-slim`)
 - busybox: 1.37 (в примере пода с двумя контейнерами, не применялся)

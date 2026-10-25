@@ -10,6 +10,17 @@ time: "3 ч"
 
 В [уроке 5.6](../05-kubernetes/06-config-secrets.md) пароль базы жил в Kubernetes Secret, созданном командой, а значения в Secret хранятся в base64, то есть почти открытым текстом (base64 это способ записи, а не шифр). Стоит положить такой манифест в git, и пароль утёк навсегда ([урок 9.1](01-secrets-problem-vault.md)). В Vault пароль уже лежит, но приложение в кластере ходить в Vault не умеет: ему нужен обычный Secret.
 
+```text
+$ kubectl get externalsecret,secret -n notes
+NAME                                  STORE        REFRESH   STATUS         READY
+externalsecret.external-secrets.io/notes-db   vault-backend   1h    SecretSynced   True
+
+NAME               TYPE     DATA   AGE
+secret/notes-db    Opaque   1      3m
+```
+
+На выводе видно две стороны одной связки: `ExternalSecret` со статусом `SecretSynced` описывает, что взять из Vault, а рядом лежит обычный `Secret notes-db`, который он создал сам. Приложение видит только второе.
+
 На работе эту связку делает External Secrets Operator (ESO): программа внутри кластера, у которой есть доступ к Vault. Она сама создаёт и обновляет Secret из внешнего хранилища. Оператор (operator) это программа, которая постоянно следит за описаниями в кластере и приводит реальность в соответствие с ними, как курьер, который каждый час сверяет заявку с содержимым склада. Без такой программы тебе пришлось бы копировать пароль из Vault в кластер руками после каждой смены. Подробно разберём в теории. В git остаётся только описание «откуда взять», а не сам пароль. Это описание оформляется как отдельный объект `ExternalSecret`: заявка вида «возьми по этому адресу из Vault такие-то поля и сложи в Secret с таким-то именем». Как бумажка «заберите посылку из ячейки 42», на которой нет самой посылки. Ту же схему используют с AWS Secrets Manager, Yandex Lockbox и другими хранилищами.
 
 Шаг проекта: ESO ставится в кластер, в Helm-чарте «Заметок» появляется `ExternalSecret notes-db` (chart 0.4.0), ручной Secret удаляется, пароль базы в git и в манифестах платформы больше не хранится.
@@ -171,12 +182,12 @@ spec:
 > **Главное:** `ClusterSecretStore` отвечает «где», `ExternalSecret` отвечает «что», и в `key` пишут путь без `secret/` и `data/`.
 {: .key}
 
-> **Проверь понимание:** в поле `key` ты написал `secret/data/notes/db`. Что произойдёт?
+> **Проверь понимание:** в поле `key` ты написал `data/notes/db`. Что произойдёт?
 
 <details markdown="1">
 <summary>Ответ</summary>
 
-ESO сам добавит `secret/data/` в начале пути, получится `secret/data/secret/data/notes/db`, такого секрета нет: ошибка `secret not found` (Code: 404). В `key` пишут только `notes/db`.
+ESO сам добавит `secret/data/` в начале пути, получится `secret/data/data/notes/db`, такого секрета нет: ошибка `Secret does not exist` (см. «Типичные ошибки»). В `key` пишут только путь внутри движка: `notes/db`. Если написать `secret/notes/db`, ESO префикс `secret/` срежет и всё заработает, но в курсе везде пишем короткий путь одним способом: так нет путаницы с папкой, которая сама называется `secret`.
 
 </details>
 
@@ -314,7 +325,7 @@ Vault получит лавину запросов, аудит-журнал бы
 
 **Владение.** Поле `creationPolicy: Owner` означает, что ESO **владеет** созданным Secret: создаёт, обновляет и удаляет его вместе с `ExternalSecret`. Отсюда две ловушки:
 
-1. Если Secret с таким именем уже создан вручную, ESO с `Owner` не может его присвоить и будет сообщать об ошибке. Ручной Secret надо удалить до применения `ExternalSecret`.
+1. Если Secret с таким именем уже создан вручную, ESO с `Owner` присвоит его себе и перезапишет данными из Vault (лишние ключи пропадут). Ошибка бывает, только если Secret уже принадлежит другому `ExternalSecret`. Ручной Secret лучше удалить до применения `ExternalSecret`, чтобы не гадать, чьи значения в нём лежат.
 2. Если удалить `ExternalSecret`, исчезнет и Secret, а поды, которые его используют, при следующем создании не запустятся.
 
 **Ещё ловушка: две пары скобок.** Helm ([урок 5.9](../05-kubernetes/09-helm.md)) тоже использует двойные фигурные скобки для своих шаблонов. Если написать шаблон ESO внутри шаблона Helm как есть, Helm попытается сам выполнить его и упадёт (нет поля `.username` в его данных). Поэтому внутренние скобки Helm-у передают как строку: {% raw %}`{{ "{{ .username }}" }}`{% endraw %}. Helm выводит строку, а ESO получает готовый шаблон. Как именно, увидишь в задании 4.
@@ -600,11 +611,11 @@ NAME                                                READY   STATUS    RESTARTS  
 external-secrets-6c8f9d7b5-kq2xw                    1/1     Running   0          58s
 external-secrets-cert-controller-7d9c4f6b8-p4tzn    1/1     Running   0          58s
 external-secrets-webhook-5b7f8c9d64-m9vh2           1/1     Running   0          58s
-acraccesstokens.generators.external-secrets.io
 clusterexternalsecrets.external-secrets.io
-clustergenerators.generators.external-secrets.io
+clusterpushsecrets.external-secrets.io
 clustersecretstores.external-secrets.io
 externalsecrets.external-secrets.io
+pushsecrets.external-secrets.io
 ```
 
 **Как читать вывод:** три пода `1/1 Running`: контроллер (делает работу), `cert-controller` (выпускает сертификат для вебхука) и `webhook` (проверяет ресурсы при создании, `ExternalSecret` с ошибкой в описании он отклонит сразу). Строки `имя.группа` это CRD: часть до первой точки это вид ресурса, остальное группа.
@@ -614,7 +625,7 @@ externalsecrets.external-secrets.io
 - Почему CRD ставятся вместе с оператором, а не вместе с приложением?
 
 **Типичные ошибки:**
-- `Error: INSTALLATION FAILED: cannot re-use a name that is still in use`: релиз `external-secrets` уже есть, посмотри `helm list -A` и используй `helm upgrade`.
+- `Error: INSTALLATION FAILED: cannot reuse a name that is still in use`: релиз `external-secrets` уже есть, посмотри `helm list -A` и используй `helm upgrade`.
 - `Internal error occurred: failed calling webhook "validate.externalsecret.external-secrets.io"`: под вебхука ещё не готов, подожди `Running 1/1` и повтори `kubectl apply`.
 - `Error: no cached repo found`: не выполнен `helm repo update`.
 
@@ -793,13 +804,13 @@ kubectl -n vault exec vault-0 -- env VAULT_TOKEN="$ROOT_TOKEN" \
 **Что должно получиться:**
 
 ```text
-NAME   STORETYPE            STORE           REFRESH INTERVAL   STATUS         READY
-demo   ClusterSecretStore   vault-backend   1m                 SecretSynced   True
+NAME   STORETYPE            STORE           REFRESH INTERVAL   STATUS         READY   LAST SYNC
+demo   ClusterSecretStore   vault-backend   1m                 SecretSynced   True    8s
 first
 second
 ```
 
-**Как читать вывод:** `SecretSynced True` значит, что ESO прочитал Vault и создал Secret. `first` это значение сразу после создания, `second` то, что появилось после минуты ожидания: ротация дошла до Secret без твоих действий. После шага 4 Secret `demo` тоже исчезает: им владел ESO (`Owner`).
+**Как читать вывод:** `SecretSynced True` значит, что ESO прочитал Vault и создал Secret. `LAST SYNC` это сколько прошло с последней успешной синхронизации; значение растёт до следующего `refreshInterval`. `first` это значение сразу после создания, `second` то, что появилось после минуты ожидания: ротация дошла до Secret без твоих действий. После шага 4 Secret `demo` тоже исчезает: им владел ESO (`Owner`).
 
 **Объясни себе:**
 - Как ускорить синхронизацию, не дожидаясь интервала? (Подсказка: `kubectl annotate externalsecret demo force-sync=$(date +%s) --overwrite`: `$(date +%s)` даёт число секунд, каждый раз новое, и новое значение аннотации заставляет ESO перечитать Vault.)
@@ -807,7 +818,7 @@ second
 
 **Типичные ошибки:**
 - `Error from server (NotFound): secrets "demo" not found` сразу после `apply`: синхронизация ещё не прошла, подожди 5-10 секунд.
-- `Code: 404. Errors: * secret not found`: в Vault нет пути `secret/notes/demo`, проверь шаг 1 (в `key` пишется `notes/demo` без `secret/` и без `data/`).
+- `error processing spec.dataFrom[0].extract, err: Secret does not exist` в событиях `kubectl describe externalsecret demo` (статус `SecretSyncedError`): в Vault нет пути `secret/notes/demo`, проверь шаг 1 (в `key` пишется `notes/demo` без `secret/` и без `data/`).
 
 > Шаблон `target.template` легко написать неправильно. Попроси нейросеть объяснить каждую строку шаблона и проверь её ответ командой `kubectl get secret notes-db -o jsonpath=...` с `base64 -d`.
 {: .ai}
@@ -821,7 +832,7 @@ second
 <details markdown="1">
 <summary>Ответ</summary>
 
-ESO не сможет стать владельцем чужого Secret: статус `SecretSyncedError`, Secret не перезаписан. Поэтому ручной Secret сначала удаляют. Про PostgreSQL: пароль пользователя `notes` записан в самой БД при инициализации тома ([5.5](../05-kubernetes/05-storage-statefulset-postgres.md)). Изменение Secret его не меняет, значит, пароль в БД надо привести в соответствие с Vault, иначе приложение получит `password authentication failed`.
+Скорее всего ESO ничего не скажет об ошибке: Secret без другого владельца он присвоит себе и целиком перезапишет значениями из Vault (`SecretSynced True`). Ошибка `secret is owned by another ExternalSecret` (причина `SecretOwnedByOther`) будет, только если Secret уже принадлежит другому `ExternalSecret`. Ручной Secret всё равно удаляют: так не остаётся сомнений, откуда значения. Про PostgreSQL: пароль пользователя `notes` записан в самой БД при инициализации тома ([5.5](../05-kubernetes/05-storage-statefulset-postgres.md)). Изменение Secret его не меняет, значит, пароль в БД надо привести в соответствие с Vault, иначе приложение получит `password authentication failed`.
 
 </details>
 
@@ -941,8 +952,8 @@ git commit -m "9.2: пароль БД из Vault через External Secrets Ope
 {% endraw %}
 
 ```text
-NAME       STORETYPE            STORE           REFRESH INTERVAL   STATUS         READY
-notes-db   ClusterSecretStore   vault-backend   1h                 SecretSynced   True
+NAME       STORETYPE            STORE           REFRESH INTERVAL   STATUS         READY   LAST SYNC
+notes-db   ClusterSecretStore   vault-backend   1h                 SecretSynced   True    5s
 ```
 
 ```text
@@ -959,7 +970,7 @@ Secret-манифестов с паролем нет
 - Что мешает удалить `.env` из compose совсем? Почему для платформы долг закрыт, а для локальной отладки остаётся пометка?
 
 **Типичные ошибки:**
-- `ExternalSecret notes-db` в `SecretSyncedError`, в `kubectl describe externalsecret notes-db` жалоба, что Secret уже существует и ему не принадлежит (при `creationPolicy: Owner` ESO чужой Secret не берёт): ручной Secret не удалён или пересоздан, повтори `kubectl -n notes delete secret notes-db`. Ошибка Helm `invalid ownership metadata` здесь не при чём: она бывает, когда в манифестах релиза лежит объект с чужим владельцем.
+- После `helm upgrade` приложение получило не тот пароль: ручной Secret не был удалён, ESO перезаписал его значениями из Vault, а пароль в БД не приведён в соответствие (шаг 4). Сверь значение и повтори шаг 4. Если в `kubectl describe externalsecret notes-db` видно `secret is owned by another ExternalSecret`, в тот же Secret пишет другой `ExternalSecret`: оставь один. Ошибка Helm `invalid ownership metadata` здесь не при чём: она бывает, когда в манифестах релиза лежит объект с чужим владельцем.
 - `FATAL: password authentication failed for user "notes"` в логах приложения: пропущен шаг 4, пароль в БД не совпал с Vault.
 - `could not parse ... invalid port number in URL` или `invalid URL`: в пароле есть `/` или `+`, а шаблон без `| urlquery`.
 - `error calling urlquery`/`function "urlqery" not defined`: опечатка в имени функции, ошибка видна в `kubectl describe externalsecret notes-db`.
@@ -1003,7 +1014,7 @@ kubectl -n external-secrets logs deploy/external-secrets --tail=20
 kubectl -n vault get pods,endpoints vault
 ```
 
-Сообщение из `describe` содержит текст ответа Vault, и по нему сразу видно слой: 400 (роль или привязка), 403 (политика), `connection refused` или `no such host` (сеть и сам Vault), `Vault is sealed` (печать).
+Сообщение из `describe` содержит текст ответа Vault, и по нему сразу видно слой: `400 invalid role name` (роли нет), 403 на `auth/kubernetes/login` (имя или namespace SA не из роли, либо плохой JWT), 403 на `secret/data/...` (политика), `connection refused` или `no such host` (сеть и сам Vault), `Vault is sealed` (печать).
 
 ### Исправление
 
@@ -1090,7 +1101,7 @@ kubectl -n vault get pods,endpoints vault
 ## Проверено на версиях
 
 - External Secrets Operator: v2.11.0 (Helm-чарт 2.11.0), Vault v2.1.1 (чарт HashiCorp, standalone), PostgreSQL 18: версии из курса, кластер в этой редакции не запускался, вывод `kubectl` и `vault` сверен по документации и предыдущей редакции.
-- Helm: v4.3.0, kind: v0.33.0, kubectl: 1.37.1, Kubernetes: 1.37.1: версии стенда курса, не перепроверялись.
+- Helm: v4.3.0, kind: v0.33.0, kubectl: 1.37.1, Kubernetes: 1.36.4: версии стенда курса, не перепроверялись.
 - Шаблон `externalsecret.yaml`: разбор экранирования скобок сделан по правилам Helm, `helm template` не прогонялся.
 - `break.sh`: проверен `shellcheck` и чтением, на кластере не запускался.
 

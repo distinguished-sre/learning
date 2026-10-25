@@ -207,7 +207,7 @@
    "skill": "что происходит при OOM-убийстве",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про убийство процесса OOM-killer'ом при упоре в `mem_limit`?",
+   "text": "Какие утверждения про убийство процесса OOM-killer'ом при упоре в `mem_limit` верны?",
    "options": [
     {
      "id": "a",
@@ -241,7 +241,7 @@
    "kind": "чтение",
    "type": "single",
    "text": "После долгого soak ты смотришь события контейнера. Что они показывают?",
-   "code": "2026-10-03T10:41:07.114Z container oom 3f9a0c1d2b44 (name=shop-shop-1)\n2026-10-03T10:41:07.131Z container die 3f9a0c1d2b44 (exitCode=137, name=shop-shop-1)",
+   "code": "2026-10-03T10:41:07.114Z container oom 3f9a0c1d2b44 (image=shop-shop, name=shop-shop-1)\n2026-10-03T10:41:07.131Z container die 3f9a0c1d2b44 (exitCode=137, image=shop-shop, name=shop-shop-1)",
    "options": [
     {
      "id": "a",
@@ -607,7 +607,7 @@
    "skill": "что ещё накапливается в soak",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что из этого в soak считается признаком накопления ресурса (кроме памяти)?",
+   "text": "Что из этого в soak считается признаком накопления ресурса (кроме памяти)? Выбери все подходящие.",
    "options": [
     {
      "id": "a",

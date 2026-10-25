@@ -10,6 +10,20 @@ time: "3 ч"
 
 В Docker Compose ты писал `prometheus.yml` руками и перечислял цели: «ходи по адресу `notes:8080` и забирай метрики». В Kubernetes так не выйдет. Поды (pod, минимальная единица запуска, [урок 5.2](../05-kubernetes/02-pods-deployments.md)) приходят и уходят, у каждого нового пода новый IP-адрес, и статичный список адресов устаревает за час.
 
+```text
+$ kubectl get pods -n notes -o wide          (10:00)
+NAME                     READY   STATUS    IP
+notes-7c9d8b6f5-4xk2p    1/1     Running   10.244.0.12
+notes-7c9d8b6f5-m8z7q    1/1     Running   10.244.0.13
+
+$ kubectl rollout restart deploy/notes -n notes ; kubectl get pods -n notes -o wide   (10:05)
+NAME                     READY   STATUS    IP
+notes-5b8f4d7c6-h2v9s    1/1     Running   10.244.0.21
+notes-5b8f4d7c6-t6w4n    1/1     Running   10.244.0.22
+```
+
+После обычного перезапуска у обоих подов новые адреса. Список `10.244.0.12` и `10.244.0.13` в `prometheus.yml` уже указывает в пустоту, поэтому Prometheus в кластере должен сам спрашивать у Kubernetes, кто сейчас жив.
+
 Кроме того, сам кластер требует наблюдения: под падает и перезапускается по кругу, на узле кончается память, Deployment застрял и не может поднять нужное число копий. На работе это первый пункт после «поставили кластер»: ставят готовый набор `kube-prometheus-stack`, и через полчаса есть дашборды узлов и подов, а команды подключают свои сервисы одним небольшим манифестом (манифест это YAML-файл с описанием объекта Kubernetes). `kube-prometheus-stack` это «мониторинг в коробке»: один Helm-пакет ([урок 5.9](../05-kubernetes/09-helm.md)), внутри которого Prometheus, Grafana, Alertmanager и датчики для кластера уже подружены между собой. Как купить готовую сигнализацию с монтажом вместо того, чтобы собирать её из отдельных датчиков. Без него ты неделю соединял бы всё это сам.
 
 Шаг проекта: в кластер `kind-notes` ставится стек мониторинга (namespace `monitoring`), чарт `helm/notes` получает `ServiceMonitor` и `PrometheusRule` (chart 0.3.0, appVersion 0.7.0), и Prometheus сам находит «Заметки». `ServiceMonitor` это небольшой файл-заявка «собирай метрики вот с этого сервиса», как запись в график обхода. `PrometheusRule` это файл с правилами алертов, например «если ошибок больше 5%, подними тревогу». Оба разберём подробно ниже. Namespace `monitoring` это отдельная «комната» внутри кластера ([урок 5.2](../05-kubernetes/02-pods-deployments.md)): мониторинг живёт в своей, чтобы не смешиваться с приложениями.
@@ -230,7 +244,7 @@ flowchart TD
 <details markdown="1">
 <summary>Ответ</summary>
 
-Алерт строится на метриках kube-state-metrics (`kube_pod_container_status_restarts_total`), они живут независимо от `/metrics` приложения. Приложение в CrashLoop не отвечает, поэтому его собственные метрики пропали, а состояние пода kube-state-metrics видит по-прежнему.
+Алерт строится на метрике kube-state-metrics `kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}`, она живёт независимо от `/metrics` приложения. Приложение в CrashLoop не отвечает, поэтому его собственные метрики пропали, а состояние пода kube-state-metrics видит по-прежнему.
 
 </details>
 
@@ -288,18 +302,18 @@ Prometheus хранит историю на диске и должен полу�
 
 Не у каждого пода есть Service. Если под запускается Job-ом (одноразовая задача, [урок 5.8](../05-kubernetes/08-jobs-cronjob-daemonset.md)) или это вспомогательный контейнер (сайдкар), которому Service не положен, ServiceMonitor его не найдёт.
 
-ServiceMonitor ищет жильца через вывеску подъезда («Подъезд 3, квартиры 10-20»), а PodMonitor стучит в дверь конкретной квартиры. Оговорка: вывеска (Service) удобнее, она сама следит, кто в подъезде живёт и готов ли.
+ServiceMonitor ищет жильца через вывеску подъезда («Подъезд 3, квартиры 10-20»), а PodMonitor стучит в дверь конкретной квартиры. Оговорка: вывеска (Service) удобнее, она сама следит, кто в подъезде живёт.
 
-ServiceMonitor берёт список адресов из Endpoints Service, а в Endpoints попадают только готовые поды (прошедшие readiness-пробу, [урок 5.7](../05-kubernetes/07-probes-resources-rollouts.md)). PodMonitor выбирает поды по ярлыкам напрямую, порт указывается в `podMetricsEndpoints`. Для обычных приложений с Service выбирай ServiceMonitor, для остального PodMonitor.
+ServiceMonitor берёт список адресов из Endpoints Service: это адреса подов, подошедших под селектор Service (неготовые поды, не прошедшие readiness-пробу из [урока 5.7](../05-kubernetes/07-probes-resources-rollouts.md), лежат там отдельно, в `notReadyAddresses`; `kubectl get endpoints` показывает только готовые). PodMonitor выбирает поды по ярлыкам напрямую, порт указывается в `podMetricsEndpoints`. Для обычных приложений с Service выбирай ServiceMonitor, для остального PodMonitor.
 
-Разберём на примере. Под `notes` не прошёл readiness: Service его не включает. ServiceMonitor его тоже не видит, и цель пропадает. PodMonitor нашёл бы его и показал `up 1`, если `/metrics` доступен. Так что при диагностике «цель пропала» смотри и `kubectl get endpoints notes`.
+Разберём на примере. Селектор Service не совпал с ярлыками пода `notes`: в Endpoints нет адресов, ServiceMonitor нечего собирать, и цели в /targets нет. PodMonitor ищет по ярлыкам самого пода и такую цель нашёл бы и показал `up 1`, если `/metrics` доступен. Так что при диагностике «цель пропала» смотри и `kubectl get endpoints notes`.
 
 > **Прикинь сам:** у тебя CronJob, который каждую ночь запускает под на 30 секунд и Service к нему нет. Что выберешь для метрик?
 {: .predict}
 
 Скорее всего, ни то и ни другое: Prometheus собирает раз в 15-60 секунд и короткий Job может не успеть. Для коротких задач используют Pushgateway (Job сам отправляет итог) или считают результат в метриках, которые пишет долгоживущий сервис. PodMonitor подойдёт для долгоживущих подов без Service.
 
-Осторожно, тут часто путают. Что PodMonitor «лучше». У него нет защиты «не собирать с неготовых подов», а вывески нет, значит и привязки к сервису.
+Осторожно, тут часто путают. Что PodMonitor «лучше». Prometheus собирает метрики и с неготовых подов (у такой цели служебная метка `__meta_kubernetes_endpoint_ready="false"`), поэтому ни ServiceMonitor, ни PodMonitor от этого не защищают; вывески нет, значит и привязки к сервису.
 
 > **Главное:** ServiceMonitor ищет через Service, PodMonitor прямо по подам, и нужный выбирают по наличию Service.
 {: .key}
@@ -580,9 +594,13 @@ prometheus-kps-prometheus-0              2/2     Running   0          2m
 alertmanagerconfigs.monitoring.coreos.com   2026-09-29T07:20:11Z
 alertmanagers.monitoring.coreos.com         2026-09-29T07:20:11Z
 podmonitors.monitoring.coreos.com           2026-09-29T07:20:11Z
+probes.monitoring.coreos.com                2026-09-29T07:20:11Z
+prometheusagents.monitoring.coreos.com      2026-09-29T07:20:11Z
 prometheuses.monitoring.coreos.com          2026-09-29T07:20:11Z
 prometheusrules.monitoring.coreos.com       2026-09-29T07:20:11Z
+scrapeconfigs.monitoring.coreos.com         2026-09-29T07:20:11Z
 servicemonitors.monitoring.coreos.com       2026-09-29T07:20:11Z
+thanosrulers.monitoring.coreos.com          2026-09-29T07:20:11Z
 ```
 
 **Как читать вывод:** в колонке `READY` `2/2` значит «два контейнера из двух готовы» (в поде Prometheus рядом работает контейнер, перечитывающий конфиг). `STATUS Running` и `RESTARTS 0` это норма. Имена подов с хвостом (`x2k4p`) случайные, у тебя будут другие; у StatefulSet имена с номером (`-0`). В списке CRD дата это момент регистрации.
@@ -595,7 +613,7 @@ servicemonitors.monitoring.coreos.com       2026-09-29T07:20:11Z
 
 **Типичные ошибки.**
 - `Error: INSTALLATION FAILED: context deadline exceeded`: не хватило времени или памяти, поды Pending. Смотри `kubectl get pods -n monitoring` и `kubectl describe pod`, увеличь Docker-ресурсы или включи режим 8 ГБ.
-- `Error: INSTALLATION FAILED: cannot re-use a name that is still in use`: релиз `kps` уже есть. Используй `helm upgrade --install` или `helm uninstall kps -n monitoring`.
+- `Error: INSTALLATION FAILED: cannot reuse a name that is still in use`: релиз `kps` уже есть. Используй `helm upgrade --install` или `helm uninstall kps -n monitoring`.
 - Цели etcd и scheduler в состоянии DOWN с `connection refused`: не отключены в values, поправь и сделай `helm upgrade`.
 
 ### Задание 2. Подключаем «Заметки» через ServiceMonitor
@@ -781,9 +799,9 @@ notes   5s
 - Чем этот алерт отличается от `KubePodCrashLooping` из стека?
 
 **Типичные ошибки.**
-- `Error: UPGRADE FAILED: YAML parse error ... did not find expected key`: не экранирован шаблон `$labels.instance`, Helm попытался развернуть его сам. Оборачивай Prometheus-шаблоны в строку-литерал Helm (см. пример выше).
+- `Error: UPGRADE FAILED: parse error at (notes/templates/prometheusrule.yaml:N): undefined variable "$labels"`: не экранирован шаблон `$labels.instance`, Helm попытался развернуть его сам. Оборачивай Prometheus-шаблоны в строку-литерал Helm (см. пример выше).
 - Правило создано, но в `/alerts` его нет: нет label `release: kps` на `PrometheusRule` (те же причины, что у ServiceMonitor).
-- `Error from server (BadRequest): admission webhook "prometheusrulemutate.monitoring.coreos.com" denied the request`: синтаксическая ошибка в `expr`, проверь PromQL в Graph.
+- `... admission webhook "prometheusrulevalidate.monitoring.coreos.com" denied the request: Rules are not valid`: синтаксическая ошибка в `expr`, проверь PromQL в Graph.
 
 ### Задание 4. Шаг проекта: chart 0.3.0 и выкат метрик
 

@@ -239,7 +239,7 @@
       "skill": "чтение ошибки",
       "kind": "диагностика",
       "type": "single",
-      "text": "`kubectl get externalsecrets` отвечает, что у сервера нет типа ресурса `externalsecrets` (`the server does not have a resource type`). Что это значит?",
+      "text": "`kubectl get externalsecrets` отвечает, что у сервера нет типа ресурса `externalsecrets` (`the server doesn't have a resource type \"externalsecrets\"`). Что это значит?",
       "options": [
         {
           "id": "a",
@@ -309,8 +309,8 @@
       "options": [
         {
           "id": "a",
-          "text": "`secret/notes/db`, как в команде `vault kv get`",
-          "why": "ESO знает про движок из `ClusterSecretStore`, и префикс `secret/` получится дважды."
+          "text": "`data/notes/db`, начиная с `data`, как в пути политики",
+          "why": "ESO сам добавит `secret/data/`, получится `secret/data/data/notes/db`: такого пути нет."
         },
         {
           "id": "b",
@@ -318,8 +318,8 @@
         },
         {
           "id": "c",
-          "text": "`secret/data/notes/db`, чтобы путь совпал с API",
-          "why": "ESO сам добавляет `secret/data/`, получится несуществующий путь с повтором."
+          "text": "`notes/data/db`, чтобы `data` стоял рядом с секретом",
+          "why": "`data` нужен только сразу после имени движка, и его добавляет ESO; получится `secret/data/notes/data/db`, такого пути нет."
         },
         {
           "id": "d",
@@ -330,7 +330,7 @@
       "correct": [
         "b"
       ],
-      "explain": "В `key` только путь внутри движка, без `secret/` и без `data/`.",
+      "explain": "В `key` пишут путь внутри движка: `notes/db`. ESO сам ставит перед ним имя движка и `data/`. (Лишний префикс `secret/` ESO срежет, но в курсе пишем короткую форму.)",
       "section": "Два ресурса ESO: где хранилище и что взять"
     },
     {

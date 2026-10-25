@@ -341,12 +341,12 @@
    "skill": "что такое dropped_iterations",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про метрику `dropped_iterations`?",
+   "text": "Какие утверждения про метрику `dropped_iterations` верны?",
    "options": [
     {
      "id": "a",
      "text": "В итоговой таблице она печатается всегда, даже если равна нулю",
-     "why": "k6 показывает её, только когда она не нулевая, поэтому на неё и ставят порог."
+     "why": "Без порога k6 печатает метрику, только когда она не нулевая; с порогом строка есть и при нуле. Поэтому «всегда печатается» неверно, и на неё ставят порог."
     },
     {
      "id": "b",
@@ -375,7 +375,7 @@
    "kind": "диагностика",
    "type": "single",
    "text": "В чужом сценарии k6 отказался запускаться с сообщением ниже. Что исправить?",
-   "code": "ERRO[0000] preAllocatedVUs (10) cannot be greater than maxVUs (5)",
+   "code": "ERRO[0000] There were problems with the specified script configuration:\n\t- scenario shop has configuration errors: maxVUs can't be less than preAllocatedVUs",
    "options": [
     {
      "id": "a",
@@ -739,7 +739,7 @@
    "skill": "свойства SharedArray",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про `SharedArray` из `k6/data`?",
+   "text": "Какие утверждения про `SharedArray` из `k6/data` верны?",
    "options": [
     {
      "id": "a",
@@ -771,9 +771,9 @@
    "id": "q10-02-24",
    "skill": "ошибка при чтении users.json",
    "kind": "диагностика",
-   "type": "multiple",
-   "text": "k6 запускают из другого каталога, и появляется ошибка ниже. Какие причины возможны?",
-   "code": "ERRO[0000] GoError: The moduleSpecifier \"./users.json\" couldn't be found on local disk.",
+   "type": "single",
+   "text": "k6 запускают из другого каталога, и появляется ошибка ниже. Какая причина возможна?",
+   "code": "ERRO[0000] GoError: stat /home/user/perf-lab/10-k6/users.json: no such file or directory",
    "options": [
     {
      "id": "a",
@@ -782,7 +782,8 @@
     },
     {
      "id": "b",
-     "text": "В коде остался `open('./users.json')` без `import.meta.resolve`, и путь считается не от скрипта"
+     "text": "В коде остался `open('./users.json')` без `import.meta.resolve`, и путь считается не от скрипта",
+     "why": "Относительный `open()` и без `import.meta.resolve` считается от папки скрипта, а не от каталога запуска, поэтому запуск из другого каталога сам по себе файл не теряет."
     },
     {
      "id": "c",
@@ -795,10 +796,9 @@
     }
    ],
    "correct": [
-    "b",
     "d"
    ],
-   "explain": "`import.meta.resolve('./users.json')` считает путь от файла со скриптом, и тогда k6 находит данные при запуске из любого каталога.",
+   "explain": "Ошибка значит, что файла нет по пути рядом со скриптом. `import.meta.resolve('./users.json')` явно привязывает путь к файлу модуля, и тогда запуск из любого каталога находит данные, пока файл лежит рядом с `shop.js`.",
    "section": "Данные пользователей: `SharedArray`"
   },
   {
@@ -907,7 +907,7 @@
    "skill": "лечение зелёного теста, который врёт",
    "kind": "диагностика",
    "type": "multiple",
-   "text": "Заказано 20 итераций в секунду на 30 секунд (около 600 итераций), `MAX_VUS=5`. Тест зелёный, код 0, но `iterations` около 110. Что сделать?",
+   "text": "Заказано 20 итераций в секунду на 30 секунд (около 600 итераций), `MAX_VUS=5`. Тест зелёный, код 0, но `iterations` около 110. Что из этого сделать? Выбери все подходящие.",
    "code": "iterations.........: 112   3.73/s\nhttp_req_failed....: 0.00%\n✓ 'p(95)<500' p(95)=118ms",
    "options": [
     {

@@ -10,6 +10,14 @@ time: "2.5 ч"
 
 Я твой наставник, сижу рядом. История из прошлого года. На распродаже вырос красный столбик ошибок 502: 12 в секунду. Команда полчаса смотрела на него и гадала, что сломалось. Я бы тоже гадал: метрика (число, меняющееся во времени, [урок 7.1](01-metrics-prometheus.md)) умеет отвечать «сколько» и «как быстро», а «что именно случилось» не умеет. Она нарочно хранит одни числа, иначе собирать её было бы слишком дорого.
 
+```text
+{"ts":"2026-10-25T14:02:11Z","level":"error","route":"/api/orders","status":502,"request_id":"a41f9c","trace_id":"5b0e7d2c9a1f4e68","msg":"payment timeout after 3.0s"}
+{"ts":"2026-10-25T14:02:11Z","level":"error","route":"/api/orders","status":502,"request_id":"a41fa0","trace_id":"7c2d4b81e0a35f19","msg":"payment timeout after 3.0s"}
+{"ts":"2026-10-25T14:02:12Z","level":"warning","route":"/api/orders","status":200,"request_id":"a41fa3","trace_id":"c93e1a66d5b20741","msg":"payment retry 2 of 3"}
+```
+
+В красном столбике ошибок 502 была просто цифра, а в логе у каждой ошибки есть причина: оплата не ответила за 3 секунды. Смотри на поля `route`, `status` и `msg`, а по `request_id` и `trace_id` любую строку можно найти и в других системах.
+
 Ответ лежит в **логах**: журнале, куда сервис пишет по строке на каждое событие (с логами в консоли ты уже работал в [уроке 1.2](../01-linux/02-text-logs.md)). Маршрут, пользователь, текст ошибки, время внутри: всё это есть в строке. Метрики показывают, где болит, а логи объясняют, почему.
 
 Сегодня ты научишься читать логи «Магазина» запросами, а не глазами: найдёшь ошибки за нужные две минуты, посчитаешь их по маршрутам и вытащишь один запрос по номеру. С этого начинается любой разбор.
@@ -119,7 +127,7 @@ flowchart TD
 | `trace_id` | номер трейса (32 символа), по нему лог связывается с трейсом из [урока 7.7](07-traces.md); пока пропусти |
 | `error` | причина сбоя, только у ответов 5xx |
 
-Причины в `error` не случайны. 502 `payment failed`: оплата отказала или недоступна. 504 `payment timeout`: оплата не ответила за `PAYMENT_TIMEOUT`. 503 `database pool timeout`: в пуле не нашлось свободного соединения за `DB_POOL_TIMEOUT` секунд (по умолчанию 5).
+Причины в `error` не случайны. 502 `payment failed`: оплата отказала или недоступна. 504 `payment timeout`: оплата не ответила за `PAYMENT_TIMEOUT`. 503 `couldn't get a connection after 5.00 sec` (клиент при этом получает тело `{"detail":"database pool timeout"}`): в пуле не нашлось свободного соединения за `DB_POOL_TIMEOUT` секунд (по умолчанию 5).
 
 </details>
 
@@ -281,19 +289,19 @@ LogQL (Log Query Language) намеренно похож на PromQL из [ур�
 Допустим, в метриках нет нужной метки, а ошибки надо посчитать по маршрутам. Оберни селектор в функцию по диапазону, и строки станут графиком, как метрики.
 
 ```logql
-sum(count_over_time({service="shop"} | json | status >= 500 [1m]))
+sum(count_over_time({service="shop"} | json | __error__ = "" | status >= 500 [1m]))
 ```
 
 Читаем изнутри наружу. Селектор с фильтрами выбирает строки с 5xx, `[1m]` задаёт окно в минуту, `count_over_time` считает строки в каждом окне, `sum` складывает по потокам. Получается график «ошибок за минуту». Со скоростью в секунду и по маршрутам:
 
 ```logql
-sum by (route) (rate({service="shop"} | json | status >= 500 [1m]))
+sum by (route) (rate({service="shop"} | json | __error__ = "" | status >= 500 [1m]))
 ```
 
 `rate` делит число строк на длину окна: 12 ошибок за минуту это 12 / 60 = 0,2 в секунду. `by (route)` строит по линии на маршрут. Для числовых полей есть `unwrap`: он берёт значение поля как число, и по нему считают статистику. Например, `quantile_over_time` даёт процентиль за окно, как `histogram_quantile` в [7.2](02-promql.md):
 
 ```logql
-quantile_over_time(0.95, {service="shop"} | json | route="/api/orders" | unwrap duration_ms [1m]) by (route)
+quantile_over_time(0.95, {service="shop"} | json | __error__ = "" | route="/api/orders" | unwrap duration_ms [1m]) by (route)
 ```
 
 Это p95 времени ответа заказов по логам.
@@ -372,11 +380,11 @@ curl -s 'localhost:3100/loki/api/v1/label/service/values' | jq -c .
 ```
 
 ```logql
-sum by (route) (count_over_time({service="shop"} | json [1m]))
+sum by (route) (count_over_time({service="shop"} | json | __error__ = "" [1m]))
 ```
 
 ```logql
-quantile_over_time(0.95, {service="shop"} | json | route="/api/orders" | unwrap duration_ms [1m]) by (route)
+quantile_over_time(0.95, {service="shop"} | json | __error__ = "" | route="/api/orders" | unwrap duration_ms [1m]) by (route)
 ```
 
 Во втором запросе `line_format` переписывает строку в читаемый вид; в Explore его шаблон можно писать и в обратных кавычках, как здесь.
@@ -405,7 +413,7 @@ POST /api/orders 201 71.62мс
 - `parse error ... unexpected IDENTIFIER`: забыл `|` между шагами или не закрыл кавычки в `line_format`.
 - `queries require at least one regexp or equality matcher that does not have an empty-compatible value`: селектор без непустого условия. Начинай с `{service="shop"}`.
 - Пустой результат при правильном запросе: проверь диапазон времени (он сверху справа) и что нагрузка идёт: `docker compose --profile monitoring logs --tail=3 shop`.
-- `| json` добавляет к результату ошибку `JSONParserErr`: в потоке `shop` попалась не-JSON строка (например, стартовое сообщение uvicorn). Фильтр `| __error__ = ""` уберёт такие строки.
+- `| json` на не-JSON строке (например, стартовое сообщение uvicorn) в логовом запросе оставляет строку и ставит метку `__error__="JSONParserErr"`, а в метрическом (`count_over_time`, `rate`) валит весь запрос ошибкой `pipeline error: 'JSONParserErr'`. Добавь `| __error__ = ""` сразу после `| json`.
 
 > LogQL-запрос ничего не находит? Скопируй запрос и пример реальной строки лога, спроси нейросеть, где расходятся. Проверь по шагам из урока: сначала только селектор потока, потом по одному добавляй фильтры, пока строки не пропадут.
 {: .ai}
@@ -446,10 +454,10 @@ x-request-id: 7c0e5b1d9a3f48e2b6d1a4c8f0e92b35
 
 ### 4. Метрика и лог на одном окне
 
-Во втором окне запусти нагрузку заказов с ошибками оплаты (подробно причины разберём в уроке 7.6; здесь важна только связка метрики и лога). Включим сбои оплаты на 40%:
+Во втором окне запусти нагрузку заказов с ошибками оплаты (подробно причины разберём в уроке 7.6; здесь важна только связка метрики и лога). Включим сбои оплаты на 80%:
 
 ```bash
-curl -s -X POST localhost:8001/admin/config -H 'Content-Type: application/json' -d '{"fail_rate": 0.4}'
+curl -s -X POST localhost:8001/admin/config -H 'Content-Type: application/json' -d '{"fail_rate": 0.8}'
 python ~/perf-lab/07-monitoring/orders_load.py orders 3 90 &
 ```
 
@@ -460,12 +468,12 @@ sum by (route) (rate(http_requests_total{status=~"5.."}[1m]))
 ```
 
 ```logql
-sum by (route) (rate({service="shop"} | json | status >= 500 [1m]))
+sum by (route) (rate({service="shop"} | json | __error__ = "" | status >= 500 [1m]))
 ```
 
 ```text
-{route="/api/orders"}   0.31
-{route="/api/orders"}   0.31
+{route="/api/orders"}   0.95
+{route="/api/orders"}   0.93
 ```
 
 **Как читать вывод:** обе системы видят один маршрут и почти одинаковую скорость. Расхождение в сотых допустимо: окна и момент скрейпа не совпадают до секунды. Теперь выбери в логах строки ошибок:
@@ -477,8 +485,8 @@ sum by (route) (rate({service="shop"} | json | status >= 500 [1m]))
 {% endraw %}
 
 ```text
-502 payment failed 109.3мс user=2
-502 payment failed 63.8мс user=1
+502 payment failed 203.5мс user=2
+502 payment failed 188.7мс user=1
 ```
 
 Причина видна в каждой строке: `payment failed`. Верни оплату в норму, чтобы не мешала дальше, и дождись конца нагрузки:
@@ -513,12 +521,12 @@ LOG_LEVEL=ERROR docker compose --profile monitoring up -d shop
 
 **Задача:** выясни без подсказок, почему запросов нет в Loki, хотя сервис отвечает. Какие запросы ты **всё-таки** увидишь в логах, и что это значит для разбора инцидента?
 
-<div class="viz" data-viz="flow" data-steps='[{"title":"Убедись, что сервис работает","text":"`curl -s localhost:8000/api/categories` возвращает JSON: проблема не в сервисе."},{"title":"Проверь доставку","text":"`http://localhost:12345`: все компоненты Alloy зелёные? Свежие логи других сервисов в Loki есть?"},{"title":"Посмотри лог контейнера напрямую","text":"`docker compose --profile monitoring logs --tail=5 shop`: если и там пусто, лог не пишется."},{"title":"Проверь уровень","text":"`docker compose --profile monitoring exec shop env | grep LOG_LEVEL` показывает порог."},{"title":"Верни как было","text":"`docker compose --profile monitoring up -d shop` без переменной вернёт `INFO`."}]'></div>
+<div class="viz" data-viz="flow" data-steps='[{"title":"Убедись, что сервис работает","text":"`curl -s localhost:8000/api/categories` возвращает JSON: проблема не в сервисе."},{"title":"Проверь доставку","text":"`http://localhost:12345`: все компоненты Alloy зелёные? Свежие логи других сервисов в Loki есть?"},{"title":"Посмотри лог контейнера напрямую","text":"`docker compose --profile monitoring logs --tail=5 shop`: если в нём нет JSON-строк запросов (`\"msg\": \"Запрос завершён\"`), сервис их не пишет (стартовые строки uvicorn не в счёт)."},{"title":"Проверь уровень","text":"`docker compose --profile monitoring exec shop env | grep LOG_LEVEL` показывает порог."},{"title":"Верни как было","text":"`docker compose --profile monitoring up -d shop` без переменной вернёт `INFO`."}]'></div>
 
 <details markdown="1">
 <summary>Что должно получиться</summary>
 
-`LOG_LEVEL=ERROR` оставляет в логе только строки уровня `ERROR` и выше. Успешные запросы пишутся на уровне `INFO`, и они пропали: в Loki не дойдёт то, чего нет в самом контейнере (смотри шаг 3: `docker compose logs` тоже пуст). Видны останутся только ответы 5xx. Вывод для инцидентов: понижать подробность в бою опасно, ты теряешь нормальный фон, с которым сравнивают поломку («а раньше так было?»), а также медленные запросы (`WARNING`). Починка: `docker compose --profile monitoring up -d shop` без переменной (вернётся `INFO` по умолчанию из `.env` или `compose.yaml`).
+`LOG_LEVEL=ERROR` оставляет в логе только строки уровня `ERROR` и выше. Успешные запросы пишутся на уровне `INFO`, и они пропали: в Loki не дойдёт то, чего нет в самом контейнере (смотри шаг 3: в `docker compose logs shop` только стартовые строки uvicorn простым текстом, JSON-строк запросов нет; эти не-JSON строки попадут в Loki, и поэтому `| json` даёт `JSONParserErr`). Видны останутся только ответы 5xx. Вывод для инцидентов: понижать подробность в бою опасно, ты теряешь нормальный фон, с которым сравнивают поломку («а раньше так было?»), а также медленные запросы (`WARNING`). Починка: `docker compose --profile monitoring up -d shop` без переменной (вернётся `INFO` по умолчанию из `.env` или `compose.yaml`).
 
 </details>
 

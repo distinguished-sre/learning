@@ -10,6 +10,20 @@ time: "3 ч"
 
 Поды в Kubernetes одноразовые: убил, создался новый, с пустой файловой системой. В [уроке 5.2](02-pods-deployments.md) «Заметки» писали в `emptyDir` (временный каталог, который живёт ровно столько же, сколько под), и данные пропадали вместе с подом. Для базы данных это неприемлемо: ей нужен диск, который переживает под, и стабильное имя, чтобы клиенты всегда находили её на месте.
 
+```text
+$ kubectl delete pod postgres-0 -n notes
+pod "postgres-0" deleted
+
+$ kubectl get pod,pvc -n notes
+NAME             READY   STATUS    RESTARTS   AGE
+pod/postgres-0   1/1     Running   0          14s
+
+NAME                                  STATUS   VOLUME      CAPACITY   AGE
+persistentvolumeclaim/data-postgres-0 Bound    pvc-a41f…   1Gi        2d
+```
+
+Под `postgres-0` живёт 14 секунд: его пересоздали с тем же именем. Заявка на диск `data-postgres-0` существует уже двое суток и осталась на месте, а значит, данные базы пережили под.
+
 На работе это первый вопрос к любому сервису с данными в кластере: где живут данные, кто их создаёт, что будет при удалении пода, при удалении StatefulSet и при удалении всего namespace. Ошибка здесь стоит потери данных, а не просто рестарта.
 
 Шаг проекта: в `k8s/base/40-postgres.yaml` появляются StatefulSet `postgres` (образ `postgres:18`), headless Service `db` и PVC на 1 ГиБ; Secret `notes-db` с паролем создан командой и в git не попадает.
@@ -146,7 +160,7 @@ persistentvolume/pvc-8b1a0e0d-42a3-4a7c-b6b1-5a0c3c9e2f41   1Gi        RWO      
 
 Колонка `STATUS` у PVC принимает три значения. `Pending` («ожидает»): заявка принята, но подходящий том ещё не привязан (при `WaitForFirstConsumer` это нормально, пока нет пода). `Bound` («привязан»): заявка связана с томом, под может его использовать. `Lost` («потерян»): том, с которым была связана заявка, исчез (например, PV удалили руками), и данные под угрозой. В повседневной работе ты чаще видишь `Bound`, а `Pending` дольше пары минут при уже запущенном поде повод открыть `kubectl describe pvc`. Колонка `CAPACITY` показывает фактический размер тома: он может оказаться больше запрошенного (запросил 1Gi, получил 1Gi у нашего kind, но облачные диски иногда округляют вверх), и никогда не меньше.
 
-Колонка `VOLUMEATTRIBUTESCLASS` есть у свежих версий `kubectl` (между `STORAGECLASS` и `AGE`). Это «класс атрибутов тома»: необязательная настройка вроде скорости диска, которую можно поменять у уже созданного тома. Мы её не используем, поэтому везде `<unset>` («не задано»). Если у тебя в выводе этой колонки нет, версия `kubectl` старше, и это нормально. Колонка `REASON` у PV пустая, пока с томом всё в порядке.
+Колонку `VOLUMEATTRIBUTESCLASS` (между `STORAGECLASS` и `AGE`) добавляет API-сервер версии 1.29 и новее, версия `kubectl` не важна. Это «класс атрибутов тома»: необязательная настройка вроде скорости диска, которую можно поменять у уже созданного тома. Мы её не используем, поэтому везде `<unset>` («не задано»). Если у тебя в выводе этой колонки нет, версия кластера старше 1.29, и это нормально. Колонка `REASON` у PV пустая, пока с томом всё в порядке.
 
 Осторожно, путаница: PVC часто принимают за сам диск. Это только заявка, диск это PV. Второе заблуждение: «удалил pod, значит, удалил и PVC». Нет, PVC живёт отдельно, и именно поэтому данные переживают под.
 
@@ -371,7 +385,7 @@ postgres-0 . db . notes . svc . cluster.local
 - том монтируем в `/var/lib/postgresql` (именно туда, а не в `.../data`), тогда каталог версии окажется внутри тома;
 - переменную `PGDATA` (путь к каталогу данных) задавать не нужно.
 
-Что будет при ошибке: если смонтировать том в `/var/lib/postgresql/data`, база запустится и будет работать. Но реальные данные лягут в `/var/lib/postgresql/18/docker`, то есть вне тома, в слой контейнера. Всё будет выглядеть нормально ровно до первого пересоздания пода, после которого база окажется пустой. Самая неприятная поломка та, которая не видна сразу.
+Что будет при ошибке: если смонтировать том в `/var/lib/postgresql/data`, образ откажется стартовать: в логе будет `Error: in 18+, these Docker images are configured to store database data in a format which is compatible with "pg_ctlcluster"...`, а в конце совет `place a single mount at /var/lib/postgresql`. Контейнер завершится с ошибкой и уйдёт в `CrashLoopBackOff`, том останется пустым. Хорошо, что поломка видна сразу.
 
 Так выглядит каталог внутри контейнера (проверено на `postgres:18`):
 
@@ -385,17 +399,17 @@ docker
 
 Осторожно, путаница: инструкции из интернета для PostgreSQL 15 и 16 предлагают монтировать `.../data` и задавать `PGDATA`. Для 18 они устарели: сверяйся с документацией образа для своей версии.
 
-> **Прикинь сам:** ты смонтировал том в `/var/lib/postgresql/data`, база запустилась. Почему после удаления пода данные пропали?
+> **Прикинь сам:** ты смонтировал том в `/var/lib/postgresql/data`. Почему под не стартует и в логе совет про `/var/lib/postgresql`?
 {: .predict}
 
-В `postgres:18` данные лежат в `/var/lib/postgresql/18/docker`, вне смонтированного каталога. Они писались в слой контейнера и ушли вместе с подом.
+Образ 18+ ожидает данные внутри `/var/lib/postgresql/18/docker`, замечает отдельный том на старом пути `/var/lib/postgresql/data`, считает это ошибкой настройки (как при обновлении без `pg_upgrade`) и завершается с кодом 1.
 
-> **Проверь понимание:** ты смонтировал том в `/var/lib/postgresql/data`, база запустилась. Почему после удаления пода данные пропали?
+> **Проверь понимание:** ты смонтировал том в `/var/lib/postgresql/data`. Почему под не стартует и в логе совет про `/var/lib/postgresql`?
 
 <details markdown="1">
 <summary>Ответ</summary>
 
-В образе `postgres:18` данные лежат в `/var/lib/postgresql/18/docker`, а этот путь не входит в смонтированный каталог `.../data`. Данные писались в слой контейнера, который удаляется вместе с подом.
+Образ `postgres:18` ожидает данные внутри `/var/lib/postgresql/18/docker`, замечает отдельный том на старом пути `.../data`, считает это ошибкой настройки (как при обновлении без `pg_upgrade`) и завершается с кодом 1.
 
 </details>
 
@@ -496,7 +510,7 @@ flowchart TD
 
 Когда ты меняешь шаблон пода (`template`) у StatefulSet, например версию образа, контроллер обновляет поды по очереди, от старшего номера к младшему: сначала `postgres-2`, потом `postgres-1`, потом `postgres-0`. Каждый следующий под обновляется только после того, как предыдущий стал готов. Смысл: в базе с репликами главный сервер обычно `postgres-0`, и его обновляют последним, после реплик. При этом каждый под сохраняет своё имя и свой PVC.
 
-Есть одно жёсткое ограничение. Поле `volumeClaimTemplates` у существующего StatefulSet менять **нельзя**: API ответит ошибкой `Forbidden: updates to statefulset spec for fields other than 'replicas', 'ordinals', 'template', 'updateStrategy' ... are forbidden`. Причина: PVC уже созданы по старому шаблону, и контроллер не станет менять их задним числом. Если нужно другое значение (например другой размер или класс), есть три пути: удалить StatefulSet и PVC и начать заново (только когда данных нет), удалить StatefulSet без удаления подов (`kubectl delete statefulset postgres --cascade=orphan`) и создать заново с новым шаблоном, либо править сами PVC.
+Есть одно жёсткое ограничение. Поле `volumeClaimTemplates` у существующего StatefulSet менять **нельзя**: API ответит ошибкой валидации. На сервере 1.36 (как в нашем kind): `The StatefulSet "postgres" is invalid: spec: Forbidden: updates to statefulset spec for fields other than 'replicas', 'ordinals', 'template', 'updateStrategy', 'revisionHistoryLimit', 'persistentVolumeClaimRetentionPolicy' and 'minReadySeconds' are forbidden`; с Kubernetes 1.37 текст короче: `spec.volumeClaimTemplates: Invalid value: ...: field is immutable`. Причина: PVC уже созданы по старому шаблону, и контроллер не станет менять их задним числом. Если нужно другое значение (например другой размер или класс), есть три пути: удалить StatefulSet и PVC и начать заново (только когда данных нет), удалить StatefulSet без удаления подов (`kubectl delete statefulset postgres --cascade=orphan`) и создать заново с новым шаблоном, либо править сами PVC.
 
 Расширение диска. Если у класса стоит `allowVolumeExpansion: true`, увеличить том можно на лету: правишь у PVC `spec.resources.requests.storage` (например `1Gi` на `2Gi`). У `standard` в kind расширение выключено (`ALLOWVOLUMEEXPANSION false`, помнишь колонку в выводе выше), поэтому в облаках заранее выбирают класс с расширением. Уменьшить том нельзя нигде.
 
@@ -534,7 +548,7 @@ flowchart TD
 | Удалили PVC | том удаляется (при `Delete`) | потеряны |
 | Удалили namespace | удаляется всё внутри, включая PVC | потеряны |
 | Умер узел с локальным диском | под не может стартовать на другом узле, том остался на мёртвом | недоступны, пока узел не вернётся |
-| Умер узел, диск сетевой | том отвязывается и подключается на другом узле | целы, короткий простой |
+| Умер узел, диск сетевой | под зависает в `Unknown`/`Terminating`; замена появится после удаления объекта Node, `--force` удаления пода или taint `out-of-service` (иначе риск двух писателей), затем сетевой диск подключается на другом узле | целы, простой до вмешательства оператора |
 
 Обрати внимание на строку про обновление образа: между большими версиями PostgreSQL (например 17 на 18) формат данных меняется, и просто заменить образ нельзя. Нужна миграция (`pg_upgrade` или дамп и восстановление). Это ещё одна причина, по которой операторы БД полезны.
 
@@ -767,7 +781,7 @@ data-postgres-0         Bound    pvc-8b1a0e0d-42a3-4a7c-b6b1-5a0c3c9e2f41   1Gi 
 LOG:  database system is ready to accept connections
 ```
 
-**Как читать вывод:** `READY 1/1` у StatefulSet и пода значит, что готова единственная реплика (реплика - одна копия пода). `CLUSTER-IP None` подтверждает, что сервис headless. У PVC `STATUS Bound` значит «заявка связана с томом», `VOLUME` это имя созданного PV, `RWO` это `ReadWriteOnce`, `STORAGECLASS standard` это класс, по которому создан том, а `VOLUMEATTRIBUTESCLASS <unset>` значит, что дополнительный класс атрибутов не задан (колонка есть у свежих `kubectl`, у старых её нет). Фраза `accepting connections` от `pg_isready` и строка `database system is ready to accept connections` в логе значат, что база запущена.
+**Как читать вывод:** `READY 1/1` у StatefulSet и пода значит, что готова единственная реплика (реплика - одна копия пода). `CLUSTER-IP None` подтверждает, что сервис headless. У PVC `STATUS Bound` значит «заявка связана с томом», `VOLUME` это имя созданного PV, `RWO` это `ReadWriteOnce`, `STORAGECLASS standard` это класс, по которому создан том, а `VOLUMEATTRIBUTESCLASS <unset>` значит, что дополнительный класс атрибутов не задан (колонку печатает API-сервер версии 1.29 и новее). Фраза `accepting connections` от `pg_isready` и строка `database system is ready to accept connections` в логе значат, что база запущена.
 
 **Объясни себе:**
 
@@ -779,7 +793,8 @@ LOG:  database system is ready to accept connections
 
 - `Error: secret "notes-db" not found` (статус пода `CreateContainerConfigError`): Secret не создан в namespace `notes`; создай командой выше и подожди, под перезапустится сам.
 - `Error: Database is uninitialized and superuser password is not specified`: переменная `POSTGRES_PASSWORD` пуста; проверь ключ в Secret командой `kubectl -n notes get secret notes-db -o jsonpath='{.data}'`.
-- `initdb: error: directory "/var/lib/postgresql/data" exists but is not empty`: тома с чужими данными; смонтируй том в `/var/lib/postgresql`, как в манифесте.
+- `Error: in 18+, these Docker images are configured to store database data in a format which is compatible with "pg_ctlcluster"...` (контейнер завершается, `CrashLoopBackOff`): в томе лежат данные другой версии или том смонтирован не в `/var/lib/postgresql` (например, в `.../data`); возьми новый пустой PVC и смонтируй его ровно в `/var/lib/postgresql`, как в манифесте.
+- `initdb: error: directory "/var/lib/postgresql/18/docker" exists but is not empty`: в каталоге версии лежат чужие файлы без `PG_VERSION`, нужен чистый том.
 
 ### Задание 2. Подключиться к базе по DNS
 
@@ -846,7 +861,7 @@ INSERT 0 1
 **Типичные ошибки:**
 
 - `psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: No such file or directory`: сервер ещё стартует или упал; смотри `kubectl -n notes logs postgres-0`.
-- `psql: error: connection to server ... failed: FATAL:  role "postgres" does not exist`: забыт ключ `-U notes`, суперпользователь в нашей базе называется `notes`.
+- `psql: error: connection to server ... failed: FATAL:  role "root" does not exist`: забыт ключ `-U notes`: без него `psql` берёт имя пользователя в контейнере (там это `root`), а суперпользователь в нашей базе называется `notes`.
 - `nslookup: can't resolve 'db.notes.svc.cluster.local'`: неверный namespace или имя сервиса, проверь `kubectl -n notes get svc db`.
 
 ### Задание 3. Удалить под, потом попробовать удалить всё
@@ -925,7 +940,7 @@ data-postgres-0   Bound    pvc-8b1a0e0d-42a3-4a7c-b6b1-5a0c3c9e2f41   1Gi       
 **Типичные ошибки:**
 
 - `Error from server (NotFound): pods "postgres-0" not found`: `wait` вызван до того, как контроллер создал под; повтори через пару секунд.
-- `pg_dump: error: connection to server on socket ... failed: FATAL:  role "postgres" does not exist`: не указан `-U notes`.
+- `pg_dump: error: connection to server on socket ... failed: FATAL:  role "root" does not exist`: не указан `-U notes`, а без него берётся имя пользователя в контейнере (`root`).
 - В `notes-backup.sql` первая строка `error: ...`: бэкап пишут в stdout, поэтому не добавляй `-it` (tty портит вывод).
 
 ### Задание 4. Шаг проекта: Postgres в `k8s/base/`
@@ -1064,7 +1079,7 @@ kubectl -n notes run pgcheck --rm -it --restart=Never --image=postgres:18 \
 Warning  ProvisioningFailed  persistentvolumeclaim/data-postgres-0  storageclass.storage.k8s.io "fast-ssd" not found
 ```
 
-Причина: в `volumeClaimTemplates` указан несуществующий `storageClassName`. Важно: это поле у StatefulSet менять нельзя, API ответит `Forbidden: updates to statefulset spec for fields other than ... are forbidden`. Правильный путь: удалить StatefulSet (данных ещё нет), удалить зависший PVC, поправить манифест и применить заново:
+Причина: в `volumeClaimTemplates` указан несуществующий `storageClassName`. Важно: это поле у StatefulSet менять нельзя, API ответит ошибкой `spec: Forbidden: updates to statefulset spec for fields other than ... are forbidden` (с Kubernetes 1.37: `spec.volumeClaimTemplates: Invalid value ...: field is immutable`). Правильный путь: удалить StatefulSet (данных ещё нет), удалить зависший PVC, поправить манифест и применить заново:
 
 ```bash
 kubectl -n notes delete statefulset postgres
@@ -1175,7 +1190,7 @@ kubectl -n notes exec -i postgres-0 -- psql -U notes -d notes \
 
 Не прогонялось в кластере kind, вывод команд `kubectl` взят из предыдущей редакции урока и сверен по знанию формата (значения `AGE`, имя PV и IP пода у тебя будут другими):
 
-- kind: v0.33.0, Kubernetes: 1.37.1 (kubectl 1.37.1), StorageClass `standard` (rancher.io/local-path);
+- kind: v0.33.0, Kubernetes: 1.36.4 (образ `kindest/node:v1.36.4` с дайджестом из релиза kind v0.33.0), kubectl: 1.37.1, StorageClass `standard` (rancher.io/local-path);
 - busybox: 1.37.
 
 ## Итог урока: ты умеешь

@@ -8,7 +8,7 @@
    "skill": "прочитать строку ps aux",
    "kind": "чтение",
    "type": "multiple",
-   "text": "Что можно сказать про процесс `yes` по этой строке `ps aux`?",
+   "text": "Что из этого можно сказать про процесс `yes` по этой строке `ps aux`? Выбери все подходящие.",
    "code": "USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\nstudent    48211 99.6  0.0   8344   640 pts/0    R    10:40   0:12 yes",
    "options": [
     {
@@ -179,7 +179,7 @@
    "skill": "сигналы SIGTERM и SIGKILL",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про сигналы?",
+   "text": "Какие утверждения про сигналы верны?",
    "options": [
     {
      "id": "a",
@@ -379,7 +379,7 @@
    "skill": "прочитать три числа load average",
    "kind": "чтение",
    "type": "multiple",
-   "text": "`uptime` на 8-ядерной машине показал такой load average. Что верно?",
+   "text": "`uptime` на 8-ядерной машине показал такой load average. Какие утверждения верны?",
    "code": "load average: 9.87, 5.12, 2.31",
    "options": [
     {

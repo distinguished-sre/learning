@@ -10,6 +10,20 @@ time: "3 ч"
 
 Не всё в кластере это сервер, который должен работать вечно. Миграция базы (изменение её структуры при выходе новой версии приложения: например, добавить в таблицу новую колонку), ночной бэкап (копия данных на случай потери), пересчёт отчёта запускаются, делают работу и заканчиваются. Если запихнуть такую задачу в Deployment, Kubernetes увидит, что программа завершилась, и запустит её снова, потом ещё раз, и так без конца: он для этого и создан, чтобы поддерживать работающее приложение.
 
+```text
+$ kubectl get cronjob,job,pod -n notes
+NAME                          SCHEDULE    SUSPEND   LAST SCHEDULE
+cronjob.batch/notes-backup    0 3 * * *   False     6h
+
+NAME                                 STATUS     COMPLETIONS   DURATION
+job.batch/notes-backup-29345580      Complete   1/1           24s
+
+NAME                                 READY   STATUS      RESTARTS
+pod/notes-backup-29345580-q7x4d      0/1     Completed   0
+```
+
+CronJob в три часа ночи создал Job, а тот запустил под, который отработал 24 секунды и остановился со статусом `Completed`. Заметь `READY 0/1`: для задачи это нормально, она не должна жить вечно.
+
 Есть и обратная задача: агент, который собирает логи (текстовые записи о работе программ) или метрики (числа о работе: сколько занято процессора и памяти), должен быть на каждом узле кластера ровно один. Deployment с тремя репликами этого не гарантирует: он может посадить все три копии на один узел, а на остальных не будет ни одной.
 
 Для этих случаев в Kubernetes есть свои объекты:
@@ -102,7 +116,7 @@ CronJob: работа периодическая и заканчивается. 
 1. Ты создаёшь Job с шаблоном пода (как в Deployment, урок 5.2).
 2. Контроллер Job создаёт под и следит за ним.
 3. Под завершился с кодом 0: это успех, Job засчитывает его. Когда набрано нужное число успехов, Job получает состояние `Complete`, новых подов не создаёт.
-4. Под завершился с ошибкой: Job создаёт новый под (это повторная попытка). Между попытками пауза растёт: 10 секунд, 20, 40 и так далее, до 6 минут.
+4. Под завершился с ошибкой: Job создаёт новый под (это повторная попытка). Между попытками пауза растёт: 10 секунд, 20, 40 и так далее, до 10 минут.
 5. Когда неудач набралось больше, чем разрешено (`backoffLimit`), Job получает состояние `Failed` и сдаётся.
 
 **Главные поля.**
@@ -138,7 +152,7 @@ Job с `completions: 3` и `parallelism: 2` (например, надо обра
 <details markdown="1">
 <summary>Ответ</summary>
 
-Семь подов: первый и шесть повторных. Паузы между попытками: 10, 20, 40, 80, 160 секунд и потом 320 (а верхний потолок пауз 6 минут), в сумме больше десяти минут. Это причина, почему `backoffLimit` для миграций ставят небольшим.
+Семь подов: первый и шесть повторных. Паузы между попытками: 10, 20, 40, 80, 160 секунд и потом 320 (а верхний потолок пауз 10 минут), в сумме больше десяти минут. Это причина, почему `backoffLimit` для миграций ставят небольшим.
 
 </details>
 
@@ -684,7 +698,7 @@ hello-fail-r2jwl   0/1     Error    0          11s
 
 **Типичные ошибки:**
 
-- `The Job "hello" is invalid: spec.template.spec.restartPolicy: Unsupported value: "Always": supported values: "OnFailure", "Never"`: у Job нельзя `Always`. Поставь `Never` или `OnFailure`.
+- `The Job "hello" is invalid: spec.template.spec.restartPolicy: Required value: valid values: "OnFailure", "Never"`: у Job нельзя `Always` (его же подставит API, если поле пропустить). Поставь `Never` или `OnFailure`.
 - `error: timed out waiting for the condition on jobs/hello`: Job не дошёл до `Complete` за 60 секунд. Смотри `kubectl -n notes get pods` и `describe pod`: чаще всего образ не скачался (`ImagePullBackOff`).
 
 ### Задание 2. DaemonSet: по одному поду на узел
@@ -793,7 +807,7 @@ node-agent   3         3         3       3            3           <none>        
 **Типичные ошибки:**
 
 - `The DaemonSet "node-agent" is invalid: spec.template.metadata.labels: Invalid value: ...: selector does not match template labels`: метки шаблона не совпадают с `selector.matchLabels`. Приведи их к одному виду.
-- `error: unknown field "spec.template.spec.containers[0].tolerations"`: `tolerations` вставлен внутрь контейнера. Он относится к поду, на уровень `containers`.
+- `Error from server (BadRequest): error when creating "daemonset-agent.yaml": DaemonSet in version "v1" cannot be handled as a DaemonSet: strict decoding error: unknown field "spec.template.spec.containers[0].tolerations"`: `tolerations` вставлен внутрь контейнера. Он относится к поду, на уровень `containers`.
 
 ### Задание 3. Шаг проекта: бэкап PostgreSQL по расписанию
 
@@ -890,7 +904,7 @@ kubectl -n notes run pg-check --rm -i --restart=Never --image=postgres:18 \
   --overrides='{"spec":{"containers":[{"name":"pg-check","image":"postgres:18","command":["sh","-c","pg_restore -l \"$(ls -t /backups/notes-*.dump | head -1)\" | head -14"],"volumeMounts":[{"name":"b","mountPath":"/backups"}]}],"volumes":[{"name":"b","persistentVolumeClaim":{"claimName":"pg-backups"}}]}}'
 ```
 
-**Что должно получиться.** Статус тома сразу после `apply`, потом лог бэкапа, потом статус после запуска, потом оглавление дампа (числа, время и имя тома у тебя другие; у kubectl 1.34 и новее в таблице PVC есть столбец `VOLUMEATTRIBUTESCLASS`):
+**Что должно получиться.** Статус тома сразу после `apply`, потом лог бэкапа, потом статус после запуска, потом оглавление дампа (числа, время и имя тома у тебя другие; в таблице PVC кластера Kubernetes 1.29 и новее есть столбец `VOLUMEATTRIBUTESCLASS`: его добавляет сервер, версия kubectl не важна):
 
 ```text
 NAME         STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
@@ -992,9 +1006,9 @@ kubectl get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints
 <details markdown="1">
 <summary>Разбор трёх сценариев</summary>
 
-**Сценарий 1: CronJob не запускается.** В `kubectl get cronjob pg-backup` столбец `SCHEDULE` показывает `0 0 30 2 *` (30 февраля), а новых Job нет. Расписание синтаксически верное, но такой даты не бывает, поэтому при `apply` ошибки нет. Исправление: вернуть `schedule: "0 * * * *"` (`kubectl apply -f k8s/base/60-pg-backup-cronjob.yaml`), проверить `kubectl -n notes create job --from=cronjob/pg-backup check-1`. Урок: после правки расписания смотри `LAST SCHEDULE` на следующем запуске, а не радуйся отсутствию ошибки. Так же выглядит `suspend: true`, только он виден в столбце `SUSPEND`.
+**Сценарий 1: CronJob не запускается.** В `kubectl get cronjob pg-backup` столбец `SCHEDULE` показывает `0 0 30 2 *` (30 февраля), а новых Job нет. Расписание синтаксически верное, но такой даты не бывает, поэтому при `apply` ошибки нет, зато в `describe cronjob` внизу появляется Warning `InvalidSchedule`: `invalid schedule: 0 0 30 2 * : time difference between two schedules is less than 1 second` (у расписания нет следующей даты). Исправление: вернуть `schedule: "0 * * * *"` (`kubectl apply -f k8s/base/60-pg-backup-cronjob.yaml`), проверить `kubectl -n notes create job --from=cronjob/pg-backup check-1`. Урок: после правки расписания смотри `LAST SCHEDULE` на следующем запуске, а не радуйся отсутствию ошибки. Так же выглядит `suspend: true`, только он виден в столбце `SUSPEND`.
 
-**Сценарий 2: Job упал по backoffLimit.** `kubectl get pods` показывает поды `Error`, `describe job` заканчивается `BackoffLimitExceeded`. `logs` пода: `pg_dump: error: connection to server at "db" ... failed: FATAL:  role "notes_backup" does not exist`. Причина: бэкап ходит в базу под пользователем, которого нет (в жизни так бывает после переименования роли или ошибки в скрипте). Исправление: вернуть верного пользователя в скрипте (`kubectl apply -f k8s/base/60-pg-backup-cronjob.yaml`), удалить упавший Job (`kubectl -n notes delete job <имя>`) и запустить заново из CronJob. Упавший Job сам не воскреснет: он остаётся в статусе Failed, пока его не удалить.
+**Сценарий 2: Job упал по backoffLimit.** `kubectl get pods` показывает поды `Error`, `describe job` заканчивается `BackoffLimitExceeded`. `logs` пода: `pg_dump: error: connection to server at "db" (10.244.2.7), port 5432 failed: FATAL:  password authentication failed for user "notes_backup"`. Причина: бэкап ходит в базу под пользователем, которого нет (в жизни так бывает после переименования роли или ошибки в скрипте); при проверке пароля сервер не говорит, что роли нет, и отвечает так же, как на неверный пароль, поэтому сверяй имя после `-U` в скрипте и пароль в Secret. Исправление: вернуть верного пользователя в скрипте (`kubectl apply -f k8s/base/60-pg-backup-cronjob.yaml`), удалить упавший Job (`kubectl -n notes delete job <имя>`) и запустить заново из CronJob. Упавший Job сам не воскреснет: он остаётся в статусе Failed, пока его не удалить.
 
 **Сценарий 3: DaemonSet не садится на control-plane.** `DESIRED 2`, а узлов 3. `kubectl get nodes -o custom-columns=...` показывает taint `node-role.kubernetes.io/control-plane:NoSchedule`. Исправление: добавить в шаблон DaemonSet `tolerations` для этого ключа (как в задании 2: `kubectl apply -f ~/notes/k8s/examples/daemonset-agent.yaml`, файл с допуском). Если агент там не нужен, ничего не чинить: это штатное поведение.
 
@@ -1075,7 +1089,7 @@ Job миграции в статусе Failed. Вот вывод kubectl describ
 - Манифесты Job, DaemonSet, CronJob и PVC: `kubeconform -strict` без замечаний.
 - Скрипт `break/5.8/break.sh`: `shellcheck` без замечаний, логика проверена чтением, в кластере не запускался.
 
-Не прогонялось в кластере kind: вывод `kubectl` (статусы подов, `DESIRED`, события Job, статусы PVC, паузы между попытками) сверен по знанию формата, значения `AGE`, имена подов и томов у тебя будут другими. Столбец `VOLUMEATTRIBUTESCLASS` в `get pvc` есть в новых версиях kubectl, в старых его нет. Образ `busybox:1.37.0`.
+Не прогонялось в кластере kind: вывод `kubectl` (статусы подов, `DESIRED`, события Job, статусы PVC, паузы между попытками) сверен по знанию формата, значения `AGE`, имена подов и томов у тебя будут другими. Столбец `VOLUMEATTRIBUTESCLASS` в `get pvc` печатает API-сервер версии 1.29 и новее, в старых кластерах его нет. Образ `busybox:1.37.0`.
 
 ## Итог урока: ты умеешь
 

@@ -45,7 +45,7 @@
    "options": [
     {
      "id": "a",
-     "text": "`93.184.215.14`",
+     "text": "`104.20.23.154`",
      "why": "Это обычный публичный адрес из примеров урока, он виден из интернета."
     },
     {
@@ -112,7 +112,7 @@
    "skill": "что значит быстрый отказ",
    "kind": "диагностика",
    "type": "multiple",
-   "text": "`curl http://10.0.0.5:8000/` сразу, за 0,01 секунды, ответил `Connection refused`. Что можно уверенно сказать?",
+   "text": "`curl http://10.0.0.5:8000/` сразу, за 0,01 секунды, ответил `Connection refused`. Что из этого можно уверенно сказать? Выбери все подходящие.",
    "options": [
     {
      "id": "a",
@@ -217,7 +217,7 @@
    "kind": "чтение",
    "type": "single",
    "text": "Ты выполнил `sudo ss -tlnp`. Какая программа принимает обращения только с этой же машины?",
-   "code": "State   Recv-Q  Send-Q   Local Address:Port    Peer Address:Port  Process\nLISTEN  0       4096         127.0.0.1:8000         0.0.0.0:*     users:((\"python3\",pid=51203,fd=3))\nLISTEN  0       4096     127.0.0.53%lo:53           0.0.0.0:*     users:((\"systemd-resolve\",pid=812,fd=14))\nLISTEN  0       128            0.0.0.0:22           0.0.0.0:*     users:((\"sshd\",pid=950,fd=3))\nLISTEN  0       244                  *:5432               *:*     users:((\"postgres\",pid=1432,fd=6))",
+   "code": "State   Recv-Q  Send-Q   Local Address:Port    Peer Address:Port  Process\nLISTEN  0       5            127.0.0.1:8000         0.0.0.0:*     users:((\"python3\",pid=51203,fd=3))\nLISTEN  0       4096     127.0.0.53%lo:53           0.0.0.0:*     users:((\"systemd-resolve\",pid=812,fd=14))\nLISTEN  0       128            0.0.0.0:22           0.0.0.0:*     users:((\"sshd\",pid=950,fd=3))\nLISTEN  0       244                  *:5432               *:*     users:((\"postgres\",pid=1432,fd=6))",
    "options": [
     {
      "id": "a",
@@ -251,7 +251,7 @@
    "kind": "чтение",
    "type": "multiple",
    "text": "По этому же выводу `ss`: на каких портах программа слушает все адреса машины?",
-   "code": "State   Recv-Q  Send-Q   Local Address:Port    Peer Address:Port  Process\nLISTEN  0       4096         127.0.0.1:8000         0.0.0.0:*     users:((\"python3\",pid=51203,fd=3))\nLISTEN  0       4096     127.0.0.53%lo:53           0.0.0.0:*     users:((\"systemd-resolve\",pid=812,fd=14))\nLISTEN  0       128            0.0.0.0:22           0.0.0.0:*     users:((\"sshd\",pid=950,fd=3))\nLISTEN  0       244                  *:5432               *:*     users:((\"postgres\",pid=1432,fd=6))",
+   "code": "State   Recv-Q  Send-Q   Local Address:Port    Peer Address:Port  Process\nLISTEN  0       5            127.0.0.1:8000         0.0.0.0:*     users:((\"python3\",pid=51203,fd=3))\nLISTEN  0       4096     127.0.0.53%lo:53           0.0.0.0:*     users:((\"systemd-resolve\",pid=812,fd=14))\nLISTEN  0       128            0.0.0.0:22           0.0.0.0:*     users:((\"sshd\",pid=950,fd=3))\nLISTEN  0       244                  *:5432               *:*     users:((\"postgres\",pid=1432,fd=6))",
    "options": [
     {
      "id": "a",
@@ -317,12 +317,12 @@
    "skill": "флаги ss -tlnp",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что делают флаги в `sudo ss -tlnp`?",
+   "text": "Что из этого делают флаги в `sudo ss -tlnp`? Выбери все подходящие.",
    "options": [
     {
      "id": "a",
      "text": "`-n`: ограничивает вывод десятью строками",
-     "why": "Флаг `-n` заменяет названия числами (`8000` вместо `http-alt`), строки он не считает."
+     "why": "Флаг `-n` заменяет названия числами (`8080` вместо `http-alt`), строки он не считает."
     },
     {
      "id": "b",
@@ -422,12 +422,12 @@
    "kind": "чтение",
    "type": "single",
    "text": "Что показывает число 278 в этой строке вывода `dig`?",
-   "code": ";; ANSWER SECTION:\nexample.com.            278     IN      A       93.184.215.14\n\n;; Query time: 23 msec\n;; SERVER: 127.0.0.53#53(127.0.0.53) (UDP)\n;; MSG SIZE  rcvd: 56",
+   "code": ";; ANSWER SECTION:\nexample.com.            278     IN      A       104.20.23.154\nexample.com.            278     IN      A       172.66.147.243\n\n;; Query time: 23 msec\n;; SERVER: 127.0.0.53#53(127.0.0.53) (UDP)\n;; MSG SIZE  rcvd: 72",
    "options": [
     {
      "id": "a",
      "text": "Размер ответа в байтах",
-     "why": "Размер указан в строке `MSG SIZE`, и там 56."
+     "why": "Размер указан в строке `MSG SIZE`, и там 72."
     },
     {
      "id": "b",
@@ -488,7 +488,7 @@
    "skill": "что значит NXDOMAIN",
    "kind": "диагностика",
    "type": "multiple",
-   "text": "`dig shop.lab` показал `status: NXDOMAIN`. Что верно?",
+   "text": "`dig shop.lab` показал `status: NXDOMAIN`. Какие утверждения верны?",
    "options": [
     {
      "id": "a",
@@ -689,7 +689,7 @@
    "skill": "как читать time_connect",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про значения `time_*` в `curl -w`?",
+   "text": "Какие утверждения про значения `time_*` в `curl -w` верны?",
    "options": [
     {
      "id": "a",

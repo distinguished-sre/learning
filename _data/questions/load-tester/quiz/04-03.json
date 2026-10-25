@@ -76,7 +76,7 @@
    "skill": "функция без return",
    "kind": "диагностика",
    "type": "multiple",
-   "text": "Скрипт `avg = total_ms([120, 95, 310]) / 3` упал: `TypeError: unsupported operand type(s) for /: 'NoneType' and 'int'`. Функция считает сумму в цикле и ничего не возвращает. Что верно?",
+   "text": "Скрипт `avg = total_ms([120, 95, 310]) / 3` упал: `TypeError: unsupported operand type(s) for /: 'NoneType' and 'int'`. Функция считает сумму в цикле и ничего не возвращает. Какие утверждения верны?",
    "code": "def total_ms(values):\n    total = 0\n    for v in values:\n        total += v\n\navg = total_ms([120, 95, 310]) / 3\nprint(avg)",
    "options": [
     {
@@ -110,7 +110,7 @@
    "skill": "print вместо return",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Функция `def double(x): print(x * 2)` вызвана как `y = double(5)`. Что верно?",
+   "text": "Функция `def double(x): print(x * 2)` вызвана как `y = double(5)`. Какие утверждения верны?",
    "options": [
     {
      "id": "a",
@@ -242,7 +242,7 @@
    "skill": "локальная errors",
    "kind": "чтение",
    "type": "multiple",
-   "text": "Что произойдёт при запуске этого кода?",
+   "text": "Что из этого произойдёт при запуске этого кода? Выбери все подходящие.",
    "code": "def count_errors(codes):\n    errors = 0\n    for code in codes:\n        if code >= 400:\n            errors += 1\n    return errors\n\nprint(count_errors([200, 500, 404]))\nprint(errors)",
    "options": [
     {
@@ -409,7 +409,7 @@
    "skill": "файл random.py",
    "kind": "диагностика",
    "type": "single",
-   "text": "Ты назвал файл `random.py`, внутри `import random` и `print(random.randint(1, 6))`. Запуск падает с `AttributeError: partially initialized module 'random' ...`. Что делать?",
+   "text": "Ты назвал файл `random.py`, внутри `import random` и `print(random.randint(1, 6))`. Запуск падает с `AttributeError` про модуль `random`: `... module 'random' has no attribute 'randint' ...`. Что делать?",
    "options": [
     {
      "id": "a",
@@ -842,7 +842,7 @@
    "skill": "raise или тихий возврат",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Функция получила строку, которую не может разобрать. Как поступить правильно?",
+   "text": "Функция получила строку, которую не может разобрать. Какие действия правильны?",
    "options": [
     {
      "id": "a",

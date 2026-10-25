@@ -148,7 +148,7 @@
    "kind": "чтение",
    "type": "single",
    "text": "Ты выполнил `curl -s localhost:8000/api/orders -H \"Authorization: Bearer $TOKEN\" | jq .items` и увидел ошибку ниже. Что она значит?",
-   "code": "jq: error: Cannot index array with string \"items\"",
+   "code": "jq: error (at <stdin>:1): Cannot index array with string \"items\"",
    "options": [
     {
      "id": "a",
@@ -181,7 +181,7 @@
    "skill": "найти причину parse error в jq",
    "kind": "диагностика",
    "type": "single",
-   "text": "Скрипт упал на `jq: error: parse error: Invalid numeric literal at line 1, column 6`. Какой шаг самый разумный?",
+   "text": "Скрипт упал на `jq: parse error: Invalid numeric literal at line 1, column 6`. Какой шаг самый разумный?",
    "options": [
     {
      "id": "a",
@@ -247,7 +247,7 @@
    "skill": "что означает «без состояния»",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Сервер REST не хранит состояние между запросами (stateless). Какие следствия верны?",
+   "text": "Сервер REST не держит состояние клиента в памяти между запросами (stateless). Какие следствия верны?",
    "options": [
     {
      "id": "a",
@@ -461,7 +461,7 @@
    "skill": "правила обращения с токеном",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про токен в «Магазине»?",
+   "text": "Какие утверждения про токен в «Магазине» верны?",
    "options": [
     {
      "id": "a",
@@ -779,7 +779,7 @@
    "skill": "идемпотентность и безопасность методов",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про идемпотентность и безопасность методов?",
+   "text": "Какие утверждения про идемпотентность и безопасность методов верны?",
    "options": [
     {
      "id": "a",

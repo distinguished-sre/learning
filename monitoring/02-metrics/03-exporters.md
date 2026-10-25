@@ -12,6 +12,10 @@ time: "3 ч"
 
 Не знает, что его контейнер упёрся в потолок процессора. Не знает, что база тормозит из-за запроса без индекса. А если магазин сломан настолько, что вообще не отвечает, он не расскажет ничего.
 
+<div class="viz" data-viz="chart" data-type="line" data-x="03:00,03:05,03:10,03:15,03:20,03:25,03:30" data-series='[{"name":"up{job=\"shop\"}, изнутри","values":[1,1,1,1,1,1,1],"unit":""},{"name":"probe_success, снаружи","values":[1,1,0,0,0,1,1],"unit":""}]' data-x-label="Время" data-y-label="1 = всё хорошо" data-unit="" data-explain="Приложение отвечает на /metrics, но покупатель с 03:10 до 03:25 сайт не открывает."></div>
+
+Две линии показывают один и тот же ночной сбой. Метрика `up` изнутри всё время равна 1, а проверка снаружи с 03:10 до 03:25 даёт 0: так выглядит сломанный сертификат или DNS. Один взгляд без другого эту аварию пропустил бы.
+
 Из практики: приложение рапортует «всё хорошо», графики зелёные, а покупатели пишут, что сайт недоступен. Оказалось, что сломался сертификат или DNS: до самого приложения запросы просто не доходили, и изнутри этого не видно. Нужен второй взгляд, снаружи, глазами покупателя.
 
 Этим занимаются две группы инструментов. **Экспортёры** (exporters) это переводчики: они спрашивают у хоста, контейнера или базы данных их внутренние показатели и выдают на `/metrics` в понятном Prometheus формате. А **blackbox-проверки** это покупатель-робот: он пробует открыть сайт снаружи и отмечает, получилось ли.
@@ -55,7 +59,7 @@ flowchart TD
 
 Поэтому экспортёры не требуют много ресурсов и безопасно дублируются. Представь переводчика на конференции: он не записывает речь, а переводит ровно то, что слышит в данный момент. А записью занимается стенографист (Prometheus).
 
-На стенде четыре экспортёра: `node-exporter` (хост), `cadvisor` (контейнеры), `postgres-exporter` (база данных), а ещё Alertmanager и Alloy (о них позже, в темах 3 и 4), которые отдают собственные метрики сами. Все они перечислены в `prometheus.yml` и видны на странице Targets. В отличие от магазина и оплаты, порты экспортёров наружу, на твой хост, не опубликованы: смотреть их можно только изнутри сети Compose.
+На стенде три экспортёра: `node-exporter` (хост), `cadvisor` (контейнеры), `postgres-exporter` (база данных). Ещё Alertmanager и Alloy (о них позже, в темах 3 и 4) отдают собственные метрики сами. Все они перечислены в `prometheus.yml` и видны на странице Targets. В отличие от магазина и оплаты, порты экспортёров наружу, на твой хост, не опубликованы: смотреть их можно только изнутри сети Compose.
 
 Поэтому для просмотра `/metrics` экспортёров мы заходим через контейнер Prometheus, у которого есть и сеть, и `wget`. Об этом в практике.
 
@@ -341,7 +345,7 @@ scrape_configs:
 > **Прикинь сам:** без третьего правила (`replacement: blackbox:9115`) куда пойдёт Prometheus?
 {: .predict}
 
-Прямо на `http://shop:8000/readyz` с путём `/probe`, то есть в обход blackbox, и получит 404. Адрес «куда ходить» остался бы прежним.
+Скрейпа не будет: в `__address__` остался бы весь адрес с протоколом и путём (`http://shop:8000/readyz`), а Prometheus отбрасывает такой адрес как некорректный (ошибка `is not a valid hostname`). Ходить нужно на `blackbox:9115`, поэтому третье правило обязательно.
 
 Осторожно: больше всего ошибок в relabeling из-за порядка правил и опечаток в метках. Если все пробы по `instance` схлопнулись в один blackbox-адрес, значит, второе правило пропущено.
 
@@ -439,9 +443,9 @@ cd ~/monitoring-lab/02-metrics
 
 ```text
  0.18
-name=shop-shop-1 0.34
-name=shop-shop-1 0.41
-datname=shop,relname=orders,schemaname=public 312
+id=/docker/…,image=…,instance=cadvisor:8080,job=cadvisor,name=shop-shop-1 0.34
+id=/docker/…,image=…,instance=cadvisor:8080,job=cadvisor,name=shop-shop-1 0.41
+__name__=pg_stat_user_tables_seq_scan,datname=shop,instance=postgres-exporter:9187,job=postgres,relname=orders,schemaname=public 312
 ```
 
 **Как читать вывод:** хост загружен на 18%, магазин использует треть ядра при лимите 1.0, память на 41% от лимита: запас есть. Счётчик `seq_scan` по `orders` растёт с каждым запросом списка заказов (повтори запрос после цикла и сравни). Строка метрик будет другой на Docker Desktop: подбери метки по `container_cpu_usage_seconds_total` без условий.
@@ -460,24 +464,24 @@ docker compose --profile monitoring exec postgres psql -U shop -d shop -c "selec
 ```text
  calls | mean_ms |                       left
 -------+---------+--------------------------------------------------
-  2400 |     0.4 | SELECT oi.order_id, oi.product_id, p.name, oi.qty,
+  4000 |     0.4 | SELECT oi.order_id, oi.product_id, p.name, oi.qty,
    200 |     0.6 | SELECT id, status, total, created_at FROM orders W
    ...
 ```
 
-**Как читать вывод:** списков заказов было 200, как и в цикле, а запросов за позициями заказов 2400: на каждый заказ из 12 приходит отдельный запрос. Это N+1 (один запрос списка и ещё N запросов по одному на каждую строку), на стенде он включён по умолчанию. Каждый запрос быстрый, 0.4 мс, но их в двенадцать раз больше, чем нужно. Смысл упражнения в том, чтобы увидеть связь: рост `seq_scan` в метриках и конкретный запрос в статистике.
+**Как читать вывод:** списков заказов было 200, как и в цикле, а запросов за позициями заказов 4000: на каждый заказ из 20 приходит отдельный запрос (числа в `pg_stat_statements` накапливаются, у тебя может быть больше, если шёл `traffic.sh`). Это N+1 (один запрос списка и ещё N запросов по одному на каждую строку), на стенде он включён по умолчанию. Каждый запрос быстрый, 0.4 мс, но их в двадцать раз больше, чем нужно. Смысл упражнения в том, чтобы увидеть связь: рост `seq_scan` в метриках и конкретный запрос в статистике.
 
-<div class="viz" data-viz="mon-table" data-title='Тот же запрос после BUG_N_PLUS_ONE=0' data-query='select calls, round(mean_exec_time::numeric,1) as mean_ms, left(query,50) from pg_stat_statements order by total_exec_time desc limit 3' data-columns='["calls","mean_ms","left"]' data-rows='[["200","0.9","SELECT oi.order_id, oi.product_id, p.name, oi.qty,"],["200","0.6","SELECT id, status, total, created_at FROM orders W"]]' data-highlight-col='0' data-highlight-row='0' data-explain='Позиции заказов читаются одним запросом на весь список: вызовов 200, а не 2400.'></div>
+<div class="viz" data-viz="mon-table" data-title='Тот же запрос после BUG_N_PLUS_ONE=0' data-query='select calls, round(mean_exec_time::numeric,1) as mean_ms, left(query,50) from pg_stat_statements order by total_exec_time desc limit 3' data-columns='["calls","mean_ms","left"]' data-rows='[["200","0.9","SELECT oi.order_id, oi.product_id, p.name, oi.qty,"],["200","0.6","SELECT id, status, total, created_at FROM orders W"]]' data-highlight-col='0' data-highlight-row='0' data-explain='Позиции заказов читаются одним запросом на весь список: вызовов 200, а не 4000.'></div>
 
 Исправление включается в `.env` (`BUG_N_PLUS_ONE=0`) и перезапуском магазина. А вот как это же видно в трейсе, открытом из Grafana (Tempo, подробно в теме 4):
 
-<div class="viz" data-viz="mon-trace" data-title='Tempo: GET /api/orders с N+1' data-trace-id='f3d8cfa59e532830f2903597c5ebc80c' data-spans='[{"id":"r","parent":null,"service":"shop","name":"GET /api/orders","start":0,"dur":39,"status":"ok","attrs":{"http.route":"/api/orders","http.status_code":200}},{"id":"g","parent":"r","service":"shop","name":"GET","start":1,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"c","parent":"r","service":"shop","name":"db.pool.getconn","start":3,"dur":1,"status":"ok"},{"id":"q0","parent":"r","service":"shop","name":"SELECT","start":5,"dur":3,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q1","parent":"r","service":"shop","name":"SELECT","start":8,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q2","parent":"r","service":"shop","name":"SELECT","start":11,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q3","parent":"r","service":"shop","name":"SELECT","start":13,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q4","parent":"r","service":"shop","name":"SELECT","start":16,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q5","parent":"r","service":"shop","name":"SELECT","start":18,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q6","parent":"r","service":"shop","name":"SELECT","start":21,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q7","parent":"r","service":"shop","name":"SELECT","start":24,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q8","parent":"r","service":"shop","name":"SELECT","start":26,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q9","parent":"r","service":"shop","name":"SELECT","start":29,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q10","parent":"r","service":"shop","name":"SELECT","start":31,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q11","parent":"r","service":"shop","name":"SELECT","start":34,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q12","parent":"r","service":"shop","name":"SELECT","start":37,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}}]' data-focus='q7' data-explain='Список из 12 заказов: после запроса списка идёт цепочка одинаковых коротких SELECT, по одному на заказ.'></div>
+<div class="viz" data-viz="mon-trace" data-title='Tempo: GET /api/orders с N+1' data-trace-id='f3d8cfa59e532830f2903597c5ebc80c' data-spans='[{"id":"r0","parent":null,"service":"shop","name":"POST /api/orders","start":0,"dur":2050,"status":"ok","attrs":{"http.method":"POST","http.route":"/api/orders","http.status_code":201}},{"id":"a1","parent":"r0","service":"shop","name":"SELECT","start":6,"dur":4,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"a2","parent":"r0","service":"shop","name":"INSERT","start":12,"dur":5,"status":"ok","attrs":{"db.system":"postgresql","db.name":"shop"}},{"id":"c1","parent":"r0","service":"shop","name":"POST","start":24,"dur":1990,"status":"ok","attrs":{"http.method":"POST","http.url":"http://payment:8001/pay","http.status_code":200}},{"id":"p1","parent":"c1","service":"payment","name":"POST /pay","start":27,"dur":1984,"status":"ok","attrs":{"http.route":"/pay","http.status_code":200}}]' data-focus='q7' data-explain='Список из 20 заказов: после запроса списка идёт цепочка одинаковых коротких SELECT, по одному на заказ.'></div>
 
-Тринадцать одинаковых полосок подряд, лесенкой: каждая быстрая, но вместе они дают 39 мс. Лесенка из одинаковых коротких запросов это почерк N+1.
+Двадцать одна одинаковая полоска подряд, лесенкой: каждая быстрая, но вместе они дают 69 мс. Лесенка из одинаковых коротких запросов это почерк N+1.
 
 <div class="viz" data-viz="mon-trace" data-title='Tempo: GET /api/orders после исправления' data-trace-id='f3dc9edc50ff558f34f049e8b30a9b79' data-spans='[{"id":"r","parent":null,"service":"shop","name":"GET /api/orders","start":0,"dur":10,"status":"ok","attrs":{"http.route":"/api/orders","http.status_code":200}},{"id":"g","parent":"r","service":"shop","name":"GET","start":1,"dur":1,"status":"ok","attrs":{"db.system":"redis"}},{"id":"c","parent":"r","service":"shop","name":"db.pool.getconn","start":3,"dur":1,"status":"ok"},{"id":"q0","parent":"r","service":"shop","name":"SELECT","start":5,"dur":3,"status":"ok","attrs":{"db.system":"postgresql"}},{"id":"q1","parent":"r","service":"shop","name":"SELECT","start":8,"dur":2,"status":"ok","attrs":{"db.system":"postgresql"}}]' data-focus='q1' data-explain='Тот же список: один SELECT списка и один SELECT позиций сразу для всех заказов.'></div>
 
-Теперь два SELECT, и весь запрос занял 10 мс вместо 39. В статистике это те же 2400 против 200 вызовов.
+Теперь два SELECT, и весь запрос занял 10 мс вместо 69. В статистике это те же 4000 против 200 вызовов.
 
 
 Теперь устроим то, что видела панель выше: пачку входов. Вход проверяет пароль через bcrypt, это намеренно дорогая операция (на стенде `BCRYPT_ROUNDS=12`), а процесс магазина один (`WEB_CONCURRENCY=1`) с лимитом в одно ядро. Больше одного ядра такой процесс не займёт, даже если хост свободен, и входы встают в очередь:
@@ -626,15 +630,15 @@ PROM=localhost:9091 ~/monitoring-lab/02-metrics/promq.sh 'probe_success'
 **Что должно получиться** (пример):
 
 ```text
-instance=http://shop:8000/readyz,job=blackbox-http 1
-instance=http://shop:8000/api/products,job=blackbox-http 1
-instance=http://payment:8001/healthz,job=blackbox-http 1
-instance=http://shop:8000/nope,job=blackbox-http 0
-instance=postgres:5432,job=blackbox-tcp 1
-instance=redis:6379,job=blackbox-tcp 1
+__name__=probe_success,instance=http://shop:8000/readyz,job=blackbox-http 1
+__name__=probe_success,instance=http://shop:8000/api/products,job=blackbox-http 1
+__name__=probe_success,instance=http://payment:8001/healthz,job=blackbox-http 1
+__name__=probe_success,instance=http://shop:8000/nope,job=blackbox-http 0
+__name__=probe_success,instance=postgres:5432,job=blackbox-tcp 1
+__name__=probe_success,instance=redis:6379,job=blackbox-tcp 1
 ```
 
-**Как читать вывод:** в `instance` стоит проверяемый адрес, а не `blackbox:9115`: сработало второе правило relabeling. Пять проб зелёные, красная одна, заведомая `/nope`. Теперь доля за окно:
+**Как читать вывод:** в твоём выводе к строкам добавятся служебные метки, главное смотри на `instance` и значение. В `instance` стоит проверяемый адрес, а не `blackbox:9115`: сработало второе правило relabeling. Пять проб зелёные, красная одна, заведомая `/nope`. Теперь доля за окно:
 
 ```promql
 avg_over_time(probe_success[5m])
@@ -697,16 +701,12 @@ sleep 20
 
 Проверь `up` по всем целям: `up == 0`. Если лишь у `cadvisor` ноль, а остальные 1, Prometheus жив. Проверь, что магазин при этом работает: `curl localhost:8000/readyz` отвечает. Значит, память контейнеров на самом деле существует, а не видна нам.
 
-Затем покажи, что blackbox ловит то, что не ловят метрики: проба по `/nope` красная, а магазин при этом исправен. Проба умеет сообщать про «ошибку, которую нужно починить», а умеет и про «ошибку в настройках проверки».
-
 ### Исправление
 
 <details markdown="1">
 <summary>Разбор</summary>
 
 Верна гипотеза 2: остановился cAdvisor, и ряды `container_*` пропали. Через минуту после остановки на странице `http://localhost:9090/alerts` сработает `ExporterDown` для `cadvisor`: именно алерт на `up == 0` ловит исчезновение метрик, которое никакое сравнение с порогом не заметит. Значит, пустой график это не «всё спокойно», а повод проверить, жив ли сбор.
-
-Красная проба по `/nope` это проверка самого мониторинга: проба сработала правильно, а проблема в адресе. Для рабочих проб в списке остаются только реальные адреса.
 
 Верни cAdvisor и проверь, что цель снова `up`:
 

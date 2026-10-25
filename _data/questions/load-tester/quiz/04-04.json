@@ -27,7 +27,7 @@
     {
      "id": "d",
      "text": "`\"rw\"`",
-     "why": "Такого режима нет: Python ответит `ValueError: invalid mode`."
+     "why": "Такого режима нет: Python ответит `ValueError: must have exactly one of create/read/write/append mode`."
     }
    ],
    "correct": [
@@ -74,7 +74,7 @@
    "skill": "что делает with open",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что делает конструкция `with open(\"access.log\", encoding=\"utf-8\") as f:` для файла?",
+   "text": "Что из этого делает конструкция `with open(\"access.log\", encoding=\"utf-8\") as f:` для файла? Выбери все подходящие.",
    "options": [
     {
      "id": "a",
@@ -417,7 +417,7 @@
    "skill": "зачем нужен JSON Lines",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Почему логи «Магазина» пишутся как один JSON-объект на строку, а не одним большим JSON-документом?",
+   "text": "Какие причины объясняют, почему логи «Магазина» пишутся как один JSON-объект на строку, а не одним большим JSON-документом?",
    "options": [
     {
      "id": "a",
@@ -656,7 +656,7 @@
    "skill": "как работает setdefault",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Строка из `report.py`: `times.setdefault(endpoint, []).append(int(row[\"duration_ms\"]))`. Что из перечисленного верно?",
+   "text": "Строка из `report.py`: `times.setdefault(endpoint, []).append(int(row[\"duration_ms\"]))`. Какие утверждения о ней верны?",
    "options": [
     {
      "id": "a",
@@ -803,7 +803,7 @@
     {
      "id": "b",
      "text": "В файле лишняя запятая в конце, удалить её",
-     "why": "Лишняя запятая ругается другим текстом: `Expecting property name enclosed in double quotes`."
+     "why": "Лишняя запятая даёт другой текст ошибки (`Illegal trailing comma ...` или, в Python 3.12, `Expecting property name enclosed in double quotes`) и указывает позицию внутри текста, а не символ 0."
     },
     {
      "id": "c",

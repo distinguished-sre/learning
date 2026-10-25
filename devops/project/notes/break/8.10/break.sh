@@ -21,7 +21,7 @@ need_cluster() {
   fi
 }
 
-# Правильная политика из задания 3 (три источника).
+# Правильная политика из задания 3 (четыре источника).
 apply_good_policy() {
   kubectl apply -f - >/dev/null <<'YAML'
 apiVersion: security.istio.io/v1
@@ -42,6 +42,8 @@ spec:
             namespaces: ["monitoring"]
         - source:
             principals: ["cluster.local/ns/mesh-lab/sa/curl-ok"]
+        - source:
+            principals: ["cluster.local/ns/notes/sa/waypoint"]
       to:
         - operation:
             ports: ["8080"]
@@ -65,6 +67,8 @@ spec:
     - from:
         - source:
             principals: ["cluster.local/ns/mesh-lab/sa/curl-ok"]
+        - source:
+            principals: ["cluster.local/ns/notes/sa/waypoint"]
       to:
         - operation:
             ports: ["8080"]
@@ -75,7 +79,7 @@ YAML
 # Сценарий 2: namespace выпадает из ambient. Повторный запуск ничего не меняет.
 break2() {
   kubectl label namespace "$NS" istio.io/dataplane-mode- >/dev/null 2>&1 || true
-  echo "Готово. Посмотри протокол в istioctl ztunnel-config workload -n $NS."
+  echo "Готово. Посмотри протокол в istioctl ztunnel-config workload --workload-namespace $NS."
 }
 
 # Сценарий 3: waypoint остаётся, но namespace перестаёт им пользоваться.

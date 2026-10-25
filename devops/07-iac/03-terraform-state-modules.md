@@ -10,6 +10,24 @@ time: "2 ч"
 
 Пока state (файл состояния: список того, что Terraform уже создал, урок [7.1](01-iac-terraform-basics.md)) лежит у тебя на ноутбуке, инфраструктура принадлежит одному человеку. Это как записная книжка прораба, которую он носит в кармане: бригада не знает, какие окна уже вставлены, а если прораб потерял книжку, стройка продолжает стоить денег, но никто не понимает, что на ней построено. Два человека с двумя разными книжками начнут вставлять одно и то же окно дважды. Два одновременных `apply` (команда, которая вносит изменения в облако) могут к тому же испортить сам файл состояния.
 
+Так выглядит защита, когда state общий и с блокировкой: второй человек не может запустить `apply`, пока первый не закончил.
+
+```text
+$ terraform apply
+╷
+│ Error: Error acquiring the state lock
+│
+│ Lock Info:
+│   ID:        8c1f2a47-5d0e-9b3c-14aa-6e2f0d7b91c5
+│   Path:      notes-tfstate/dev/terraform.tfstate
+│   Operation: OperationTypeApply
+│   Who:       anna@laptop
+│   Created:   2026-10-25 11:42:07 UTC
+╵
+```
+
+На выводе видно, кто держит блокировку, какую операцию и с какого времени, поэтому не нужно гадать, можно ли ждать или звонить коллеге.
+
 Копипаста кода для dev и stage (dev это окружение для разработки и проб, stage это «репетиция» перед боевым) быстро расходится: в одном файле поправили, в другом забыли, и окружения перестают быть похожими. Из-за этого на «репетиции» всё работает, а на боевой системе нет.
 
 Решения два. Первое: общий state в бакете (bucket: хранилище файлов в облаке, как шкаф с ячейками; разбирали в [уроке 6.2](../06-cloud/02-vm-network-storage.md)) с блокировкой, чтобы одновременно писал только один человек. Второе: модуль (module), то есть готовый «кирпич» кода, из которого собираются окружения: описал сеть и ВМ один раз, вызвал дважды. Подробно оба понятия разберём в теории. Это базовый уровень командной работы с Terraform, и про него спрашивают на собеседованиях.
@@ -419,7 +437,7 @@ Backend не вечен: бакет переименовали, окружени
 
 Переезд в другой офис. Перевезти архив со старого места (`-migrate-state`) или начать с пустых шкафов в новом (`-reconfigure`): решение нужно принять явно, оба варианта законны, но имеют разные последствия.
 
-После `init` Terraform сохраняет настройки backend в `.terraform/terraform.tfstate` (служебный файл, не путай со state). Перед каждой операцией он сравнивает запись с `backend.tf`. Если они различаются, выдаётся `Error: Backend configuration changed`, и нужно запустить `init` с одним из флагов:
+После `init` Terraform сохраняет настройки backend в `.terraform/terraform.tfstate` (служебный файл, не путай со state). Перед каждой операцией он сравнивает запись с `backend.tf`. Если они различаются, `plan` останавливается с `Error: Backend initialization required` (причина `Backend configuration block has changed`), а `terraform init` без флагов пишет `Error: Backend configuration changed`. В обоих случаях нужно запустить `init` с одним из флагов:
 
 - `terraform init -migrate-state`: скопировать state из старого места в новое. Если в новом месте уже что-то лежит, спросит, перезаписывать ли.
 - `terraform init -reconfigure`: просто переключиться на новый backend, ничего не копируя и забыв прежние настройки. Годится, когда state уже перенесён руками или не нужен.
@@ -594,12 +612,12 @@ Terraform выберет самую новую версию провайдера
 8. снимает блокировку
 ```
 
-Если на шаге 2 получена ошибка блокировки, дальше Terraform не идёт. Если на шаге 4 нет блока `moved`, на шаге 7 ты увидишь пары `destroy` и `create`. Если на шаге 5 не хватает значения переменной, план остановится с `No value for required variable` до обращения к облаку. Умение назвать шаг, на котором сломалось, это и есть диагностика.
+Если на шаге 2 получена ошибка блокировки, дальше Terraform не идёт. Если на шаге 4 нет блока `moved`, на шаге 7 ты увидишь пары `destroy` и `create`. Если на шаге 5 не хватает значения переменной, план остановится с `Missing required argument` до обращения к облаку. Умение назвать шаг, на котором сломалось, это и есть диагностика.
 
 > **Прикинь сам:** На каком шаге `plan` остановится, если в модуль не передано значение обязательной переменной, и дойдёт ли он до облака?
 {: .predict}
 
-На шаге 5, когда раскрывается модуль: будет `No value for required variable`. До обращения к облаку (шаг 6) дело не дойдёт.
+На шаге 5, когда раскрывается модуль: будет `Missing required argument`. До обращения к облаку (шаг 6) дело не дойдёт.
 
 > **Главное:** умение назвать шаг, на котором сломался `plan`, и есть диагностика: блокировка, state, `moved`, модуль, refresh, сравнение.
 {: .key}
@@ -804,8 +822,9 @@ Lock Info:
 
 **Типичные ошибки:**
 
-- `Error: Failed to get existing workspaces: ... InvalidAccessKeyId`: в этом терминале не выставлены `AWS_ACCESS_KEY_ID` и `AWS_SECRET_ACCESS_KEY`. Экспортируй их заново.
-- `Error: Unsupported argument ... "endpoint"`: старый синтаксис. В Terraform 1.10 и новее пиши `endpoints = { s3 = "..." }`.
+- `Error: No valid credential sources found`: в этом терминале не выставлены `AWS_ACCESS_KEY_ID` и `AWS_SECRET_ACCESS_KEY`. Экспортируй их заново.
+- `Error: Failed to get existing workspaces: ... InvalidAccessKeyId`: ключ задан, но хранилище его не знает (опечатка, удалённый или чужой ключ). Проверь статический ключ сервисного аккаунта.
+- `Warning: Deprecated Parameter ... "endpoint"`: старый синтаксис, он устарел с Terraform 1.6 и пока работает. Пиши `endpoints = { s3 = "..." }`.
 - `Error: Backend initialization required, please run "terraform init"`: после правки `backend.tf` не выполнен `init`.
 - `plan` показывает `~ update in-place` у ВМ и `user-data (sensitive value)`: в терминале другой `TF_VAR_notes_db_password`, не тот, с которым создавалась ВМ. Верни прежний пароль. Если его уже нет, такой `apply` безвреден для работающей машины (cloud-init повторно не запускается), но state запомнит новое значение.
 
@@ -824,13 +843,14 @@ Lock Info:
 
 **Шаги:**
 
-1. Сделай страховку и создай структуру. `terraform state pull` печатает текущий state, `>` пишет его в файл. `mkdir -p` создаёт каталоги (и не ругается, если они есть). `git mv` переносит файл и сообщает git, что это перенос. Файлы с секретами (`terraform.tfvars`) git не отслеживает, для них обычный `mv`:
+1. Сделай страховку и создай структуру. `terraform state pull` печатает текущий state, `>` пишет его в файл. `mkdir -p` создаёт каталоги (и не ругается, если они есть). `git mv` переносит файл и сообщает git, что это перенос. Файлы с секретами (`terraform.tfvars`) git не отслеживает, для них обычный `mv`. Файл `backend.tf` создан в задании 2 и ещё не отслеживается git, поэтому его сначала добавляют через `git add`, иначе `git mv` завершится ошибкой:
 
 ```bash
 cd ~/notes/infra/terraform
 terraform state pull > ~/notes-state-before-module.json   # страховка перед переездом
 mkdir -p modules/notes-vm envs/dev
 git mv network.tf variables.tf vm.tf outputs.tf cloud-init.yaml.tftpl modules/notes-vm/
+git add backend.tf   # создан в задании 2 и ещё не в git, без этого git mv завершится ошибкой
 git mv versions.tf providers.tf backend.tf .terraform.lock.hcl terraform.tfvars.example envs/dev/
 mv terraform.tfvars envs/dev/
 rm -rf .terraform tfplan terraform.tfstate*
@@ -1148,7 +1168,7 @@ No changes. Your infrastructure matches the configuration.
 Выбери сценарий и воспроизведи:
 
 1. Конфликт state. В одном терминале запусти `terraform apply` и не отвечай, во втором сделай то же самое. Убей первый процесс через `kill -9` и повтори `terraform plan`.
-2. `Error: Backend configuration changed`. Поменяй в `backend.tf` `key` на `notes/dev2/terraform.tfstate` и запусти `terraform plan`.
+2. Смена backend. Поменяй в `backend.tf` `key` на `notes/dev2/terraform.tfstate` и запусти `terraform plan` (увидишь `Backend initialization required`), затем `terraform init` без флагов (`Backend configuration changed`).
 3. Потеря state. Удали объект state из бакета: `yc storage s3api delete-object --bucket "$TF_BUCKET" --key notes/dev/terraform.tfstate`, затем `terraform plan`.
 
 ### Гипотезы
@@ -1183,7 +1203,7 @@ terraform force-unlock 3d2c6a1e-7f0b-4b5e-9d3a-0c6f7c1e2a44
 
 Дальше запусти `plan`: state мог остаться в промежуточном состоянии. `force-unlock` опасен, потому что разрешает параллельный `apply`. Хороший процесс: запуски идут только из CI с очередью.
 
-**2. Backend configuration changed.** Terraform заметил, что описание backend не совпадает с запомненным, и не гадает, что ты хотел. Два честных варианта:
+**2. Backend initialization required / Backend configuration changed.** Terraform заметил, что описание backend не совпадает с запомненным, и не гадает, что ты хотел. Два честных варианта:
 
 ```bash
 # перенести state в новое место

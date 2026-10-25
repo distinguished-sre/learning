@@ -11,6 +11,24 @@ time: "3 ч"
 
 Dev и prod почти одинаковы: те же манифесты, но другие ресурсы, хост, расписание бэкапа. **Манифест** (manifest) это YAML-файл с описанием объекта Kubernetes. Копировать каталоги с манифестами под каждое окружение нельзя: через месяц копии разъедутся, и никто не вспомнит, какое отличие было намеренным.
 
+```text
+$ diff <(kubectl kustomize overlays/dev) <(kubectl kustomize overlays/prod)
+12c12
+<   replicas: 1
+---
+>   replicas: 3
+31c31
+<         memory: 128Mi
+---
+>         memory: 256Mi
+58c58
+<   - host: dev.notes.lab
+---
+>   - host: notes.lab
+```
+
+Один набор манифестов даёт два окружения, и между ними отличаются ровно три строки: число реплик, память и хост. Всё остальное совпадает, поэтому случайному расхождению негде спрятаться.
+
 В уроке 5.9 ты решил такую же задачу через Helm: манифест превращается в шаблон с пропусками. Для приложения это удобно. Но платформенные манифесты (Postgres, Gateway, CronJob бэкапа) мы писали обычным YAML, и превращать их в шаблоны с `{{ }}` не хочется: они перестанут быть валидным YAML (то есть таким, который понимает любой редактор и любая программа без предварительной подстановки), и читать их станет сложнее.
 
 Kustomize решает задачу наоборот: есть **общая база** (base) и тонкий **слой поверх** (overlay), в котором записаны только отличия. Шаблонов нет, база остаётся обычным правильным YAML, а любое отличие окружения видно одной командой `diff` (программа, которая сравнивает два текста и показывает только различающиеся строки, как «найди десять отличий» на двух картинках). Описание «что брать и что менять» лежит в файле `kustomization.yaml`: это не манифест Kubernetes, а список заданий для самого Kustomize, подробно разберём ниже.
@@ -207,11 +225,11 @@ error: no resource matches strategic merge patch "StatefulSet.v1.apps/postgres.[
 > **Главное:** патч находит объект по виду, имени и namespace, а списки сливает по `name`; если объект не найден, сборка падает.
 {: .key}
 
-Слияние удаляет поле через `null`, а элемент списка через `$patch: delete`, но только там, где Kustomize знает схему объекта; для остального нужен JSON-патч.
+Слияние удаляет поле через `null` (это работает и у CRD), а элемент списка через `$patch: delete`, но только там, где Kustomize знает схему объекта (у CRD он не сработает, и в выводе останется строка `$patch: delete`); для остального нужен JSON-патч.
 
 ### JSON-патч: точечные операции по пути
 
-У стратегического слияния есть пределы. Оно умеет **удалять** (поле через `null`, элемент списка через `$patch: delete`, если у списка есть ключ слияния, например `name`), но не может обратиться к элементу по номеру. К тому же слиянию нужна схема объекта, а для расширений Kubernetes (**CRD**, Custom Resource Definition: объекты, которые добавили сторонние программы, например Gateway) Kustomize схемы не знает. Для таких случаев есть JSON-патч (по стандарту RFC 6902, поэтому его называют «JSON 6902»).
+У стратегического слияния есть пределы. Оно умеет **удалять** (поле через `null`, элемент списка через `$patch: delete`, если у списка есть ключ слияния, например `name`), но не может обратиться к элементу по номеру. К тому же для списков слиянию нужна схема объекта, а для расширений Kubernetes (**CRD**, Custom Resource Definition: объекты, которые добавили сторонние программы, например Gateway) Kustomize схемы не знает. Для таких случаев есть JSON-патч (по стандарту RFC 6902, поэтому его называют «JSON 6902»).
 
 Инструкция для рабочего: «в ящике 2, ячейка 3, заменить болт». Слияние это «замени болт на такой-то» без указания места, JSON-патч указывает точный адрес. Оговорка: при точном адресе легко ошибиться на единицу.
 
@@ -223,7 +241,7 @@ error: no resource matches strategic merge patch "StatefulSet.v1.apps/postgres.[
 
 Так как у JSON-патча нет kind и name внутри, цель указывается отдельным ключом `target` в `kustomization.yaml`: по `kind`, `name`, при необходимости `namespace` и меткам.
 
-В базе Gateway `notes-gw` с двумя listener'ами (**listener** это «слушатель»: порт и протокол, на которых Gateway принимает соединения; урок 5.4), первый на 80, второй на 443. Нужно добавить каждому `hostname`:
+В базе Gateway `notes-gw` с двумя listener'ами (**listener** это «слушатель»: порт и протокол, на которых Gateway принимает соединения; урок 5.4), первый на 80, второй на 443. Нужно задать каждому `hostname`. В учебной базе его нет; в Gateway «Заметок» из урока 5.4 он уже есть (`notes.lab`), и `op: add` его перезапишет (так задаётся, например, `prod.notes.lab`):
 
 ```yaml
 patches:
@@ -253,7 +271,7 @@ patches:
     protocol: HTTPS
 ```
 
-`op: add` для несуществующего поля создаёт его. `op: replace` для несуществующего поля упал бы с ошибкой: заменять нечего.
+`op: add` для несуществующего поля создаёт его, а для существующего перезаписывает. `op: replace` в Kustomize тоже запишет значение, если родитель есть; упадёт, только если нет родительского пути (например `/spec/foo/bar`) или индекса списка. `op: remove` для отсутствующего ключа падает с ошибкой `Unable to remove nonexistent key`.
 
 Осторожно, путаница: индексы в `path`: `/spec/listeners/1` привязан к **порядку** в списке. Если кто-то поменяет местами listener'ы в базе, твой патч молча поправит не тот. Слияние по имени в этом смысле надёжнее, поэтому JSON-патч берут, когда слияние не подходит.
 
@@ -346,7 +364,7 @@ flowchart TD
 
 Из этого следует важное: патч в шаге 3 видит объекты такими, какими их выдала база и генераторы, а метки из `labels` ещё не добавлены. Поэтому в патче нужно писать имена и namespace **как в базе**, а не как получится в итоге. Второе следствие: когда overlay ссылается на базу, база сначала собирается по тем же пяти шагам целиком, и только потом overlay накладывает свои шаги на её результат.
 
-Возьмём dev-overlay «Заметок». Шаг 1 читает базу: объекты `Namespace`, `EnvoyProxy`, `GatewayClass`, `Gateway`, `Service`, `StatefulSet`, `CronJob`. Шаг 3 применяет три патча: слияние к StatefulSet `postgres`, JSON-патч к Gateway `notes-gw`, JSON-патч к CronJob `pg-backup`. Шаг 4 добавляет метку `environment: dev` каждому из семи объектов. Шаг 5 печатает. Вот почему в настоящем выводе диффа dev и prod на тестовой базе строка `environment:` менялась в каждом объекте, а остальные отличия были только там, где стояли патчи.
+Возьмём dev-overlay «Заметок». Шаг 1 читает базу: объекты `Namespace`, `EnvoyProxy`, `GatewayClass`, `Gateway`, `PersistentVolumeClaim`, `Service`, `StatefulSet`, `CronJob`. Шаг 3 применяет три патча: слияние к StatefulSet `postgres`, JSON-патч к Gateway `notes-gw`, JSON-патч к CronJob `pg-backup`. Шаг 4 добавляет метку `environment: dev` каждому из восьми объектов (семь видов: PVC `pg-backups` лежит в одном файле с CronJob). Шаг 5 печатает. Вот почему в настоящем выводе диффа dev и prod на тестовой базе строка `environment:` менялась в каждом объекте, а остальные отличия были только там, где стояли патчи.
 
 > **Прикинь сам:** ты хочешь найти StatefulSet патчем по метке `environment: dev`, которую добавляет `labels`. Получится ли?
 {: .predict}
@@ -377,7 +395,7 @@ flowchart TD
 
 Ключ `namespace: notes` в `kustomization.yaml` проставляет namespace всем объектам в наборе. Для известных ему встроенных объектов кластерного уровня Kustomize это понимает и пропускает. Но для расширений (**CRD**, объекты, добавленные сторонними программами) он не знает, есть у них namespace или нет.
 
-Мы проверили это на базе «Заметок»: добавили `namespace: notes` в overlay и собрали. В выводе GatewayClass `notes-gc` получил строку `namespace: notes`. Но GatewayClass существует на уровне всего кластера, и такой манифест не соответствует его природе: сервер либо проигнорирует, либо отклонит поле. Поэтому в базе «Заметок» namespace записан прямо в каждом манифесте (`metadata.namespace: notes`), а в `kustomization.yaml` ключ `namespace:` мы не используем.
+Мы проверили это на базе «Заметок»: добавили `namespace: notes` в overlay и собрали. В выводе GatewayClass `eg` получил строку `namespace: notes`. Но GatewayClass существует на уровне всего кластера, и такой манифест не соответствует его природе: сервер либо проигнорирует, либо отклонит поле. Есть и вторая причина: EnvoyProxy `notes-proxy` лежит в namespace `envoy-gateway-system`, и общий `namespace: notes` перенёс бы его в `notes`, сломав ссылку `parametersRef` у Gateway. Поэтому в базе «Заметок» namespace записан прямо в тех манифестах, где он нужен (`metadata.namespace: notes`), а в `kustomization.yaml` ключ `namespace:` мы не используем.
 
 > **Прикинь сам:** что нужно повторить в патче, если у объекта в базе указан `metadata.namespace`?
 {: .predict}
@@ -698,7 +716,7 @@ kubectl apply -k k8s/base --dry-run=server
 kubectl diff -k k8s/base; echo "код выхода: $?"
 ```
 
-**Что должно получиться:** список видов включает `Namespace`, `EnvoyProxy`, `GatewayClass`, `Gateway`, `StatefulSet`, `Service`, `CronJob` (точный набор зависит от ваших файлов 5.4 и 5.8), `dry-run` печатает строки вида `statefulset.apps/postgres configured (server dry run)`, а `diff` заканчивается кодом `0`: база совпадает с тем, что уже работает.
+**Что должно получиться:** список видов включает `Namespace`, `EnvoyProxy`, `GatewayClass`, `Gateway`, `StatefulSet`, `Service`, `PersistentVolumeClaim`, `CronJob` (точный набор зависит от ваших файлов 5.4 и 5.8), `dry-run` печатает строки вида `statefulset.apps/postgres unchanged (server dry run)`, а `diff` заканчивается кодом `0`: база совпадает с тем, что уже работает. Если бы в базе что-то отличалось от кластера, вместо `unchanged` стояло бы `configured`.
 
 ```text
    1 kind: CronJob
@@ -706,11 +724,12 @@ kubectl diff -k k8s/base; echo "код выхода: $?"
    1 kind: Gateway
    1 kind: GatewayClass
    1 kind: Namespace
+   1 kind: PersistentVolumeClaim
    1 kind: Service
    1 kind: StatefulSet
 ```
 
-**Как читать вывод:** число слева это сколько объектов такого вида в базе, вид справа. В файлах базы могут быть и другие объекты (например PVC), тогда список у тебя будет длиннее: главное, что нет `Deployment` и `HTTPRoute` приложения. Строки `dry-run` про `configured (server dry run)` значат «принято, изменится (или не изменится)». Код `0` после `diff` значит «git и кластер совпадают»; если ты что-то правил в кластере руками, увидишь код `1` и разницу.
+**Как читать вывод:** число слева это сколько объектов такого вида в базе, вид справа. В файлах базы могут быть и другие объекты (например PVC), тогда список у тебя будет длиннее: главное, что нет `Deployment` и `HTTPRoute` приложения. Строки `dry-run` с `unchanged (server dry run)` значат «принято, изменений нет», а `configured (server dry run)` значит «принято, объект изменится». Код `0` после `diff` значит «git и кластер совпадают»; если ты что-то правил в кластере руками, увидишь код `1` и разницу.
 
 **Объясни себе:**
 - Почему `kubectl diff` возвращает код 1, если различия есть, и как это использовать в CI?
@@ -786,6 +805,7 @@ patches:
       kind: Gateway
       name: notes-gw
     patch: |-
+      # add создаёт поле или перезаписывает существующее
       - op: add
         path: /spec/listeners/0/hostname
         value: notes.lab
@@ -853,7 +873,7 @@ statefulset rolling update complete 1 pods at revision postgres-6c9d5b7f8...
 - Хост Gateway задан в overlay, а хост HTTPRoute в values чарта. Что произойдёт, если они разойдутся? (Маршрут не будет принят Gateway, снаружи будет 404.)
 
 **Типичные ошибки:**
-- `The StatefulSet "postgres" is invalid: spec: Forbidden: updates to statefulset spec for fields other than 'replicas', 'ordinals', 'template', 'updateStrategy', 'persistentVolumeClaimRetentionPolicy' and 'minReadySeconds' are forbidden`: ты попытался патчем поменять `volumeClaimTemplates` (размер диска); размер тома StatefulSet после создания не меняется, расширяй PVC отдельно.
+- `The StatefulSet "postgres" is invalid: spec: Forbidden: updates to statefulset spec for fields other than 'replicas', 'ordinals', 'template', ... are forbidden` (на сервере 1.36 нашего kind; с Kubernetes 1.37 текст другой: `spec.volumeClaimTemplates: Invalid value: ...: field is immutable`): ты попытался патчем поменять `volumeClaimTemplates` (размер диска); размер тома StatefulSet после создания не меняется, расширяй PVC отдельно.
 - `error: no matches for Id StatefulSet.v1.apps/postgres.[noNs]; failed to find unique target for patch StatefulSet.v1.apps/postgres.[noNs]`: в патче не совпали `kind` или `name` с базой.
 - HTTPRoute не получает статус Accepted: хост в listener не совпал с `hostnames` маршрута; проверь `kubectl -n notes get httproute -o yaml`.
 

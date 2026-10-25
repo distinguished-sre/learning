@@ -49,7 +49,7 @@ case "${1:-}" in
   1)
     need_root 1; need_managed
     [[ -f $BACKUP ]] || install -m 600 -o deploy -g deploy "$ENV_FILE" "$BACKUP"
-    sed -i 's/sslmode=verify-full/sslmode=disable/' "$ENV_FILE"
+    sed -i 's#sslrootcert=/certs/yc-ca.pem#sslrootcert=/certs/missing-ca.pem#' "$ENV_FILE"
     dc up -d notes
     echo "Сценарий 1 готов. Проверь: curl -sS https://<твой домен>/readyz и docker compose logs --tail 20 notes"
     ;;
@@ -91,7 +91,7 @@ case "${1:-}" in
        && command -v psql >/dev/null 2>&1; then
       psql "$(host_url)" -Atq -c "SELECT setval(pg_get_serial_sequence('notes', 'id'), COALESCE((SELECT max(id) FROM notes), 1), (SELECT max(id) IS NOT NULL FROM notes));" >/dev/null
     fi
-    echo "Всё возвращено: sslmode=verify-full, порт 6432 открыт, последовательность выровнена."
+    echo "Всё возвращено: sslrootcert на месте, порт 6432 открыт, последовательность выровнена."
     ;;
   *)
     echo "Использование: sudo bash $0 1|2|3|fix" >&2

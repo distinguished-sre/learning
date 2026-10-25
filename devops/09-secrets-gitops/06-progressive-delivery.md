@@ -10,6 +10,10 @@ time: "3 ч"
 
 Обычная выкатка в Kubernetes (`RollingUpdate`, [урок 5.7](../05-kubernetes/07-probes-resources-rollouts.md)) заменяет поды по одному и смотрит только на пробы готовности (проверки «под готов принимать запросы»). Если новая версия отвечает 200 на `/readyz`, но отдаёт 500 на каждый третий запрос, Kubernetes спокойно докатит её на 100% трафика, а о проблеме ты узнаешь из алерта или от пользователей. На работе это классика: «релиз прошёл зелёным, а через 10 минут упала конверсия». Типичная картина: пробы зелёные, а пользователи уже пишут в поддержку. Я покажу, как научить выкатку смотреть на метрики, а не только на пробы.
 
+<div class="viz" data-viz="chart" data-type="line" data-x="25,50,75,100" data-series='[{"name":"Ошибки 5xx у пользователей","unit":"%","values":[8,17,25,33]},{"name":"Пробы готовности (сбои)","unit":"%","values":[0,0,0,0]}]' data-x-label="Доля подов с новой версией, %" data-y-label="Доля ошибок" data-unit="%" data-explain="Каждый третий ответ новой версии отдаёт 500, а проба /readyz остаётся зелёной на всех шагах."></div>
+
+На графике видно, как ошибки растут вместе с долей новой версии (до 33% на каждый третий запрос), а линия проб лежит на нуле: Kubernetes считает выкатку здоровой и докатывает её до конца.
+
 Canary (канареечный релиз; название пришло из шахт, где первой опасный газ замечала канарейка, историю расскажу ниже) даёт новой версии малую долю трафика, сравнивает метрики (числа, которые приложение и кластер выдают о себе: сколько запросов, сколько ошибок, как быстро отвечает) и сам решает: продолжать или откатывать. **Argo Rollouts** это программа для Kubernetes, которая умеет так выкатывать: она вместо обычного Deployment ведёт новую версию по шагам и сверяется с метриками, как осторожный прораб, который не сдаёт дом, пока не проверит каждый этаж. Без неё эти решения принимает человек, глядя на графики. Делает это Argo Rollouts декларативно (ты описываешь желаемое в YAML, а не пишешь команды по шагам), внутри кластера, вместе с Gateway API и Prometheus, которые у тебя уже есть.
 
 Шаг проекта: «Заметки» выкатываются как `Rollout` (ресурс Argo Rollouts, замена Deployment: в нём описаны шаги выкатки и проверки, подробно разберём в теории) с шагами 10/30/60/100% и анализом доли ошибок; плохая версия 0.7.1 откатывается сама. Состояние после урока: app v7.1, образ 0.7.1, тег git `v0.7.1`, чарт 0.5.0.
@@ -414,7 +418,7 @@ notes_http_requests_total{pod="notes-5b4c-xyz12",status="500"}    60
 | `get rollout notes -w` | показать состояние и следить за ним (`-w` от watch, «наблюдать») |
 | `promote notes` | снять паузу и идти дальше; `--full` пропустить остальные шаги |
 | `abort notes` | прервать релиз, вернуть весь трафик на stable |
-| `retry rollout notes` | повторить прерванный или неопределённый релиз |
+| `retry rollout notes` | повторить прерванный (aborted) релиз после `abort` |
 | `undo notes` | вернуть предыдущую ревизию |
 
 Сервис критичный, и ты хочешь, чтобы человек посмотрел на графики после 30%. В `steps` после `setWeight: 30` ставишь `pause: {}`. Rollout дойдёт до 30%, встанет в состояние `Paused` и будет стоять сколько нужно. Ты смотришь Grafana, потом выполняешь `promote`, и релиз идёт дальше. Если ты забыл про такую паузу, потом удивляешься, почему релиз «завис»: это не поломка, а ожидание тебя.
@@ -479,7 +483,7 @@ Rollout запущен, поды canary созданы, а трафик на н�
 
 Все настройки верны, права выданы, а анализ снова `Inconclusive`. Что ещё могло пойти не так?
 
-Метрика доли ошибок это отношение «ошибки к запросам». Если запросов нет, отношение не определено (ноль на ноль), как средний балл класса, в котором никто не писал контрольную. Prometheus считает `rate` по запросам к canary-подам. Если за окно 2 минуты к ним не пришло ни одного запроса, деление даёт пустой результат (`NaN`, «не число»), и `AnalysisRun` получает `Inconclusive`. Плюс на малом числе запросов случайность решает всё: при 10 запросах одна ошибка это 10%.
+Метрика доли ошибок это отношение «ошибки к запросам». Если запросов нет, отношение не определено (ноль на ноль), как средний балл класса, в котором никто не писал контрольную. Prometheus считает `rate` по запросам к canary-подам. Если за окно 2 минуты к ним не пришло ни одного запроса, деление даёт либо пустой результат (нет серий), либо `NaN` («не число», ноль на ноль, когда серии есть, но счётчики не растут); ни то ни другое не подходит под условия, и `AnalysisRun` получает `Inconclusive`. Плюс на малом числе запросов случайность решает всё: при 10 запросах одна ошибка это 10%.
 
 Сервис получает 2 запроса в секунду. На canary 10% это 0,2 запроса в секунду, то есть 24 запроса за 2 минуты. Ошибка в 2 запросах из 24 даёт 8,3%, порог 5% провален, хотя реальная доля ошибок может быть 1%. Для нашего урока нагрузка 10 запросов в секунду даёт на canary 1 запрос в секунду, 120 за две минуты: шум приемлем.
 
@@ -530,7 +534,7 @@ Rollout запущен, поды canary созданы, а трафик на н�
 **Шаги:**
 
 1. Установи контроллер из манифеста релиза v1.10.0 в ns `argo-rollouts`. Команда `kubectl apply -n ... -f <URL>` применяет YAML прямо по ссылке; `create namespace` создаёт namespace для контроллера.
-2. Добавь плагин в ConfigMap контроллера. Версию плагина смотри на странице проекта `argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi`: проверь актуальную версию на странице проекта и подставь в `PLUGIN_VERSION`.
+2. Добавь плагин в ConfigMap контроллера. Версия плагина `argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi` закреплена: v0.17.0 (проверена на странице релизов проекта), она идёт в `PLUGIN_VERSION`.
 3. Выдай права на `httproutes`. Команды `kubectl apply -f - <<YAML ... YAML` читают манифест, записанный сразу под командой: если после `<<` стоят кавычки (`<<'YAML'`), shell ничего в тексте не подставляет, а без кавычек подставляет переменные вроде `${PLUGIN_VERSION}`; поэтому первая команда без кавычек, вторая с ними. `export PLUGIN_VERSION=...` сохраняет версию в переменной окружения, чтобы shell подставил её в ссылку.
 
 ```bash
@@ -539,8 +543,8 @@ kubectl create namespace argo-rollouts
 kubectl apply -n argo-rollouts \
   -f https://github.com/argoproj/argo-rollouts/releases/download/v1.10.0/install.yaml
 
-# Версию плагина подставь со страницы релизов проекта
-export PLUGIN_VERSION="<версия-со-страницы-проекта>"
+# Версия плагина закреплена, при обновлении смотри страницу релизов проекта
+export PLUGIN_VERSION="v0.17.0"
 
 # Регистрируем плагин: контроллер скачает бинарник при старте
 kubectl apply -f - <<YAML
@@ -611,6 +615,7 @@ level=info msg="Downloading plugin argoproj-labs/gatewayAPI from: https://github
 
 **Типичные ошибки:**
 - `unable to load plugin ... 404 Not Found` в логах: неверный `PLUGIN_VERSION` или имя файла. Открой страницу релизов плагина и скопируй имя ассета дословно.
+- Контроллер не стартует на Mac с Apple Silicon в kind: ассет плагина выбирается по архитектуре узла, вместо `gatewayapi-plugin-linux-amd64` нужен `gatewayapi-plugin-linux-arm64`.
 - `Error from server (NotFound): namespaces "argo-rollouts" not found`: пропущен `kubectl create namespace`.
 
 ### Задание 2. Rollout, AnalysisTemplate и веса в чарте
@@ -686,7 +691,7 @@ spec:
         args:
           - name: canary-hash
             valueFrom:
-              podTemplateHash: Latest
+              podTemplateHashValue: Latest
       steps:
         {{- toYaml .Values.rollout.steps | nindent 8 }}
 ---
@@ -721,14 +726,15 @@ spec:
       interval: {{ .Values.rollout.analysis.interval }}
       initialDelay: 60s
       failureLimit: {{ .Values.rollout.analysis.failureLimit }}
-      # Пустой ответ (нет метрики) не подходит ни под одно условие: будет Inconclusive
+      # Пустой ответ (нет метрики) не подходит ни под одно условие: будет Inconclusive.
+      # Ошибок нет -> числитель 0 (or vector(0)), запросов нет -> знаменатель пуст -> Inconclusive
       successCondition: len(result) > 0 && result[0] < {{ .Values.rollout.analysis.maxErrorRatio }}
       failureCondition: len(result) > 0 && result[0] >= {{ .Values.rollout.analysis.maxErrorRatio }}
       provider:
         prometheus:
           address: {{ .Values.rollout.analysis.prometheus }}
           query: |
-            sum(rate(notes_http_requests_total{namespace="notes",pod=~"notes-{{`{{args.canary-hash}}`}}-.*",status=~"5.."}[2m]))
+            (sum(rate(notes_http_requests_total{namespace="notes",pod=~"notes-{{`{{args.canary-hash}}`}}-.*",status=~"5.."}[2m])) or vector(0))
             /
             sum(rate(notes_http_requests_total{namespace="notes",pod=~"notes-{{`{{args.canary-hash}}`}}-.*"}[2m]))
 {{- end }}
@@ -987,7 +993,7 @@ kubectl -n notes logs -l app.kubernetes.io/name=notes --tail=20
 <details markdown="1">
 <summary>Разбор всех сценариев</summary>
 
-1. `Inconclusive`. Смотри `Message` в `AnalysisRun`: пустой результат запроса. Скопируй запрос в Prometheus (port-forward на 9090). Причины: опечатка в метке (`namespace`, `pod`), окно `rate` короче двух интервалов сбора, нет нагрузки на canary. Исправь запрос или запусти нагрузку. Rollout после `Inconclusive` стоит на паузе: `kubectl argo rollouts retry rollout notes -n notes` перезапускает анализ.
+1. `Inconclusive`. Смотри `Message` в `AnalysisRun`: пустой результат запроса. Скопируй запрос в Prometheus (port-forward на 9090). Причины: опечатка в метке (`namespace`, `pod`), окно `rate` короче двух интервалов сбора, нет нагрузки на canary. Исправь запрос или запусти нагрузку. Rollout после `Inconclusive` стоит на паузе. Исправь причину через git, дождись применения Flux, затем `kubectl argo rollouts abort notes -n notes` и `kubectl argo rollouts retry rollout notes -n notes`: релиз пойдёт заново с новым `AnalysisRun`. Если решено идти дальше без анализа, `kubectl argo rollouts promote notes -n notes`.
 2. Вес не меняется. В логах контроллера `plugin ... not found` или `forbidden`. Проверь ConfigMap `argo-rollouts-config` (имя плагина и URL) и ClusterRoleBinding, потом `rollout restart` контроллера. Без плагина Rollout меняет только число подов, и 10% трафика превращаются в долю подов.
 3. Автоматический abort. Это штатная работа: `FAIL_RATE=0.3` даёт около 30% ошибок на canary, порог 5%. Убери причину, выкати новую ревизию.
 4. Схема БД. Релиз удалил или переименовал колонку. Откат кода не вернёт схему. Верни колонку миграцией вперёд (roll-forward), а в будущем делай expand/contract.
@@ -1058,7 +1064,7 @@ kubectl -n notes logs -l app.kubernetes.io/name=notes --tail=20
 Кластер Kubernetes не запускался. Шаблоны чарта не прогонялись (`helm lint` и `helm template` не выполнялись, синтаксис проверен чтением). Код `FAIL_RATE` сверен с эталоном `project/notes/versions/v7.1.py`. Вывод команд реалистичный, но не снят с живого кластера.
 
 - Argo Rollouts: v1.10.0
-- Плагин Gateway API для Argo Rollouts: версия не закреплена, проверь актуальную версию на странице проекта
+- Плагин Gateway API для Argo Rollouts: v0.17.0
 - Envoy Gateway: v1.9.2
 - kube-prometheus-stack: chart 91.8.2
 - Flux: v2.9.5

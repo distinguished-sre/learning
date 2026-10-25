@@ -10,6 +10,17 @@ time: "3 ч"
 
 Terraform создал ВМ, но она пустая: нет Docker, нет пользователя `notes`, нет каталогов. Зайти по SSH и набрать команды руками можно один раз. На третьем сервере ты забудешь шаг, на десятом получишь машины, которые «почти одинаковые», и никто не вспомнит, чем именно они отличаются. Ansible заходит на серверы по SSH (защищённому удалённому входу, [урок 2.2](../02-network/02-ports-tcp-ssh.md)) сам, приводит их к описанному состоянию и не требует ставить на них никаких программ-агентов (постоянно работающих помощников на самом сервере). Это как мастер с чемоданом инструментов, который сам приезжает по списку адресов: не нужно держать по сотруднику в каждом доме.
 
+Вот что бывает с серверами, настроенными руками: спросим у трёх машин версию Docker.
+
+```text
+$ for h in notes-1 notes-2 notes-3; do echo -n "$h: "; ssh $h "docker --version"; done
+notes-1: Docker version 27.3.1, build ce12230
+notes-2: Docker version 26.1.4, build 5650f9b
+notes-3: bash: docker: command not found
+```
+
+Три сервера «для одного и того же» уже разные: на второй старая версия, на третий Docker вообще забыли поставить. Ansible нужен, чтобы такое не копилось.
+
 На работе Ansible встречается везде, где есть виртуальные машины: обновить пакет на 40 серверах, раскатить конфиг, проверить, что везде одна версия. Вопросы про идемпотентность (повторный запуск не ломает и не дублирует результат), инвентарь (список серверов) и `become` (выполнить действие с правами администратора, как `sudo`) есть почти на каждом собеседовании по DevOps. Всё это подробно разберём в теории ниже.
 
 Шаг проекта: в репозитории «Заметок» ты создаёшь папку `~/notes/infra/ansible/` (в задании 1) и кладёшь в неё два файла: `ansible.cfg` (настройки по умолчанию: под каким пользователем и с каким ключом входить) и `inventory.yml` (список серверов; пока один, с адресом ВМ из `terraform output`). Плейбуки (файлы с описанием настройки) будут в [уроке 7.5](05-ansible-playbooks.md).
@@ -171,7 +182,7 @@ packages:
 
 Аналогия: YAML это оглавление книги, где подпункты сдвинуты вправо. Оговорка: в книге сдвиг просто красота, а в YAML сдвиг это смысл. Лишний пробел превращает «внутри группы» в «рядом с группой».
 
-Ошибка отступа выглядит как `ERROR! Unable to parse .../inventory.yml as an inventory source`. Дальше в уроке ты увидишь, как проверить файл командой `ansible-inventory --graph`.
+Ошибка отступа выглядит как `[WARNING]: Unable to parse .../inventory.yml as an inventory source` и `[WARNING]: No inventory was parsed, only implicit localhost is available`. Команда при этом не падает, а работает с пустым инвентарём, поэтому дальше будет `Could not match supplied host pattern`. Дальше в уроке ты увидишь, как проверить файл командой `ansible-inventory --graph`.
 
 > **Главное:** в YAML структуру задают пробелами: словарь, вложенный словарь и список с «- »; табуляция запрещена.
 {: .key}
@@ -985,7 +996,7 @@ ls: cannot access '/etc/motd-notes': No such file or directory
 
 **Типичные ошибки:**
 
-- `ERROR! couldn't resolve module/action 'ansible.builtin.copyy'`: опечатка в имени модуля. Найди правильное: `ansible-doc -l | grep copy`.
+- `[ERROR]: Task failed: Cannot resolve 'ansible.builtin.copyy' to an action or module` (в старых версиях `ERROR! couldn't resolve module/action`): опечатка в имени модуля. Найди правильное: `ansible-doc -l | grep copy`.
 - `Destination directory /opt/notes does not exist`: `copy` не создаёт каталоги. Сначала модуль `file` с `state=directory`.
 
 ### Задание 5. Шаг проекта: инвентарь «Заметок» из terraform output
@@ -1057,7 +1068,7 @@ notes-vm | SUCCESS => {
 **Типичные ошибки:**
 
 - `Failed to connect to the host via ssh: hostname contains invalid characters` (в старых версиях `Could not resolve hostname : Name or service not known`): `NOTES_VM_IP` пуста. Проверь `echo "$NOTES_VM_IP"` и повтори `export`. Переменные живут только в терминале, где ты их задал.
-- `ERROR! Unable to parse .../inventory.yml as an inventory source`: сбит отступ в YAML. Проверь `ansible-inventory --graph`.
+- `[WARNING]: Unable to parse .../inventory.yml as an inventory source` и затем `Could not match supplied host pattern`: сбит отступ в YAML, Ansible не падает, а продолжает без твоих хостов. Проверь `ansible-inventory --graph`.
 
 ## Сломай и почини
 

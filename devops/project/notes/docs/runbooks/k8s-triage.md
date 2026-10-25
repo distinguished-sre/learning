@@ -28,7 +28,7 @@
 
 ## 4. Сеть
 
-- `kubectl get endpoints notes db -n notes`: пусто значит selector или нет Ready-подов.
+- `kubectl get endpointslices -n notes -l 'kubernetes.io/service-name in (notes,db)'`: пусто значит selector или нет Ready-подов.
 - `kubectl port-forward svc/notes 8080:8080 -n notes`, затем `curl -i http://127.0.0.1:8080/readyz`.
 - `kubectl get gateway,httproute -n notes`: условия Accepted и Programmed.
 - `kubectl get networkpolicy -n notes`: не режет ли политика DNS или порт 5432.

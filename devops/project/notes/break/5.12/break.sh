@@ -29,18 +29,13 @@ store_value() {
 
 case "${1:-}" in
   1)
-    # Запрет всего исходящего трафика: DNS тоже блокируется, приложение не находит базу по имени db.
-    kubectl apply -f - >/dev/null <<YAML
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: break-egress-deny
-  namespace: $NS
-spec:
-  podSelector: {}
-  policyTypes: [Egress]
-YAML
-    echo "Сценарий 1 готов. Проверь: kubectl -n notes get pods и логи приложения (kubectl -n notes logs deploy/notes --tail=20)"
+    # Удаляем разрешение DNS: default-deny блокирует исходящий DNS, приложение не находит базу по имени db.
+    if ! kubectl -n "$NS" get networkpolicy default-deny >/dev/null 2>&1; then
+      echo "Нет политики default-deny в namespace $NS. Сначала задание 3 урока 5.12." >&2
+      exit 1
+    fi
+    kubectl -n "$NS" delete networkpolicy allow-dns --ignore-not-found >/dev/null
+    echo "Сценарий 1 готов. Проверь: kubectl -n notes get networkpolicy и логи приложения (kubectl -n notes logs deploy/notes --tail=20)"
     ;;
   2)
     need_deploy
@@ -99,7 +94,31 @@ YAML
     echo "Сценарий 4 готов. Проверь: kubectl -n notes get pods --as=system:serviceaccount:notes:report-bot"
     ;;
   fix)
+    # Старые запуски сценария 1 создавали break-egress-deny: убираем её тоже.
     kubectl -n "$NS" delete networkpolicy break-egress-deny --ignore-not-found >/dev/null
+    # Если default-deny есть, а allow-dns удалён сценарием 1, возвращаем его (тот же манифест, что в задании 3).
+    if kubectl -n "$NS" get networkpolicy default-deny >/dev/null 2>&1 \
+      && ! kubectl -n "$NS" get networkpolicy allow-dns >/dev/null 2>&1; then
+      kubectl apply -f - >/dev/null <<YAML
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: $NS
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+YAML
+      echo "Политика allow-dns возвращена."
+    fi
     kubectl -n "$NS" delete rolebinding report-bot-reader --ignore-not-found >/dev/null
     kubectl -n "$NS" delete role report-reader --ignore-not-found >/dev/null
     kubectl -n "$NS" delete serviceaccount report-bot --ignore-not-found >/dev/null

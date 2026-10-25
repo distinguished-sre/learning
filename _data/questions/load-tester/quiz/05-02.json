@@ -42,7 +42,7 @@
    "skill": "RUN выполняется при сборке",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Образ собран, и ты запустил из него три контейнера. Что верно про `RUN pip install`?",
+   "text": "Образ собран, и ты запустил из него три контейнера. Какие утверждения про `RUN pip install` верны?",
    "options": [
     {
      "id": "a",
@@ -75,7 +75,7 @@
    "skill": "зачем тег в FROM",
    "kind": "понимание",
    "type": "multiple",
-   "text": "В Dockerfile «Магазина» стоит `FROM python:3.14.8-slim`, а не `FROM python`. Почему так сделано?",
+   "text": "Какие причины объясняют, почему в Dockerfile «Магазина» стоит `FROM python:3.14.8-slim`, а не `FROM python`?",
    "options": [
     {
      "id": "a",
@@ -344,7 +344,7 @@
    "skill": "два тега одного образа",
    "kind": "чтение",
    "type": "single",
-   "text": "Ты выполнил `docker tag shop-lab:exp shop-lab:v1` и посмотрел список образов. Что значит одинаковый `IMAGE ID` у `exp` и `v1`?",
+   "text": "Ты выполнил `docker tag shop-lab:exp shop-lab:v1` и посмотрел список образов (`docker image ls` с заданным через `--format` шаблоном колонок). Что значит одинаковый `IMAGE ID` у `exp` и `v1`?",
    "code": "REPOSITORY   TAG   IMAGE ID       CREATED          SIZE\nshop-lab     v1    5e8c1a2d93b7   3 minutes ago    262MB\nshop-lab     exp   5e8c1a2d93b7   3 minutes ago    262MB\nshop-lab     bad   a77d90c3e1b4   2 minutes ago    262MB",
    "options": [
     {
@@ -636,7 +636,7 @@
    "correct": [
     "b"
    ],
-   "explain": "Нужно проверять время создания в `docker image ls`, пересоздавать контейнер и записывать в тег коммит, из которого собран образ.",
+   "explain": "Нужно проверять время создания (`docker image inspect -f` с полем `.Created` или `--format` с полем `.CreatedSince` в `docker image ls`), пересоздавать контейнер и записывать в тег коммит, из которого собран образ.",
    "section": "Теги при сборке"
   },
   {
@@ -778,7 +778,7 @@
    "skill": "забытая точка в docker build",
    "kind": "диагностика",
    "type": "single",
-   "text": "Ты выполнил команду ниже, и Docker ответил: `docker buildx build requires exactly 1 argument`. Что исправить?",
+   "text": "Ты выполнил команду ниже, и Docker ответил: `docker: 'docker buildx build' requires 1 argument`. Что исправить?",
    "code": "docker build -t shop-lab:exp",
    "options": [
     {
@@ -912,7 +912,7 @@
    "skill": "закреплённые версии в requirements",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про строку `fastapi==0.142.2` в `requirements.txt`?",
+   "text": "Какие утверждения про строку `fastapi==0.142.2` в `requirements.txt` верны?",
    "options": [
     {
      "id": "a",
@@ -982,7 +982,7 @@
    "options": [
     {
      "id": "a",
-     "text": "`IMAGE ID` в `docker image ls`: он меняется при любом изменении слоёв"
+     "text": "`ID` образа (`docker image ls`): он меняется при любом изменении слоёв"
     },
     {
      "id": "b",

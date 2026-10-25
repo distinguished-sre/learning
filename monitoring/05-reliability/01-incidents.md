@@ -10,6 +10,10 @@ time: "3 ч"
 
 Четверг, вечер. На экране дежурного красный алерт: магазин отдаёт ошибки. Опытный инженер сначала спрашивает себя, насколько всё плохо и становится ли хуже. Неопытный бросается чинить: перезапускает сервис, откатывает релиз, правит конфиг. Три действия подряд, и уже никто не знает, что из них помогло, а что добавило проблем.
 
+<div class="viz" data-viz="pool" data-size="5" data-duration="1800" data-rate="8" data-timeout="3000"></div>
+
+Так выглядит четверговый алерт изнутри: у магазина пять соединений с базой, а каждый заказ держит своё слишком долго, потому что оплата отвечает медленно (в виджете время сжато). Смотри, как растёт очередь и когда начинаются отказы по таймауту: именно их покупатель видит как «ошибку на сайте».
+
 Эта картина знакома каждому, кто дежурил, и кончается она обычно одинаково: беда была в одном месте, а вторую поломку человек устроил сам, потому что спешил. Поэтому у инцидента есть порядок, как у посадки самолёта: сначала оценить, потом снять ущерб, потом искать причину. Не наоборот.
 
 Этот урок о том, что происходит между «сработал алерт» и «покупатели снова покупают». Ты разберёшь жизненный цикл инцидента, роли, оценку влияния по золотым сигналам и правило «риск действия не выше влияния». Потом проведёшь настоящий учебный инцидент на «Магазине» и посчитаешь, сколько минут ушло на каждый этап.
@@ -261,7 +265,7 @@ flowchart TD
 
 Покажу на нашем инциденте. Алерт `ShopDbPoolExhausted` сообщил про очередь за соединением. Это симптом, и мы сначала смотрим, как именно он проявляется. Вот лог ошибок магазина на 14:02:
 
-<div class="viz" data-viz="mon-logs" data-title="Explore: Loki, ошибки 5xx на 14:02" data-query="{service=&quot;shop&quot;} | json | status >= 500" data-highlight="couldn't get a connection" data-explain="Ошибки магазина, новые сверху. Во всех строках маршрут заказов, длительность около пяти секунд и одна причина: не нашлось соединения с базой." data-lines='[{"ts":"2026-10-04 14:02:18.640","level":"error","labels":{"service":"shop","container":"shop-shop-1","level":"ERROR"},"line":"{\"ts\": \"2026-10-04T11:02:18.640210+00:00\", \"level\": \"ERROR\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 503, \"duration_ms\": 5011.2, \"request_id\": \"1c7e0b4aa9d3552f8e01b6c4d7a39e50\", \"trace_id\": \"6a02f4d1b8c3470e95a1d2c8f03b7e14\", \"user_id\": 4, \"error\": \"couldn&#39;t get a connection after 5.00 sec\"}"},{"ts":"2026-10-04 14:02:14.093","level":"error","labels":{"service":"shop","container":"shop-shop-1","level":"ERROR"},"line":"{\"ts\": \"2026-10-04T11:02:14.093877+00:00\", \"level\": \"ERROR\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 503, \"duration_ms\": 5006.8, \"request_id\": \"b53d9e20c71f4a68a4e03d5f19c82b07\", \"trace_id\": \"e9b7c15a30d84f62b1a07c3e5d94f820\", \"user_id\": 7, \"error\": \"couldn&#39;t get a connection after 5.00 sec\"}"},{"ts":"2026-10-04 14:02:09.771","level":"error","labels":{"service":"shop","container":"shop-shop-1","level":"ERROR"},"line":"{\"ts\": \"2026-10-04T11:02:09.771402+00:00\", \"level\": \"ERROR\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 503, \"duration_ms\": 5013.5, \"request_id\": \"47d1a8e6f20b3c95d8a14e70b2c63f19\", \"trace_id\": \"0f3c82d7a51b4e69c8d02a7f14e5b936\", \"user_id\": 2, \"error\": \"couldn&#39;t get a connection after 5.00 sec\"}"},{"ts":"2026-10-04 14:02:04.512","level":"error","labels":{"service":"shop","container":"shop-shop-1","level":"ERROR"},"line":"{\"ts\": \"2026-10-04T11:02:04.512093+00:00\", \"level\": \"ERROR\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 503, \"duration_ms\": 5004.3, \"request_id\": \"9a0e7c13d54b82f6a1c30e85d7b24f61\", \"trace_id\": \"b1d4e70c92a35f8b6e01c47d3a925f08\", \"user_id\": 8, \"error\": \"couldn&#39;t get a connection after 5.00 sec\"}"}]' data-try="нажми на строку: раскроются поля. Скопируй trace_id и считай, что открываешь трейс этого заказа."></div>
+<div class="viz" data-viz="mon-logs" data-title="Explore: Loki, ошибки 5xx на 14:02" data-query="{service=&quot;shop&quot;} | json | status >= 500" data-highlight="couldn't get a connection" data-explain="Ошибки магазина, новые сверху. Во всех строках маршрут заказов, длительность около пяти секунд и одна причина: не нашлось соединения с базой." data-lines='[{"ts":"2026-10-04 14:02:18.640","level":"error","labels":{"service":"shop","container":"shop-shop-1","level":"ERROR"},"line":"{\"ts\": \"2026-10-04T14:02:18.640210+00:00\", \"level\": \"ERROR\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 503, \"duration_ms\": 5011.2, \"request_id\": \"1c7e0b4aa9d3552f8e01b6c4d7a39e50\", \"trace_id\": \"6a02f4d1b8c3470e95a1d2c8f03b7e14\", \"user_id\": 4, \"error\": \"couldn&#39;t get a connection after 5.00 sec\"}"},{"ts":"2026-10-04 14:02:14.093","level":"error","labels":{"service":"shop","container":"shop-shop-1","level":"ERROR"},"line":"{\"ts\": \"2026-10-04T14:02:14.093877+00:00\", \"level\": \"ERROR\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 503, \"duration_ms\": 5006.8, \"request_id\": \"b53d9e20c71f4a68a4e03d5f19c82b07\", \"trace_id\": \"e9b7c15a30d84f62b1a07c3e5d94f820\", \"user_id\": 7, \"error\": \"couldn&#39;t get a connection after 5.00 sec\"}"},{"ts":"2026-10-04 14:02:09.771","level":"error","labels":{"service":"shop","container":"shop-shop-1","level":"ERROR"},"line":"{\"ts\": \"2026-10-04T14:02:09.771402+00:00\", \"level\": \"ERROR\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 503, \"duration_ms\": 5013.5, \"request_id\": \"47d1a8e6f20b3c95d8a14e70b2c63f19\", \"trace_id\": \"0f3c82d7a51b4e69c8d02a7f14e5b936\", \"user_id\": 2, \"error\": \"couldn&#39;t get a connection after 5.00 sec\"}"},{"ts":"2026-10-04 14:02:04.512","level":"error","labels":{"service":"shop","container":"shop-shop-1","level":"ERROR"},"line":"{\"ts\": \"2026-10-04T14:02:04.512093+00:00\", \"level\": \"ERROR\", \"msg\": \"Запрос завершён\", \"method\": \"POST\", \"route\": \"/api/orders\", \"path\": \"/api/orders\", \"status\": 503, \"duration_ms\": 5004.3, \"request_id\": \"9a0e7c13d54b82f6a1c30e85d7b24f61\", \"trace_id\": \"b1d4e70c92a35f8b6e01c47d3a925f08\", \"user_id\": 8, \"error\": \"couldn&#39;t get a connection after 5.00 sec\"}"}]' data-try="нажми на строку: раскроются поля. Скопируй trace_id и считай, что открываешь трейс этого заказа."></div>
 
 Все строки с кодом 503, маршрутом `/api/orders` и длительностью около пяти секунд (`duration_ms`): запрос ждал соединение ровно пять секунд (`DB_POOL_TIMEOUT`) и сдался. Поле `error` называет причину: `couldn't get a connection after 5.00 sec`. Если взять `trace_id` из строки, водопад покажет, где ушло время:
 
@@ -406,7 +410,7 @@ flowchart TD
 
 Стенд «Магазин» поднят с профилем `monitoring`, Prometheus на `http://localhost:9090`, Grafana на `http://localhost:3000`, Alertmanager на `http://localhost:9093`. Нагрузку и поломки делай только на своём локальном стенде. Скрипт `orders.sh` из [урока 3.1](../03-dashboards-alerts/01-grafana.md) лежит в `~/monitoring-lab/03-dashboards-alerts/`.
 
-Договоримся о ролях: ты и дежурный, и руководитель инцидента, и связной. Времена в хронологии пиши в UTC (`date -u`): так они совпадут с `activeAt` в Prometheus.
+Договоримся о ролях: ты и дежурный, и руководитель инцидента, и связной. Времена в хронологии пиши в UTC (`date -u`): так их можно сверять с Prometheus (`activeAt` там показывает начало pending, а firing наступает на `for` правила позже).
 
 ### 1. Подготовка: хронология и шаблон
 
@@ -636,7 +640,7 @@ MTTR  от начала до закрытия  7:00
 
 **Типичные ошибки:**
 
-- `mttx.py` пишет «нет меток»: пропустил `ev` на каком-то этапе. Допиши недостающую строку в `incident-01.log` вручную в формате `ЧЧ:ММ:СС метка`, время возьми из `curl -s localhost:9090/api/v1/alerts` (поле `activeAt`) или из истории терминала.
+- `mttx.py` пишет «нет меток»: пропустил `ev` на каком-то этапе. Допиши недостающую строку в `incident-01.log` вручную в формате `ЧЧ:ММ:СС метка`, время возьми из истории терминала или посчитай: firing = `activeAt` из `curl -s localhost:9090/api/v1/alerts` плюс `for` правила (для ShopDbPoolExhausted это activeAt + 1 минута).
 - Алерты не загораются: проверь, что `orders.sh` запущены (`jobs`) и что оплата действительно 5000 мс (`curl -s localhost:8001/admin/config`). Без нагрузки очереди не будет.
 - На `localhost:9090` пусто или `curl: (7)`: профиль `monitoring` не запущен, `docker compose --profile monitoring ps`.
 - Остались «покупатели» после теста: `kill $(jobs -p)`.
@@ -668,11 +672,11 @@ curl -s localhost:8001/admin/config
 
 ```text
 NAME           IMAGE       COMMAND   SERVICE   CREATED         STATUS                   PORTS
-shop-shop-1    shop-shop   ...       shop      3 minutes ago   Up 2 minutes (healthy)   0.0.0.0:8000->8000/tcp
+shop-shop-1    shop-shop   ...       shop      25 minutes ago  Up 2 minutes (healthy)   127.0.0.1:8000->8000/tcp
 {"delay_ms":5000.0,"fail_rate":0.0}
 ```
 
-**Как читать вывод:** магазин поднят две минуты назад: перезапуск прошёл (гипотеза 1 отпала). Оплата всё ещё отвечает по 5000 мс: причина осталась на месте. Значит, перезапуск лишь опустошил очередь, а новые заказы снова заняли соединения и упёрлись в оплату. Трейс из практики уже показывал, что вина не на магазине (гипотеза 2 отпала).
+**Как читать вывод:** магазин поднят две минуты назад: перезапуск прошёл (CREATED старше, потому что `restart` не пересоздаёт контейнер, а сбрасывает только время работы) (гипотеза 1 отпала). Оплата всё ещё отвечает по 5000 мс: причина осталась на месте. Значит, перезапуск лишь опустошил очередь, а новые заказы снова заняли соединения и упёрлись в оплату. Трейс из практики уже показывал, что вина не на магазине (гипотеза 2 отпала).
 
 ### Исправление
 

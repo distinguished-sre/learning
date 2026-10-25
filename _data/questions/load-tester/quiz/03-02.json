@@ -969,7 +969,7 @@
    "skill": "зачем нужен ssh-agent",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что делает SSH-agent, который ты запускаешь командой `eval \"$(ssh-agent -s)\"`?",
+   "text": "Что из этого делает SSH-agent, который ты запускаешь командой `eval \"$(ssh-agent -s)\"`? Выбери все подходящие.",
    "options": [
     {
      "id": "a",

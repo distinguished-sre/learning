@@ -10,6 +10,17 @@ time: "3 ч"
 
 К этому моменту у «Заметок» есть Vault (хранилище секретов, [урок 9.1](01-secrets-problem-vault.md)), Flux (программа, которая сама доставляет изменения из git в кластер, [урок 9.3](03-gitops-flux.md)), cert-manager (выпуск сертификатов, [урок 9.4](04-cert-manager-tls.md)), оператор PostgreSQL (программа, которая эксплуатирует базу данных вместо человека, [урок 9.5](05-cnpg.md)), canary-релизы (выкатка новой версии малой долей трафика, [урок 9.6](06-progressive-delivery.md)) и мониторинг (сбор метрик и алертов, тема 8). Вместе это называют **платформой**: набор общих сервисов, на которых работает приложение, как коммуникации дома (вода, свет, отопление), на которые опираются все жильцы. Каждый кусок ты собирал отдельно. На собеседовании и на дежурстве (дежурство это когда ты отвечаешь за работу системы в свою смену и первым реагируешь на поломки) спрашивают другое: как это работает вместе, что будет, если кластер пропадёт, и какие дыры остались. Кто не может нарисовать цепочку целиком и назвать свои долги, тот платформу не понимает, а только повторяет команды.
 
+```text
+$ flux get kustomizations
+NAME                    REVISION              SUSPENDED   READY   MESSAGE
+flux-system             main@sha1:9d41c7e     False       True    Applied revision: main@sha1:9d41c7e
+infrastructure          main@sha1:9d41c7e     False       True    Applied revision: main@sha1:9d41c7e
+infrastructure-config   main@sha1:9d41c7e     False       True    Applied revision: main@sha1:9d41c7e
+apps                    main@sha1:9d41c7e     False       False   dependency 'flux-system/infrastructure-config' is not ready
+```
+
+На выводе видно, как платформа держится на цепочке зависимостей: слой `apps` не Ready не из-за своей ошибки, а потому что ждёт `infrastructure-config`. Читать такой вывод надо снизу вверх по зависимостям, это и есть навык платформенного мышления.
+
 В этом уроке ты нарисуешь всю цепочку от коммита до алерта, докажешь, что кластер восстанавливается из git за измеренное время, закроешь одну дыру admission-политикой (admission policy, правило, которое проверяет объект при создании) и честно перечислишь то, что осталось. Оставшееся называют **долгом** (debt): осознанное «пока сделали так, потом исправим», как незакрытый кредит. Главное, что долг записан, а не забыт: записанный долг можно планировать, забытый выстрелит ночью.
 
 Шаг проекта: в «Заметках» появляются `docs/architecture.md` (документ об устройстве системы: схема и список долгов) с диаграммой и долгами, `docs/threat-model.md` и политика `vap-no-latest-tag.yaml`.
@@ -135,7 +146,7 @@ flowchart TD
 <details markdown="1">
 <summary>Ответ</summary>
 
-Значения секретов в Vault, unseal-ключи и root-токен Vault (лежат в `~/.notes-secrets/`), данные PostgreSQL (в PVC и в бэкапах MinIO). Ещё токен для `flux bootstrap`, но его можно выпустить заново.
+Значения секретов в Vault, unseal-ключи и root-токен Vault (лежат в `~/.notes-secrets/`; unseal-ключи нужны, пока жив тот же Vault, при пересоздании кластера seed создаёт новые), данные PostgreSQL (в PVC и в бэкапах MinIO). Ещё токен для `flux bootstrap`, но его можно выпустить заново.
 
 </details>
 
@@ -148,10 +159,10 @@ flowchart TD
 | Что | Где хранится | Как восстановить | Чем опасно |
 |---|---|---|---|
 | Конфигурация (манифесты, чарты) | git | `flux bootstrap` | если удалили репозиторий, а копии нет |
-| Значения секретов | Vault (PVC в кластере) | `seed-vault.sh` и ключи из `~/.notes-secrets/` | потеря unseal-ключей: Vault не открыть |
+| Значения секретов | Vault (PVC в кластере) | `seed-vault.sh` заново инициализирует Vault и создаёт значения; то, что нельзя сгенерировать заново (внешние токены, пароль под уже существующую базу), храни отдельно и записывай в Vault сам | потеря значений, которых нет нигде, кроме Vault; потеря unseal-ключей живого Vault: открыть его нельзя |
 | Данные приложения | PVC PostgreSQL и бэкапы в MinIO | restore из бэкапа | MinIO без копии, бэкап не проверяли |
 
-Что произойдёт, если кластер удалить и создать заново, не трогая репозиторий. Flux вернёт все контроллеры и приложения (конфигурация цела). Vault создастся пустым, потому что его диск был в старом кластере: ESO не найдёт секрет, `ExternalSecret` покажет `SecretSyncedError`. Ты запускаешь `seed-vault.sh` и секреты возвращаются. База `notes-db` создастся пустой: заметок в ней нет, пока ты не восстановишь бэкап. То есть после «полного восстановления из git» приложение работает, но заметок нет.
+Что произойдёт, если кластер удалить и создать заново, не трогая репозиторий. Flux вернёт все контроллеры и приложения (конфигурация цела). Vault создастся пустым, потому что его диск был в старом кластере: ESO не найдёт секрет, `ExternalSecret` покажет `SecretSyncedError`. Ты запускаешь `seed-vault.sh`, и Vault настраивается заново: создаются новые ключи в `~/.notes-secrets/` и новый случайный пароль БД. База `notes-db` создастся пустой: заметок в ней нет, пока ты не восстановишь бэкап. То есть после «полного восстановления из git» приложение работает, но заметок нет.
 
 > **Прикинь сам:** после пересоздания кластера ты выполнил только `flux bootstrap`. Какие из трёх «домов» вернутся сами, а какие нет?
 {: .predict}
@@ -203,7 +214,7 @@ flowchart LR
 | 10-14 | `infrastructure-config`, затем `apps`; CNPG создаёт пустую базу |
 | 15 | приложение отвечает |
 
-Ожидание образов занимает большую часть времени, ручных шагов два (bootstrap и seed). Именно эти шаги кандидаты на автоматизацию.
+Ожидание образов занимает больше всего времени (6 из 15 минут), ручных шагов два (bootstrap и seed). Именно эти шаги кандидаты на автоматизацию.
 
 > **Прикинь сам:** по шкале выше, сколько минут из 15 уходит на скачивание образов и какая это доля?
 {: .predict}
@@ -316,7 +327,7 @@ Kyverno и OPA Gatekeeper делают то же самое мощнее: уме
 - SBOM (Software Bill of Materials, перечень компонентов образа) отвечает на вопрос «где у нас библиотека X», когда выходит новая CVE (публичный номер найденной уязвимости).
 - cosign подписывает образ ключом или через OIDC-идентичность CI (keyless: подпись привязана к тому, кто запустил сборку, без долгоживущих ключей). Проверка подписи при деплое гарантирует, что в кластер попал образ, собранный вашим CI, а не подложенный.
 
-Проверку подписи в кластере делает admission-контроллер, например Kyverno с правилом `verifyImages`. Встроенная VAP подписи проверять не умеет. Поэтому в нашей платформе подписи нет, и это записано в долги.
+Проверку подписи в кластере делает admission-контроллер, например Kyverno с политикой `ImageValidatingPolicy` (старое правило `verifyImages` в `ClusterPolicy` устарело). Встроенная VAP подписи проверять не умеет. Поэтому в нашей платформе подписи нет, и это записано в долги.
 
 Пример. Вышла уязвимость в библиотеке `libfoo` версии 2.1. Без SBOM ты гадаешь, где она. С SBOM выполняешь поиск по перечням компонентов всех образов и за минуту получаешь список: «notes:0.7.1 и billing:3.2 содержат libfoo 2.1». Без подписи кто-то с доступом к реестру мог бы подменить `notes:0.7.1` на другой образ, и кластер бы его запустил. С подписью и проверкой при деплое подменённый образ не пройдёт.
 
@@ -416,7 +427,7 @@ STRIDE это шесть категорий, по первым буквам:
 
 ### Vault: запечатан, распечатан и почему это важно при восстановлении
 
-Vault хранит самое ценное, поэтому сам он на диске лежит зашифрованным. Ключ, которым он шифрует данные, на диске не хранится вовсе, и даже украв диск, данные не прочитать.
+Vault хранит самое ценное, поэтому сам он на диске лежит зашифрованным. Ключ, которым он шифрует данные, хранится на диске тоже зашифрованным, а расшифровать его можно только unseal-ключом. Самого unseal-ключа на диске нет, поэтому даже украв диск, данные не прочитать.
 
 Представь банковское хранилище с часовым замком, которое открывается только когда несколько сотрудников вставляют свои ключи. После каждого закрытия оно снова заперто. С Vault так же.
 
@@ -543,7 +554,7 @@ flowchart TD
 
 Правило: сначала узнай, где именно обрывается цепочка (какое звено первое показывает ошибку), потом иди вглубь этого звена. Ошибка `CreateContainerConfigError` у пода почти всегда про недостающий Secret или ConfigMap, а не про образ.
 
-После пересоздания кластера страница не открывается. Шаг 1: Gateway есть. Шаг 2: под `notes` в `CreateContainerConfigError`. Шаг 3: описание пода говорит `secret "notes-db" not found`. Идём вверх: ExternalSecret `notes-db` показывает `SecretSyncedError: secret does not exist`. Вверх: Vault отвечает, но пуст. Причина: не выполнен `seed-vault.sh`. Заметь, что мы пришли к причине за пять проверок, никого не перезапуская.
+После пересоздания кластера страница не открывается. Шаг 1: Gateway есть. Шаг 2: под `notes` в `CreateContainerConfigError`. Шаг 3: описание пода говорит `secret "notes-db" not found`. Идём вверх: ExternalSecret `notes-db` показывает `SecretSyncedError`, в событии ошибка Vault (`Vault is sealed` или `invalid role name "notes"`). Вверх: Vault не инициализирован. Причина: не выполнен `seed-vault.sh`. Заметь, что мы пришли к причине за пять проверок, никого не перезапуская.
 
 > **Прикинь сам:** под `notes` в `ImagePullBackOff`, а не в `CreateContainerConfigError`. Идёшь ли ты в Vault?
 {: .predict}
@@ -657,22 +668,23 @@ wc -l docs/architecture.md
 
 **Шаги:**
 
-1. Убедись, что unseal-ключи на месте: без них старый Vault не нужен, но проверить полезно.
+1. Если Vault жив (тот же PVC), для него нужны старые unseal-ключи. При пересоздании кластера `seed-vault.sh` сделает новую инициализацию и перезапишет `vault-init.json`, поэтому сохрани копию, если она нужна.
 2. Удали кластер и создай заново, замеряя время.
 3. Выполни bootstrap и seed.
 
-Разбор команд. `source файл` выполняет файл в текущей оболочке: переменные из него (`GITHUB_TOKEN`, `GITHUB_USER`) становятся доступны, а значение токена нигде не печатается. `ls -l` показывает, что файл с ключами Vault есть и какие у него права. `START=$(date +%s)` сохраняет текущее время в секундах от 1970 года: позже разность двух таких чисел даёт длительность. `kind delete cluster` и `kind create cluster --config kind/kind.yaml` удаляют кластер и создают заново по файлу настроек. `flux bootstrap github` ставит Flux в кластер и подключает его к репозиторию: `--owner` владелец на GitHub, `--repository` репозиторий, `--branch` ветка, `--path` каталог с описанием кластера, `--personal` репозиторий принадлежит пользователю, а не организации. `kubectl wait ... --for=condition=Ready --timeout=15m` ждёт готовности до 15 минут. `$(( (END - START) / 60 ))` арифметика в shell: секунды в минуты.
+Разбор команд. `export` делает переменную доступной запущенным дальше программам, а `read -rs` читает токен с клавиатуры без показа на экране (так же, как в [уроке 9.3](03-gitops-flux.md)), значение токена нигде не печатается. `ls -l` показывает, что файл с ключами Vault есть и какие у него права. `START=$(date +%s)` сохраняет текущее время в секундах от 1970 года: позже разность двух таких чисел даёт длительность. `kind delete cluster` и `kind create cluster --config ~/notes/kind/kind.yaml` удаляют кластер и создают заново по файлу настроек. `flux bootstrap github` ставит Flux в кластер и подключает его к репозиторию: `--owner` владелец на GitHub, `--repository` репозиторий, `--branch` ветка, `--path` каталог с описанием кластера, `--personal` репозиторий принадлежит пользователю, а не организации. `kubectl wait ... --for=condition=Ready --timeout=15m` ждёт готовности до 15 минут. `$(( (END - START) / 60 ))` арифметика в shell: секунды в минуты.
 
 ```bash
 # Токен для Flux (только в переменной окружения, значение не печатай)
-source ~/.notes-secrets/github.env   # экспортирует GITHUB_TOKEN и GITHUB_USER
+export GITHUB_USER="<твой-логин>"
+read -rs GITHUB_TOKEN && export GITHUB_TOKEN   # вставь токен и Enter, он не отобразится
 ls -l ~/.notes-secrets/vault-init.json
 
 # Замер начинается здесь
 START=$(date +%s)
 
 kind delete cluster --name notes
-kind create cluster --config kind/kind.yaml
+kind create cluster --config ~/notes/kind/kind.yaml
 
 flux bootstrap github \
   --owner="$GITHUB_USER" \
@@ -689,7 +701,7 @@ kubectl -n flux-system wait kustomization/infrastructure --for=condition=Ready -
 
 ```bash
 kubectl -n vault wait pod/vault-0 --for=jsonpath='{.status.phase}'=Running --timeout=5m
-bash scripts/seed-vault.sh
+bash ~/notes/scripts/seed-vault.sh
 
 kubectl -n flux-system wait kustomization/apps --for=condition=Ready --timeout=15m
 END=$(date +%s)
@@ -751,7 +763,7 @@ ok
 
 **Шаги:**
 
-1. Добавь файл политики в репозиторий `notes-gitops` (эталон лежит в `project/notes/gitops/`). Построчно: `failurePolicy: Fail` значит «если проверку невозможно выполнить, отказать» (безопаснее, но зависит от доступности проверки); `matchConstraints` к каким объектам применять (поды, создание и изменение); `validations.expression` условие допустимости (разобрано в теории, `>-` в YAML склеивает строки в одну); `message` текст отказа; в привязке `validationActions: ["Deny"]` отказывать, а `namespaceSelector` ограничивает действие namespace `notes` по его метке.
+1. Добавь файл политики в репозиторий `notes-gitops` (эталон лежит в `project/notes/gitops/`). Построчно: `failurePolicy: Fail` значит «если проверку невозможно выполнить, отказать» (безопаснее, но зависит от доступности проверки); `matchConstraints` к каким объектам применять (поды, создание и изменение); `validations.expression` условие допустимости (разобрано в теории, `>-` в YAML позволяет записать длинное выражение в несколько строк как одно значение без завершающего перевода строки); `message` текст отказа; в привязке `validationActions: ["Deny"]` отказывать, а `namespaceSelector` ограничивает действие namespace `notes` по его метке.
 2. Подключи его в `kustomization.yaml` каталога `configs`.
 3. Запушь и дождись применения Flux.
 
@@ -827,7 +839,8 @@ pod "ok" deleted
 **Типичные ошибки:**
 
 - `no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1"`: кластер старше 1.30, VAP там ещё бета. Используй актуальный kind-образ из `kind/kind.yaml`.
-- `ValidatingAdmissionPolicy 'no-latest-tag' ... expression ... undeclared reference`: опечатка в CEL. Смотри `kubectl get validatingadmissionpolicy no-latest-tag -o yaml`, поле `status.typeChecking`.
+- `ValidatingAdmissionPolicy ... compilation failed ... undeclared reference to '...'` (при `kubectl apply`, а если политику доставляет Flux, то в `flux get kustomizations` или `kubectl -n flux-system describe kustomization infrastructure-config`): опечатка в CEL, политика не создана. Исправь выражение в git.
+- Политика создана, но ведёт себя не так, как задумано: смотри `kubectl get validatingadmissionpolicy no-latest-tag -o yaml`, поле `status.typeChecking` (ошибки типов вроде `undefined field`; они сами политику не выключают).
 - Политика создана, но `nginx:latest` проходит: у namespace нет метки или `validationActions` равно `Warn`. Проверь `kubectl get ns notes --show-labels` и `kubectl get validatingadmissionpolicybinding no-latest-tag -o yaml`.
 
 > Дай нейросети схему «Заметок» и попроси пройтись по ней по STRIDE. Из ответа бери только то, что реально есть в твоей платформе: нейросеть охотно придумывает компоненты, которых у тебя нет.
@@ -854,7 +867,7 @@ cat > docs/threat-model.md <<'EOF'
 
 | N | Категория | Угроза | Что закрыто | Что осталось |
 |---|---|---|---|---|
-| 1 | Spoofing | Чужой под читает секрет из Vault | Kubernetes auth: роль notes привязана к ns notes и SA notes | Роль без ограничения по TTL токена |
+| 1 | Spoofing | Чужой под читает секрет из Vault | Kubernetes auth: роль notes привязана к ns notes и SA notes | У роли ttl=1h, но нет token_max_ttl, token_num_uses и привязки audience |
 | 2 | Tampering | Подмена образа в реестре | Тег semver, Trivy в CI | Нет подписи cosign и проверки при деплое |
 | 3 | Tampering | Ручная правка кластера в обход git | Flux откатывает дрейф за интервал reconcile | У людей есть kubectl edit с админскими правами |
 | 4 | Repudiation | Неясно, кто выполнил действие | История git, PR-ревью | Нет аудит-лога Vault и apiserver |
@@ -901,7 +914,7 @@ grep -c '^| [0-9]' docs/threat-model.md
 
 1. Замени заглушку в разделе «Долги». Скрипт на Python читает файл, заменяет строку-заглушку на таблицу и записывает обратно (`<<'EOF'` подаёт скрипт на вход `python3`).
 2. Для каждого долга запиши, как закрыть его в проде.
-3. Закоммить в репозиторий `~/notes`. `2>/dev/null` выбрасывает сообщения об ошибках, `|| true` не даёт команде провалить весь блок.
+3. Закоммить в репозиторий `~/notes`. Каталог `gitops` добавляется, только если он есть (зеркало из задания 4 урока 9.3). `2>/dev/null` у `git tag` выбрасывает сообщение об ошибке, `|| true` не даёт команде провалить весь блок.
 
 ```bash
 cd ~/notes
@@ -913,7 +926,7 @@ debts = """| Долг | Как закрыть в проде |
 |---|---|
 | Vault в одном экземпляре, 1 ключ из 1 | HA (Raft, 3 узла), Shamir 3 из 5, auto-unseal через облачный KMS |
 | MinIO без репликации, бэкапы в одном месте | Объектное хранилище облака, копия в другом регионе |
-| Нет подписи образов | cosign keyless в CI, проверка через Kyverno verifyImages |
+| Нет подписи образов | cosign keyless в CI, проверка через Kyverno ImageValidatingPolicy |
 | Нет SBOM и provenance | Генерация SBOM в CI, хранение рядом с образом |
 | Один кластер и одна зона | Второй кластер, GitOps-восстановление, Velero для PVC |
 | Нет аудит-логов Vault и apiserver | Включить audit device и audit policy, отправка в Loki |
@@ -925,7 +938,8 @@ s = s.replace("(заполнится в задании 5)", debts)
 open(p, "w", encoding="utf-8").write(s)
 EOF
 grep -c '^| ' docs/architecture.md
-git add docs gitops 2>/dev/null
+git add docs
+[ -d gitops ] && git add gitops
 git commit -m "Платформа целиком: architecture, threat model, политика latest"
 git tag v0.7.1-review 2>/dev/null || true
 git log --oneline -1
@@ -948,7 +962,7 @@ git log --oneline -1
 **Типичные ошибки:**
 
 - `nothing to commit, working tree clean`: файлы уже закоммичены или правка не сохранилась. Проверь `git status` и содержимое файла.
-- `fatal: pathspec 'gitops' did not match any files`: в `~/notes` нет каталога `gitops`, зеркало лежит в репозитории `notes-gitops`. Команда с `2>/dev/null` это пропустит, но политику закоммить в её репозитории.
+- `fatal: pathspec 'gitops' did not match any files`: каталога `gitops` нет (не сделано зеркало из задания 4 урока 9.3). Команда `git add` при неверном пути не индексирует вообще ничего, даже существующий `docs`, поэтому следующий `git commit` скажет `nothing added to commit`. Добавляй пути по отдельности. Политика коммитится в её репозитории `~/notes-gitops`.
 
 
 ## Сломай и почини
@@ -989,7 +1003,7 @@ kubectl -n vault exec vault-0 -- vault status
 
 **Сценарий 1: неверный `dependsOn`.** В `apps.yaml` зависимость указывает на несуществующую ступень или отсутствует. Симптом: `dependency 'flux-system/infrastructure-configs' not found` в статусе Kustomization. Найди опечатку в имени `dependsOn`, поправь в git (не руками в кластере), запушь и выполни `flux reconcile kustomization apps --with-source`. Правильная цепочка: `infrastructure` -> `infrastructure-config` -> `apps`.
 
-**Сценарий 2: забытый секрет в Vault.** Vault поднялся, но `seed-vault.sh` не запускали. Симптом: `SecretSyncedError`, в описании `secret does not exist`, под `notes` в `CreateContainerConfigError`. Запусти `bash scripts/seed-vault.sh`, затем `kubectl -n notes annotate externalsecret notes-db force-sync=$(date +%s) --overwrite`. Урок: восстановление из git не восстанавливает содержимое Vault, это должен быть отдельный шаг в чек-листе.
+**Сценарий 2: забытый секрет в Vault.** Vault поднялся, но `seed-vault.sh` не запускали. Симптом: `SecretSyncedError`, в описании ошибка входа в Vault (`Vault is sealed`, `invalid role name "notes"`), под `notes` в `CreateContainerConfigError`. Запусти `bash scripts/seed-vault.sh`, затем `kubectl -n notes annotate externalsecret notes-db force-sync=$(date +%s) --overwrite`. Урок: восстановление из git не восстанавливает содержимое Vault, это должен быть отдельный шаг в чек-листе.
 
 **Сценарий 3: порядок CRD.** Ресурс `ClusterIssuer` лежит в ступени `infrastructure` вместе с cert-manager. Симптом: `no matches for kind "ClusterIssuer" in version "cert-manager.io/v1"`, ступень не Ready. Вынеси ресурс в `infrastructure/configs/` (она зависит от контроллеров) и запушь. Тот же приём для `ClusterSecretStore` и `Cluster` CNPG: ресурс на основе CRD живёт строго после установки оператора.
 

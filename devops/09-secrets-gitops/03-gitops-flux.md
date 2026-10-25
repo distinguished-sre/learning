@@ -10,6 +10,20 @@ time: "3.5 ч"
 
 Пока ты катишь релизы командой `helm upgrade` (обновить установленный Helm-релиз, [урок 5.9](../05-kubernetes/09-helm.md)) со своего ноутбука, у «продакшена» (боевого кластера, которым пользуются настоящие пользователи) нет настоящего источника правды: есть твоя голова и история shell. Коллега не знает, что и когда выкатили. Ручная правка через `kubectl edit` (открыть объект кластера в редакторе и изменить на месте) живёт до следующего деплоя. Права на кластер нужны каждому, кто выкатывает. На работе это звучит как «у меня работает, а на проде нет» и как ночной откат «того, что кто-то поменял руками».
 
+```text
+$ kubectl scale deploy/notes -n notes --replicas=5     # правка руками, в git стоит 2
+$ kubectl get deploy notes -n notes
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+notes   5/5     5            5           12d
+
+$ git log --oneline -1 -- apps/notes/deployment.yaml
+a7c4e19 notes: replicas 2
+
+# кто и когда поставил 5, из кластера не узнать
+```
+
+На выводе видно расхождение: кластер живёт с пятью репликами, а в git записаны две, и нигде не сказано, кто и зачем это поменял. Это и есть дрейф, который GitOps убирает.
+
 GitOps (git как единственный источник желаемого состояния) решает это. Желаемое состояние (как должен выглядеть кластер: какие приложения, сколько реплик, какие версии) лежит в репозитории, а агент (небольшая программа, которая постоянно работает внутри кластера) сам подтягивает описание и приводит кластер в соответствие. Это как жильцы дома, у которых есть утверждённый план перепланировки: менять стены можно только через план, а не кувалдой ночью. Деплой (выкатка новой версии) равен слиянию в ветку `main` (основная ветка репозитория, [урок 3.2](../03-git-ci/02-remotes-workflow.md)), откат равен `git revert` (коммит, который отменяет чужой коммит, не стирая историю, подробно разберём ниже).
 
 Шаг проекта: «Заметки» разворачиваются на новом кластере `notes` не руками, а из репозитория `notes-gitops` через Flux. Ручные `helm install` больше не используются.
@@ -265,7 +279,7 @@ flowchart LR
 
 - `interval` как часто сверять релиз;
 - `chart.spec.version` версия чарта закреплена явно: без этого Flux при выходе новой версии сам обновит релиз;
-- `install.remediation.retries: 3` и `upgrade.remediation.retries: 3` сколько раз повторять при неудаче. После исчерпания повторов Flux **сам больше не пробует**, пока ты не запустишь `flux reconcile helmrelease ... --reset`;
+- `install.remediation.retries: 3` и `upgrade.remediation.retries: 3` сколько раз повторять при неудаче. После исчерпания повторов Flux **сам больше не пробует**, пока не изменится `HelmRelease` (правка в git, меняющая `spec`, values или версию чарта: счётчики сбросятся сами) или пока ты не запустишь `flux reconcile helmrelease ... --reset` (нужно, когда причина вне спеки: пропавший Secret, недоступный реестр);
 - `driftDetection: {mode: enabled}` откатывать ручные правки ресурсов релиза (поля, которые меняет другой контроллер, исключают через `driftDetection.ignore`, пример в [уроке 9.6](06-progressive-delivery.md));
 - `values` то же самое, что `--set` или `-f values.yaml` в Helm.
 
@@ -285,18 +299,18 @@ Flux работает в фоне и сам ничего тебе не пока�
 У каждого объекта Flux (`GitRepository`, `Kustomization`, `HelmRelease`) есть раздел `status`, где контроллер записывает итог последней сверки. Главное там:
 
 - **Ready** (готов): `True`, если последняя сверка прошла успешно и всё применено; `False`, если была ошибка; `Unknown`, если сверка идёт прямо сейчас.
-- **Revision** (ревизия): какой именно коммит git сейчас применён, в виде `main@sha1:a1b2c3d...`. По ней видно, доехало ли твоё изменение: сравни с коммитом в GitHub.
-- **Message** (сообщение): человеческий текст причины, например `Applied revision: main@sha1:a1b2c3d` или `dependency 'flux-system/infrastructure' is not ready`.
+- **Revision** (ревизия): какой именно коммит git сейчас применён, в виде `main@sha1:a1b2c3d4...`. По ней видно, доехало ли твоё изменение: сравни с коммитом в GitHub.
+- **Message** (сообщение): человеческий текст причины, например `Applied revision: main@sha1:a1b2c3d4` или `dependency 'flux-system/infrastructure' is not ready`.
 
 Смотреть это удобно командой `flux get`: она печатает таблицу по всем объектам вида. Например, `flux get kustomizations` покажет строку на каждый слой.
 
 ```text
 NAME            REVISION              SUSPENDED  READY  MESSAGE
-infrastructure  main@sha1:a1b2c3d     False      True   Applied revision: main@sha1:a1b2c3d
-apps            main@sha1:a1b2c3d     False      False  dependency 'flux-system/infrastructure-config' is not ready
+infrastructure  main@sha1:a1b2c3d4     False      True   Applied revision: main@sha1:a1b2c3d4
+apps            main@sha1:a1b2c3d4     False      False  dependency 'flux-system/infrastructure-config' is not ready
 ```
 
-Разберём на примере. Читаем две строки выше по колонкам. `REVISION` одинаковый у обоих: оба слоя видят один и тот же коммит `a1b2c3d`, значит git скачан нормально. `SUSPENDED False`: слой не приостановлен вручную. `READY True` у `infrastructure`: применён без ошибок. У `apps` `READY False` и причина в `MESSAGE`: он не сломан сам, а ждёт другой слой. Значит, чинить надо не `apps`, а смотреть `infrastructure-config`. Правило чтения: идёшь по цепочке зависимостей к самому первому `False`, именно там причина.
+Разберём на примере. Читаем две строки выше по колонкам. `REVISION` одинаковый у обоих: оба слоя видят один и тот же коммит `a1b2c3d4`, значит git скачан нормально. `SUSPENDED False`: слой не приостановлен вручную. `READY True` у `infrastructure`: применён без ошибок. У `apps` `READY False` и причина в `MESSAGE`: он не сломан сам, а ждёт другой слой. Значит, чинить надо не `apps`, а смотреть `infrastructure-config`. Правило чтения: идёшь по цепочке зависимостей к самому первому `False`, именно там причина.
 
 Осторожно: «`Ready=False` значит, что кластер лежит». Нет, это значит «последняя сверка не удалась». Старые поды могут спокойно работать, как в разборе отката ниже. Второе заблуждение: «`Ready=True` значит, что приложение здоровое». Нет, это значит «Flux применил то, что в git». Здоровье проверяют пробами и метриками (темы 5 и 7).
 
@@ -424,13 +438,13 @@ flowchart LR
 
 Аналогия: правило на заводе: если станок остановился, попробуй перезапустить три раза, и если не помогло, вызови мастера и не трогай, пока он не придёт.
 
-Блок `remediation` (исправление) у `HelmRelease` задаёт политику: `retries: 3` это сколько раз повторить попытку. Контроллер повторяет `helm upgrade`, и если попытки кончились, ставит `Ready=False` с причиной `retries exhausted` и **останавливается**: дальше он сам не пробует, чтобы не молотить в цикле. Продолжить можно командой `flux reconcile helmrelease notes -n notes --reset` (`--reset` обнуляет счётчик попыток) после того, как ты поправил причину в git. У `upgrade.remediation` есть ещё стратегия `rollback`: откатить релиз на предыдущую рабочую ревизию Helm (как `helm rollback`, [урок 5.9](../05-kubernetes/09-helm.md)). В курсе мы откат делаем через `git revert`, чтобы git оставался правдой: откат только в кластере создал бы новый дрейф.
+Блок `remediation` (исправление) у `HelmRelease` задаёт политику: `retries: 3` это сколько раз повторить попытку. Контроллер повторяет `helm upgrade`, и если попытки кончились, ставит `Ready=False` с причиной `retries exhausted` и **останавливается**: дальше он сам не пробует, чтобы не молотить в цикле. Если причину ты поправил в git (правка меняет `spec`, values или версию чарта), счётчики сбросятся сами. Если в git ничего не менялось (пропал Secret, недоступен реестр), продолжить можно командой `flux reconcile helmrelease notes -n notes --reset` (`--reset` обнуляет счётчик попыток). Стратегия `upgrade.remediation.strategy` по умолчанию `rollback`: при `retries` больше нуля Flux после неудачи откатывает релиз на предыдущую рабочую ревизию Helm (как `helm rollback`, [урок 5.9](../05-kubernetes/09-helm.md)) и пробует снова. Этот откат происходит только в кластере, а в git остаётся плохой коммит, поэтому `HelmRelease` остаётся в `Ready=False`, и править источник правды мы всё равно будем через `git revert`.
 
-Разберём на примере. В values указан несуществующий тег `0.99.0`. Первая попытка: Helm применил манифест, новые поды в `ImagePullBackOff` (образ не скачивается), Helm ждёт их готовности и по таймауту объявляет ошибку. Вторая и третья то же самое. После третьей `Ready=False`, `retries exhausted`. Старые поды при этом продолжают работать. Ты правишь тег в git (revert), делаешь merge, затем `flux reconcile ... --reset`, и релиз зелёный.
+Разберём на примере. В values указан несуществующий тег `0.99.0`. Первая попытка: Helm применил манифест, новые поды в `ImagePullBackOff` (образ не скачивается), Helm ждёт их готовности и по таймауту объявляет ошибку. Потом ещё три повтора, итого четыре попытки. После четвёртой `Stalled`, причина `RetriesExceeded` (`retries exhausted`), `Ready=False`. Старые поды при этом продолжают работать. Ты откатываешь тег в git (revert), делаешь merge, счётчики сбрасываются сами, и релиз зелёный. `--reset` понадобился бы, если бы в git ничего не менялось.
 
 Осторожно: «`retries exhausted` значит, что Flux сломался». Нет, это сообщение об исчерпанных попытках: Flux ждёт, когда ты исправишь причину. Чинить надо причину (ошибку в git), а не нажимать reset снова и снова.
 
-> **Главное:** после исчерпания попыток Flux останавливается и ждёт, пока ты исправишь причину в git и сделаешь `--reset`.
+> **Главное:** после исчерпания попыток Flux останавливается до исправления причины: правка спеки в git запускает новую попытку сама, `--reset` нужен, когда причина вне спеки.
 {: .key}
 
 > **Проверь понимание:** почему после `retries exhausted` Flux не пробует снова сам?
@@ -438,7 +452,7 @@ flowchart LR
 <details markdown="1">
 <summary>Ответ</summary>
 
-Чтобы не гонять в бесконечном цикле заведомо неудачную выкатку: она нагружает кластер и засоряет события. Контроллер ждёт, пока ты изменишь git или вручную сбросишь счётчик через `--reset`.
+Чтобы не гонять в бесконечном цикле заведомо неудачную выкатку: она нагружает кластер и засоряет события. Контроллер ждёт, пока ты изменишь git (счётчики сбросятся сами) или, если причина вне git, сбросишь счётчик через `--reset`.
 
 </details>
 
@@ -495,7 +509,7 @@ flowchart LR
 
 Следствие: манифесты Flux лежат в git, и обновить сам Flux можно тем же способом, что и приложение: изменить файл в git.
 
-Осторожно: «Flux нужен доступ к моему GitHub-аккаунту постоянно». Нет: токен нужен только на момент bootstrap (чтобы создать репозиторий и добавить ключ). Дальше Flux пользуется deploy key с доступом к одному репозиторию.
+Осторожно: «Flux нужен доступ к моему GitHub-аккаунту постоянно». Нет: Flux читает репозиторий по deploy key (ключ на один репозиторий, по умолчанию только чтение), а не от имени аккаунта. Но этот ключ привязан к токену, которым делали bootstrap: если токен отозван или истёк, GitHub удалит ключ, и Flux перестанет читать git. Поэтому токен не отзывай сразу. Если ключ перестал работать: удали Secret `flux-system` в кластере и повтори `flux bootstrap github` с действующим токеном.
 
 > **Главное:** bootstrap запускают один раз, а дальше Flux управляет и собой, и всем остальным из git.
 {: .key}
@@ -647,7 +661,7 @@ flux get sources git
 
 ```text
 NAME             REVISION              SUSPENDED  READY  MESSAGE
-flux-system      main@sha1:3f9c1a2     False      True   stored artifact for revision 'main@sha1:3f9c1a2'
+flux-system      main@sha1:3f9c1a2b     False      True   stored artifact for revision 'main@sha1:3f9c1a2b'
 ```
 
 В `flux-system` четыре пода `Running`, а каталог содержит `gotk-components.yaml`, `gotk-sync.yaml`, `kustomization.yaml`.
@@ -685,7 +699,7 @@ flux-system      main@sha1:3f9c1a2     False      True   stored artifact for rev
 - Формат `metadata: {name: envoy-gateway, namespace: flux-system}` в YAML это короткая запись словаря в одну строку (то же, что три строки с отступами).
 - Три `HelmRepository` описывают, откуда брать чарты. Envoy Gateway лежит в OCI-реестре (`type: oci`, `oci://docker.io/envoyproxy`), ESO и Vault в обычных Helm-репозиториях.
 - `install: {createNamespace: true, crds: CreateReplace}` создать namespace при установке и обновлять CRD чарта при установке и апгрейде (Helm по умолчанию CRD не обновляет).
-- Функция `mk` в оболочке: пять `echo` собирают YAML-файл для Flux `Kustomization`. Аргументы: имя слоя (`$1`), путь (`$2`), зависимость (`$3`). Строка с `dependsOn` печатается, только если третий аргумент не пустой (`[ -n "$3" ]`). Такая функция нужна, чтобы не набирать три почти одинаковых файла вручную.
+- Функция `mk` в оболочке: несколько `echo` по строке собирают YAML-файл для Flux `Kustomization`. Аргументы: имя слоя (`$1`), путь (`$2`), зависимость (`$3`). Строка с `dependsOn` печатается, только если третий аргумент не пустой (`[ -n "$3" ]`). Такая функция нужна, чтобы не набирать три почти одинаковых файла вручную.
 - `flux reconcile source git flux-system` просит Flux не ждать таймера и прямо сейчас перечитать git. `flux get kustomizations --watch` печатает статусы и обновляет их (выход `Ctrl+C`).
 
 **Шаги:**
@@ -697,7 +711,7 @@ cd ~/notes-gitops
 mkdir -p infrastructure/controllers infrastructure/configs apps/notes
 ```
 
-2. Источники чартов и релизы одним файлом `infrastructure/controllers/releases.yaml`: Envoy Gateway v1.9.2, ESO v2.11.0 и Vault (standalone, файловое хранилище, как в [уроке 9.1](01-secrets-problem-vault.md)). Версию чарта Vault (`0.32.0` ниже) сверь: проверь актуальную версию на странице проекта. Источники лежат в `flux-system`, релизы ставят чарты в свои namespace:
+2. Источники чартов и релизы одним файлом `infrastructure/controllers/releases.yaml`: Envoy Gateway v1.9.2, ESO v2.11.0 и Vault (standalone, файловое хранилище, как в [уроке 9.1](01-secrets-problem-vault.md)). Чарт Vault 0.34.1 проверен по индексу чартов HashiCorp, а образ Vault закреплён тегом 2.1.1: версия чарта и версия Vault это разные вещи, без `image.tag` ты получил бы ту, что зашита в чарт. Как в уроке 9.1, `injector` (вспомогательный под для подстановки секретов) выключен. Источники лежат в `flux-system`, релизы ставят чарты в свои namespace:
 
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -745,9 +759,10 @@ spec:
   install: {createNamespace: true, disableWait: true}   # запечатанный Vault не Ready, не ждём его под
   upgrade: {disableWait: true}
   chart:
-    spec: {chart: vault, version: "0.32.0", sourceRef: {kind: HelmRepository, name: hashicorp}}
+    spec: {chart: vault, version: "0.34.1", sourceRef: {kind: HelmRepository, name: hashicorp}}
   values:
-    server: {standalone: {enabled: true}, dataStorage: {size: 1Gi}}
+    server: {image: {tag: "2.1.1"}, standalone: {enabled: true}, dataStorage: {size: 1Gi}}
+    injector: {enabled: false}
 ```
 
 3. Список ресурсов слоя (`kustomization.yaml` из [урока 5.10](../05-kubernetes/10-kustomize.md)):
@@ -782,7 +797,7 @@ Namespace `notes` теперь создаёт Flux, а не ты.
 5. Три Flux-`Kustomization` в `clusters/kind/` (у первого нет зависимостей, у остальных `dependsOn` на предыдущий):
 
 ```bash
-mk() {  # имя, путь, зависимость, wait
+mk() {  # имя, путь, зависимость
   { echo "apiVersion: kustomize.toolkit.fluxcd.io/v1"
     echo "kind: Kustomization"
     echo "metadata: {name: $1, namespace: flux-system}"
@@ -814,8 +829,8 @@ flux get kustomizations --watch
 
 ```text
 NAME                   REVISION           SUSPENDED  READY  MESSAGE
-flux-system            main@sha1:8d2e0c4  False      True   Applied revision: main@sha1:8d2e0c4
-infrastructure         main@sha1:8d2e0c4  False      True   Applied revision: main@sha1:8d2e0c4
+flux-system            main@sha1:8d2e0c4a  False      True   Applied revision: main@sha1:8d2e0c4a
+infrastructure         main@sha1:8d2e0c4a  False      True   Applied revision: main@sha1:8d2e0c4a
 ...                    (и так для infrastructure-config и apps: все READY True)
 ```
 
@@ -883,7 +898,8 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata: {name: notes, namespace: notes}
 spec:
-  interval: 5m
+  interval: 1m                         # для опыта с дрейфом; в бою обычно 5-10 минут
+  timeout: 2m                          # ждать готовности подов не дольше двух минут
   chart:
     spec: {chart: notes, version: "0.4.0", sourceRef: {kind: HelmRepository, name: notes}}
   install: {remediation: {retries: 3}}
@@ -945,7 +961,8 @@ kubectl get deployment notes -n notes
 sed -i 's/tag: "0.7.0"/tag: "9.9.9"/' apps/notes/release.yaml
 git commit -am "Плохой тег образа" && git push
 flux reconcile kustomization apps --with-source
-flux get helmreleases -n notes           # Ready=False, старые поды живы
+flux get helmreleases -n notes --watch   # сначала Unknown (идёт upgrade, ждём поды до таймаута), потом Ready=False; старые поды живы
+# дождись False (Ctrl+C), затем делай revert
 git revert --no-edit HEAD && git push
 flux reconcile kustomization apps --with-source
 ```
@@ -1038,7 +1055,7 @@ bash /tmp/break-9.3.sh 1      # номер от 1 до 4, или random
 
 ### Симптом
 
-Ты ничего не менял в git, но `flux get all -A` показывает `READY False`, изменение из git не доезжает до кластера или правка, которую ты сделал руками, исчезла.
+Ты ничего не менял в git, но `flux get all -A` показывает `READY False`, изменение из git не доезжает до кластера, правка, которую ты сделал руками, исчезла, или правка руками не откатывается.
 
 ### Гипотезы
 
@@ -1058,13 +1075,13 @@ kubectl describe helmrelease notes -n notes
 <details markdown="1">
 <summary>Разбор четырёх сценариев</summary>
 
-**1. GitRepository не читается.** `flux get sources git` показывает `False` и текст вроде `authentication required` или `repository not found`. Причина: отозван deploy key или токен, репозиторий стал приватным без секрета, либо в `spec.url` неверный адрес (в учебном сценарии адрес испорчен). Исправление: восстановить адрес или доступ (`flux create secret git ...`, повторный `flux bootstrap github` идемпотентный и пересоздаст ключ), затем `flux reconcile source git flux-system`.
+**1. GitRepository не читается.** `flux get sources git` показывает `False` и текст вроде `authentication required` или `repository not found`. Причина: отозван deploy key или токен, репозиторий стал приватным без секрета, либо в `spec.url` неверный адрес (в учебном сценарии адрес испорчен). Исправление: восстановить адрес или доступ (`flux create secret git ...`, либо пересоздать deploy key: `kubectl -n flux-system delete secret flux-system`, затем повторить `flux bootstrap github ...` с действующим токеном; без удаления Secret bootstrap напишет «source secret up to date» и ключ не пересоздаст), затем `flux reconcile source git flux-system`.
 
-**2. HelmRelease: install retries exhausted.** `Helm upgrade failed ... retries exhausted`, `Ready=False`. Причина в этом сценарии: неверный тег образа в values, новые поды не становятся готовыми (`ImagePullBackOff`), а старые продолжают работать. Проверка: `flux logs --kind=HelmRelease --name=notes -n notes`, `kubectl describe pod`. Исправление: правка values в git (если в сценарии приостановлены слой `apps` и HelmRelease, сними обе паузы: `flux resume kustomization apps` и `flux resume helmrelease notes -n notes`), затем `flux reconcile helmrelease notes -n notes --reset`, чтобы сбросить счётчик ретраев (после исчерпания он сам не пробует заново).
+**2. HelmRelease: upgrade retries exhausted.** `Helm upgrade failed ... retries exhausted`, `Ready=False`. Причина в этом сценарии: неверный тег образа в `HelmRelease` в кластере, новые поды не становятся готовыми (`ImagePullBackOff`), а старые продолжают работать. Проверка: `flux logs --kind=HelmRelease --name=notes -n notes`, `kubectl describe pod`. Исправление: слой `apps` приостановлен (`SUSPENDED True`) и релиз сломан в кластере, git цел. Выполни `flux resume kustomization apps` и `flux reconcile kustomization apps --with-source`: Flux вернёт тег и retries из git, счётчики сбросятся сами. Если релиз остался в `retries exhausted`, добавь `flux reconcile helmrelease notes -n notes --reset`.
 
-**3. Kustomization path not found.** `kustomization path not found: stat .../apps/notes-typo: no such file or directory`. Причина: каталог переименован или `spec.path` указывает на несуществующий. Проверка: `git ls-tree -r main --name-only` и `kubectl get kustomization apps -n flux-system -o yaml`. Исправление: привести путь и каталог в соответствие (в git, затем `flux resume`). Зависимые Kustomization при этом остаются в `not ready`.
+**3. Kustomization path not found.** `kustomization path not found: stat .../apps/notes-typo: no such file or directory`. Причина: в кластере у Kustomization `apps` испорчен `spec.path`, в git он верный (`git ls-tree` это покажет). Проверка: `git ls-tree -r main --name-only` и `kubectl get kustomization apps -n flux-system -o yaml`. Исправление: `flux reconcile kustomization flux-system --with-source`: `flux-system` вернёт путь из git (сам вернул бы не позже чем через 10 минут), `flux resume` не нужен. Если же путь неверен в самом git (опечатка в `apps.yaml`), правь его в git, но это другой сценарий. Сам `apps` пока остаётся в `Ready=False` с ошибкой про path not found.
 
-**4. Ручной kubectl scale затирается.** Ты увеличил реплики руками, и через минуты они вернулись. Это не поломка, а штатное поведение: git главнее. Проверка: `flux events --for HelmRelease/notes -n notes` покажет обнаруженный дрейф. Исправление: вносить правку в git; если нужна временная ручная работа, `flux suspend kustomization apps` и `flux suspend helmrelease notes -n notes`, а после `flux resume` обоих.
+**4. Правка руками не откатывается.** Ты поставил реплики руками (7), а Flux их не возвращает. Причина: `HelmRelease notes` на паузе, в `flux get helmreleases -n notes` колонка `SUSPENDED` равна `True`, и helm-controller не сверяет релиз. Проверка: `flux get all -A`, `kubectl get helmrelease notes -n notes -o jsonpath='{.spec.suspend}'`. Исправление: `flux resume helmrelease notes -n notes`: Flux сразу вернёт число реплик из git. Нужно другое число, сначала впиши его в git через PR. Для временной ручной работы паузу ставят сознательно (`flux suspend ...`) и обязательно снимают.
 
 </details>
 
@@ -1099,7 +1116,7 @@ kubectl describe helmrelease notes -n notes
 ```
 {: .wrap}
 
-**Проверь ответ:** в плане должен быть `git revert`, merge и только потом `flux reconcile ... --reset`. Типичная ошибка: `git push --force` или удаление `HelmRelease` руками.
+**Проверь ответ:** в плане должен быть `git revert`, merge, а `--reset` только если причина вне спеки. Типичная ошибка: `git push --force` или удаление `HelmRelease` руками.
 
 ## Словарик урока
 
@@ -1127,7 +1144,7 @@ kubectl describe helmrelease notes -n notes
 | kubeconfig | файл с адресом кластера и учётными данными |
 | git revert | коммит, отменяющий изменения другого коммита, без переписывания истории |
 | Ready | статус объекта Flux: последняя сверка прошла успешно (`True`), с ошибкой (`False`) или идёт (`Unknown`) |
-| ревизия (revision) | какой коммит git сейчас применён, например `main@sha1:a1b2c3d` |
+| ревизия (revision) | какой коммит git сейчас применён, например `main@sha1:a1b2c3d4` |
 | interval | как часто контроллер перечитывает источник и сверяет |
 | suspend / resume | поставить объект Flux на паузу / снять паузу (resume сразу затирает ручные правки) |
 | webhook | звонок от GitHub в Flux о новом коммите, чтобы не ждать таймера |
@@ -1147,7 +1164,7 @@ kubectl describe helmrelease notes -n notes
 ## Проверено на версиях
 
 - Flux v2.9.5, Argo CD v3.5.3 (только необязательный раздел), Envoy Gateway v1.9.2, External Secrets Operator v2.11.0, Vault v2.1.1, Helm v4.3.0, kind v0.33.0, чарт `notes` 0.4.0 (appVersion 0.7.0): версии из курса, кластер и Flux в этой редакции не запускались, вывод команд сверен по документации и предыдущей редакции.
-- Версия чарта Vault (`0.32.0`) не закреплена и не проверялась: проверь актуальную на странице проекта.
+- Чарт Vault 0.34.1 проверен по индексу чартов HashiCorp, образ Vault закреплён тегом 2.1.1 (как в уроке 9.1).
 - Манифесты Flux и `break.sh`: не прогонялись, `break.sh` проверен `shellcheck` и чтением.
 
 ## Итог урока: ты умеешь
@@ -1158,7 +1175,7 @@ kubectl describe helmrelease notes -n notes
 - [ ] умею разложить репозиторий на `clusters`, `infrastructure`, `apps` и связать слои через `dependsOn`
 - [ ] умею описать приложение как `HelmRelease` из OCI-чарта и менять его через git
 - [ ] умею показать drift и объяснить, почему ручные правки затираются
-- [ ] умею откатить плохой релиз через `git revert` и сбросить ретраи `--reset`
+- [ ] умею откатить плохой релиз через `git revert` и знаю, когда нужен `--reset`
 - [ ] умею диагностировать сбой цепочкой `flux get all`, `flux logs`, `kubectl describe`
 
 **Дальше:** [Урок 9.4: cert-manager: TLS-сертификаты автоматически](04-cert-manager-tls.md)

@@ -75,7 +75,7 @@
    "skill": "почему сортируют по total_exec_time",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Почему при поиске виновника в `pg_stat_statements` сортируют по `total_exec_time`, а не по `mean_exec_time` или `calls`?",
+   "text": "Какие причины объясняют, почему при поиске виновника в `pg_stat_statements` сортируют по `total_exec_time`, а не по `mean_exec_time` или `calls`?",
    "options": [
     {
      "id": "a",
@@ -167,7 +167,7 @@
    "correct": [
     "b"
    ],
-   "explain": "Счётчики копятся с запуска или с последнего сброса. Перед замером их обнуляют, чтобы цифры относились только к твоему прогону.",
+   "explain": "Счётчики копятся до последнего сброса и переживают обычный перезапуск базы. Перед замером их обнуляют, чтобы цифры относились только к твоему прогону.",
    "section": "pg_stat_statements: кто съел время базы"
   },
   {
@@ -275,7 +275,7 @@
    "skill": "что делает EXPLAIN ANALYZE",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что верно про `EXPLAIN (ANALYZE, BUFFERS)` в PostgreSQL?",
+   "text": "Какие утверждения про `EXPLAIN (ANALYZE, BUFFERS)` в PostgreSQL верны?",
    "options": [
     {
      "id": "a",
@@ -375,7 +375,7 @@
    "skill": "цены индекса",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Что из этого входит в цену индекса по `orders.user_id`?",
+   "text": "Что из этого входит в цену индекса по `orders.user_id`? Выбери все подходящие.",
    "options": [
     {
      "id": "a",
@@ -383,7 +383,7 @@
     },
     {
      "id": "b",
-     "text": "Индекс занимает место: для 200 000 строк `integer` порядка 4-5 МБ"
+     "text": "Индекс занимает место на диске и в памяти: порядка мегабайта для 200 000 строк `integer`"
     },
     {
      "id": "c",
@@ -542,7 +542,7 @@
    "kind": "чтение",
    "type": "multiple",
    "text": "После создания индекса ты снова смотришь `pg_stat_statements`. Какие выводы верны?",
-   "code": "query                                      | calls | total_ms | mean_ms\n-------------------------------------------+-------+----------+--------\nSELECT oi.order_id, ... FROM order_items.. | 47320 |     5870 |    0.12\nSELECT id, status, total... FROM orders .. |  2366 |     1540 |    0.65\nSELECT id, name, price ... FROM products.. |  2366 |     3010 |    1.27",
+   "code": "query                                      | calls | total_ms | mean_ms\n-------------------------------------------+-------+----------+--------\nSELECT oi.order_id, ... FROM order_items.. | 47320 |     5870 |    0.12\nSELECT id, name, price ... FROM products.. |  2366 |     3010 |    1.27\nSELECT id, status, total... FROM orders .. |  2366 |     1540 |    0.65",
    "options": [
     {
      "id": "a",
@@ -641,7 +641,7 @@
    "skill": "почему очередь у пула часто следствие",
    "kind": "понимание",
    "type": "multiple",
-   "text": "Почему очередь у пула соединений часто оказывается следствием, а не причиной проблемы?",
+   "text": "Какие причины объясняют, почему очередь у пула соединений часто оказывается следствием, а не причиной проблемы?",
    "options": [
     {
      "id": "a",
@@ -841,12 +841,12 @@
    "skill": "раздутый пул: чтение pg_stat_activity",
    "kind": "диагностика",
    "type": "multiple",
-   "text": "После `DROP INDEX` и `DB_POOL_MAX=90` ты снова гонишь `mix` на 40/с. Ошибок «database pool timeout» нет, но p95 хуже исходного. Что видишь и что сделаешь?",
-   "code": "state   | count\n--------+-------\nactive  |    84\nidle    |     6\n\nshop_db_pool_waiting: 0\nCPU postgres: 100%",
+   "text": "После `DROP INDEX` и `DB_POOL_MAX=90` ты снова гонишь `mix` на 40/с. Ошибок «database pool timeout» нет, но p95 хуже исходного. Что из этого видишь и что сделаешь? Выбери все подходящие.",
+   "code": "state   | count\n--------+-------\nactive  |    38\nidle    |     2\n\nshop_db_pool_waiting: 0\nCPU postgres: 100%",
    "options": [
     {
      "id": "a",
-     "text": "Очередь переехала из пула внутрь базы: 84 активных запроса делят одно ядро"
+     "text": "Очередь переехала из пула внутрь базы: около 40 активных запросов делят одно ядро"
     },
     {
      "id": "b",

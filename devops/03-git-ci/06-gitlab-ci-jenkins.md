@@ -10,6 +10,21 @@ time: "4 ч"
 
 В [уроке 3.3](03-actions-ci.md) ты настроил на GitHub Actions **конвейер** (pipeline): цепочку автоматических проверок, которая запускается при каждом изменении кода. Называют его так потому, что изменение едет по ленте, как деталь на заводе, и на каждой остановке его проверяет своя «станция». Но GitHub Actions есть не везде. Многие компании держат код на собственном сервере (не на сайте github.com, а на своей машине, где хозяин сам отвечает за работу и безопасность), и там работают **GitLab CI** (GitLab это такой же, как GitHub, сервис хранения кода, только его можно поставить к себе; у него свои встроенные конвейеры) или **Jenkins** (отдельная программа-сервер автоматизации, которой больше двадцати лет: её ставят рядом с кодом, и она запускает любые скрипты по событиям). В описаниях вакансий DevOps их называют чаще, чем Actions, а на собеседовании просят «перенеси конвейер с Jenkins на GitLab».
 
+```text
+Running with gitlab-runner 17.5.0 (c6bb5b3e) on notes-runner xYz12AbC
+Preparing the "docker" executor
+Using Docker image python:3.13-slim
+Fetching changes... Checking out e5a91c2 as detached HEAD
+$ pip install -r requirements-dev.txt
+$ ruff check .
+All checks passed!
+$ pytest -q
+12 passed in 1.4s
+Job succeeded
+```
+
+Это журнал одной задачи в GitLab: исполнитель взял чистый образ, скачал коммит, поставил зависимости и прогнал те же `ruff` и `pytest`, что и в Actions. Меняется оформление, а последовательность шагов узнаваема.
+
 Хорошая новость: менять платформу для инженера не значит учить всё заново. Идея одна и та же: по событию взять чистую машину, скачать код, выполнить команды и показать зелёный или красный результат. Меняются только синтаксис файла и названия понятий. В этом уроке ты перенесёшь тот же конвейер «Заметок» (проверка стиля и тесты) на GitLab CI, поднимешь собственный исполнитель (runner: программу на машине, которая забирает задания у сервера и выполняет их), потом запустишь Jenkins в Docker (инструмент, который запускает программы в изолированных «коробках»-контейнерах; разберём в следующей теме) и опишешь тот же конвейер в `Jenkinsfile` (файл-чертёж конвейера для Jenkins). Основным местом жизни проекта останется GitHub.
 
 Почему компании десятилетиями сидят на Jenkins, если есть GitHub Actions и GitLab CI? Jenkins появился раньше и умеет брать код откуда угодно и запускать что угодно. За годы вокруг него накопились сотни сборок и плагинов, написанных под конкретную инфраструктуру, а переписать их все на новую платформу дорого и рискованно: работающая сборка никому не мешает, пока её не трогают. Поэтому читать чужой `Jenkinsfile` инженеру нужно, даже если новые проекты начинают на другой платформе.
@@ -67,8 +82,7 @@ flowchart TD
     I["образ python:3.13<br>чистая среда: Python 3.13.15, make 4.4.1"] --> C["скачать код репозитория<br>файлы из git на конкретном коммите"]
     C --> P["pip install -r requirements-dev.txt<br>поставить ruff"]
     P --> L["make lint"]
-    L -->|"код выхода 0"| R["ruff check ."]
-    R -->|"код выхода 0"| T["make test"]
+    L -->|"код выхода 0"| T["make test"]
     T -->|"код выхода 0"| G["job зелёная"]
     T -->|"код выхода 1"| X["job красная,<br>остальные команды не запускаются"]
 ```
@@ -113,10 +127,10 @@ lint:                      # ключ верхнего уровня: имя job
   stage: lint              # у job есть свойство stage со значением lint
   script:                  # у job есть свойство script, значение это список
     - pip install -r requirements-dev.txt   # первый элемент списка
-    - ruff check .                           # второй элемент
+    - make lint                              # второй элемент
 ```
 
-Читается так: «существует job `lint`; она относится к этапу `lint`; её команды: сначала `pip install ...`, потом `ruff check .`». Сдвинуть `script` влево на два пробела значит объявить его как отдельную job, и GitLab ответит ошибкой, что у job нет команд. Все отступы в курсе по два пробела.
+Читается так: «существует job `lint`; она относится к этапу `lint`; её команды: сначала `pip install ...`, потом `make lint`». Сдвинуть `script` влево на два пробела значит объявить его как отдельную job, и GitLab ответит ошибкой, что у job нет команд. Все отступы в курсе по два пробела.
 
 > **Прикинь сам:** в `.gitlab-ci.yml` перепутаны отступы у `script:`. Чем это грозит?
 {: .predict}
@@ -162,7 +176,7 @@ lint:                      # ключ верхнего уровня: имя job
 
 Слово `executor` в таблице значит «способ запуска команд на раннере» (например, в контейнере `docker`). Остальные незнакомые слова из таблицы (`controller`, `masked`, `stage`) разбираются в разделах ниже, по одному.
 
-Переведём кусок из `ci.yml` урока 3.3 на язык GitLab. Там было: job `lint` с `runs-on: ubuntu-24.04` и шагом `run: ruff check .`. В GitLab «шаг `run`» превращается в элемент списка `script`, а `runs-on` (какая машина) заменяется на `image` (в каком образе). Получается job с `image: python:3.13` и `script: [ruff check .]`. Всю разницу составляют названия ключей.
+Переведём кусок из `ci.yml` урока 3.3 на язык GitLab. Там было: job `lint` с `runs-on: ubuntu-24.04` и шагом `run: make lint`. В GitLab «шаг `run`» превращается в элемент списка `script`, а `runs-on` (какая машина) заменяется на `image` (в каком образе). Получается job с `image: python:3.13` и `script: [make lint]` (плюс установка зависимостей перед ним). Всю разницу составляют названия ключей.
 
 > **Прикинь сам:** как называются у GitLab CI и Jenkins то, что GitHub Actions называет `job` и `runner`?
 {: .predict}
@@ -194,7 +208,7 @@ lint:                      # ключ верхнего уровня: имя job
 Весь конвейер лежит в одном файле `.gitlab-ci.yml` в корне репозитория. Верхний уровень файла состоит из четырёх видов ключей:
 
 - `stages` (этапы): список названий в порядке выполнения;
-- общие настройки: `default` (значения для всех job, например `image`), `variables` (переменные), `cache` (что переиспользовать между запусками);
+- общие настройки: `default` (значения для всех job: `image`, `cache` и другие) и `variables` (переменные);
 - jobs: любой ключ верхнего уровня, внутри которого есть `script`. Имя job это просто твой ключ (`lint`, `test`), а не зарезервированное слово;
 - служебные ключи вроде `workflow` и `include` (подключить чужой файл), их мы сейчас не трогаем.
 
@@ -280,10 +294,11 @@ rules:
 ```yaml
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"    # (1) где pip хранит скачанное
-cache:
-  key: pip-py313                                 # (2) имя кэша
-  paths:
-    - .cache/pip                                 # (3) что сохранить и вернуть
+default:
+  cache:
+    key: pip-py313                               # (2) имя кэша
+    paths:
+      - .cache/pip                               # (3) что сохранить и вернуть
 ```
 
 Первый запуск: `.cache/pip` пуст, pip скачивает `ruff` из интернета (около 10 МБ) и пишет в кэш; после job GitLab упаковывает папку. Второй запуск: GitLab распаковывает кэш до начала `script`, pip находит `ruff` в кэше и не скачивает. Значение переменной `$CI_PROJECT_DIR` подставляется в строку автоматически, в контейнере это, например, `/builds/anna/notes`.
@@ -343,7 +358,7 @@ flowchart LR
     BU["job build<br>тегов нет"] --> C
 ```
 
-Через минуту в интерфейсе у `test` появится подпись `This job is stuck because you don't have any active runners online with any of these tags assigned to them: gpu`. Это не поломка кода, это отсутствие исполнителя.
+Через минуту в интерфейсе у `test` появится подпись `This job is stuck because of one of the following problems. There are no active runners online, no runners for the protected branch, or no runners that match all of the job's tags: gpu`. Это не поломка кода, это отсутствие исполнителя.
 
 > **Прикинь сам:** у job `tags: [gpu]`, раннеров с таким тегом нет. Что произойдёт?
 {: .predict}
@@ -476,9 +491,9 @@ Agent: controller планирует и хранит настройки, а ко
 
 Если правило «что значит проверка прошла» записано в трёх файлах отдельно (`ci.yml`, `.gitlab-ci.yml`, `Jenkinsfile`), рано или поздно они разойдутся: в одном линтер обновят, в другом забудут, и зелёный статус на одной платформе не будет значить того же, что на другой. Решение: конвейер только вызывает короткие имена целей из `Makefile`, а что они делают, записано в одном месте.
 
-Пульт с подписанными кнопками из урока 1.6. Меняется устройство телевизора внутри, кнопка «громкость» у всех остаётся. Оговорка: пока в `ci.yml` из урока 3.3 команды написаны прямо (`python -m unittest -v`), он этого не делает; это можно поправить по желанию.
+Пульт с подписанными кнопками из урока 1.6. Меняется устройство телевизора внутри, кнопка «громкость» у всех остаётся.
 
-В `Makefile` из урока 1.6 есть цели `lint` (проверка синтаксиса `py_compile`), `test` (`python3 -m unittest -v`) и `run` (запуск сервиса). Конвейеры GitLab и Jenkins вызывают `make lint` и `make test` и отдельно `ruff check .` (ruff это линтер, он появился в уроке 3.3 и в `Makefile` пока не входит). Для этого в образе должен быть `make`. В маленьком образе `python:3.13-slim` его нет (`sh: 1: make: not found`), в полном `python:3.13` есть (GNU Make 4.4.1). Мы берём полный образ; цена: он весит около 1 ГБ и тянется один раз, дальше лежит в кэше раннера.
+В `Makefile` (уроки 1.6, 3.3 и 3.4) есть цели `lint` (`py_compile`, затем `python3 -m ruff check .`, в конце `echo "lint: ок"`), `test` (`python3 -m unittest -v`) и `run` (запуск сервиса). Конвейеры GitLab и Jenkins вызывают `make lint` и `make test`; ruff ставится через `requirements-dev.txt` (урок 3.3), отдельно его запускать не нужно. Для этого в образе должен быть `make`. В маленьком образе `python:3.13-slim` его нет (`sh: 1: make: not found`), в полном `python:3.13` есть (GNU Make 4.4.1). Мы берём полный образ; цена: он весит около 1 ГБ и тянется один раз, дальше лежит в кэше раннера.
 
 Про переменную `NOTES_DATA ?= /tmp/notes-dev.txt` из `Makefile`. Она нужна цели `make run`: сервис по умолчанию пишет данные в `/var/lib/notes/notes.txt`, а такой папки на чужой машине нет. Цель `make test` эту переменную не использует: тест сам создаёт временную папку и передаёт её сервису. Поэтому в конвейере `NOTES_DATA` задавать не нужно, а `make run` в CI вообще не вызывают, это команда для разработчика.
 
@@ -499,7 +514,7 @@ $ curl -X POST -d '{"text":"x"}' http://127.0.0.1:8080/notes
 
 Платформы разойдутся: одна проверит по-новому, две по-старому. Если команда одна (`make test`), правка в `Makefile` меняет всё сразу.
 
-Осторожно: `make` в CI «необязателен». Он не обязателен технически, но без него команды дублируются. Ещё путают: что раз `make lint` проверяет синтаксис, то `ruff` не нужен. Это разные проверки: `py_compile` ловит синтаксические ошибки, `ruff` ловит стиль и неиспользуемые импорты.
+Осторожно: `make` в CI «необязателен». Он не обязателен технически, но без него команды дублируются. Ещё путают: что `make lint` проверяет только синтаксис. Он уже запускает обе проверки: `py_compile` ловит синтаксические ошибки, `ruff` ловит стиль и неиспользуемые импорты.
 
 > **Главное:** команды проверки живут в `Makefile`, а файлы платформ только вызывают их, чтобы не расходиться.
 {: .key}
@@ -655,11 +670,11 @@ docker --version
 
 Разбор: `ls` со списком файлов печатает их же, если все существуют, и ругается на отсутствующие (`No such file or directory`, код 2). `docker --version` печатает версию Docker; если её нет, вернись к разделу «Что нужно знать».
 
-Локально проверь то, что будет делать робот: те же цели в чистом контейнере. Команда запускает контейнер образа `python:3.13`, подключает текущую папку и выполняет три команды подряд:
+Локально проверь то, что будет делать робот: те же цели в чистом контейнере. Команда запускает контейнер образа `python:3.13`, подключает текущую папку и выполняет три команды подряд (установка, `make lint`, `make test`):
 
 ```bash
 docker run --rm -v "$PWD":/w -w /w python:3.13 \
-  bash -euc 'pip install -q -r requirements-dev.txt && make lint && ruff check . && make test'
+  bash -euc 'pip install -q -r requirements-dev.txt && make lint && make test'
 ```
 
 Разбор по частям: `docker run` создаёт и запускает контейнер; `--rm` удалит его после остановки; `-v "$PWD":/w` подключает текущую папку как `/w` внутри контейнера (`$PWD` это путь текущей папки); `-w /w` делает `/w` рабочей папкой; `python:3.13` образ; `bash -euc '...'` запускает bash с флагами `-e` (остановиться при первой ошибке), `-u` (ошибка на несуществующую переменную) и `-c` (выполнить строку из кавычек); `&&` выполняет следующую команду, только если предыдущая вернула 0.
@@ -668,8 +683,9 @@ docker run --rm -v "$PWD":/w -w /w python:3.13 \
 
 ```text
 python3 -m py_compile app.py test_app.py
-lint: синтаксис в порядке
+python3 -m ruff check .
 All checks passed!
+lint: ок
 python3 -m unittest -v
 test_empty_body_is_400 (test_app.NotesTest.test_empty_body_is_400) ... ok
 test_healthz (test_app.NotesTest.test_healthz) ... ok
@@ -684,7 +700,7 @@ Ran 6 tests in 0.658s
 OK
 ```
 
-**Как читать вывод:** `python3 -m py_compile ...` строка, которую `make` печатает перед выполнением команды цели; `lint: синтаксис в порядке` это `echo` из цели `lint`; `All checks passed!` говорит ruff; дальше `unittest`. Время (`0.658s`) у тебя будет другим, главное `OK` в конце. Если здесь красное, конвейер будет красным по той же причине, и чинить надо здесь, а не в конвейере.
+**Как читать вывод:** `python3 -m py_compile ...` и `python3 -m ruff check .` строки, которые `make` печатает перед выполнением команд цели; `All checks passed!` говорит ruff; `lint: ок` это `echo` из цели `lint`; дальше `unittest`. Время (`0.658s`) у тебя будет другим, главное `OK` в конце. Если здесь красное, конвейер будет красным по той же причине, и чинить надо здесь, а не в конвейере.
 
 ### Задание 1. Конвейер «Заметок» в GitLab CI
 
@@ -701,7 +717,7 @@ OK
 
 **Шаги:**
 
-1. Создай пустой проект на gitlab.com: New project, Create blank project, имя `notes`, **без** README (иначе в проекте уже будет коммит, и push отклонят). Скопируй SSH-адрес проекта. Свой публичный ключ добавь в профиле (Preferences, SSH Keys), как в уроке 2.2, и проверь связь. Ожидаемый ответ: `Welcome to GitLab, @<логин>!`
+1. Создай пустой проект на gitlab.com: New project, Create blank project, имя `notes`, **без** README (иначе в проекте уже будет коммит, и push отклонят). Скопируй SSH-адрес проекта. Свой публичный ключ добавь в профиле (аватар, Edit profile, Access, SSH keys, Add new key), по тому же принципу, что в уроке 2.2, и проверь связь. Ожидаемый ответ: `Welcome to GitLab, @<логин>!`
 
 ```bash
 ssh -T git@gitlab.com
@@ -730,23 +746,21 @@ stages:                 # порядок этапов: сначала lint, по
 
 default:
   image: python:3.13   # образ, в котором исполняется каждый script (в нём есть make)
+  cache:
+    key: pip-py313        # имя кэша
+    paths:
+      - .cache/pip        # что сохранять между запусками
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"   # кэш pip внутри проекта, чтобы GitLab мог его сохранить
   PIP_DISABLE_PIP_VERSION_CHECK: "1"            # не проверять свежесть самого pip: лишний запрос в сеть
   PIP_ROOT_USER_ACTION: "ignore"                # в контейнере мы root, предупреждение pip не нужно
 
-cache:
-  key: pip-py313        # имя кэша
-  paths:
-    - .cache/pip        # что сохранять между запусками
-
 lint:                   # имя job
   stage: lint           # этап
   script:               # команды: остановка на первой, вернувшей не 0
     - pip install -r requirements-dev.txt
     - make lint
-    - ruff check .
 
 test:
   stage: test
@@ -757,7 +771,7 @@ git add .gitlab-ci.yml
 git commit -m "ci: конвейер lint и test для GitLab CI"
 ```
 
-Разбор файла: `stages` задаёт порядок; `default.image` даёт образ всем job сразу; `variables` создают переменные окружения внутри контейнера; `cache` описан в теории; в `lint` три команды идут по очереди, если `pip install` или `make lint` вернёт не 0, `ruff` уже не запустится; `test` вызывает `make test`, поэтому `pip install` здесь не нужен: у тестов нет внешних зависимостей, они используют только стандартную библиотеку Python. Для `lint` установка нужна, потому что `ruff` это внешний пакет, а каждая job стартует в новом контейнере, куда ничего не переносится из соседней.
+Разбор файла: `stages` задаёт порядок; `default.image` и `default.cache` дают образ и кэш всем job сразу; `variables` создают переменные окружения внутри контейнера; кэш описан в теории; в `lint` две команды идут по очереди: `pip install`, потом `make lint` (он сам запускает и `py_compile`, и ruff); `test` вызывает `make test`, поэтому `pip install` здесь не нужен: у тестов нет внешних зависимостей, они используют только стандартную библиотеку Python. Для `lint` установка нужна, потому что `ruff` это внешний пакет, а каждая job стартует в новом контейнере, куда ничего не переносится из соседней.
 
 4. Отправь в GitLab (не в GitHub) сначала `main`, потом ветку. Первая отправленная в пустой проект ветка становится веткой по умолчанию, и нам нужно, чтобы это была `main`, потому что в задании 2 правила будут на неё опираться:
 
@@ -789,7 +803,7 @@ OK
 Job succeeded
 ```
 
-**Как читать вывод:** строка с `$` это команда из `script`, которую печатает GitLab; `python3 -m unittest -v` печатает уже `make` (он показывает команду цели); шесть строк `... ok` это тесты из `test_app.py` (урок 1.6); `Job succeeded` итог, который бывает, только если последняя команда вернула 0. В логе `lint` найди строки `Successfully installed ruff-...` (версия у тебя будет своя), `lint: синтаксис в порядке` и `All checks passed!`.
+**Как читать вывод:** строка с `$` это команда из `script`, которую печатает GitLab; `python3 -m unittest -v` печатает уже `make` (он показывает команду цели); шесть строк `... ok` это тесты из `test_app.py` (урок 1.6); `Job succeeded` итог, который бывает, только если последняя команда вернула 0. В логе `lint` найди строки `Successfully installed ruff-...` (версия у тебя будет своя), `lint: ок` и `All checks passed!`.
 
 **Объясни себе:**
 
@@ -801,7 +815,7 @@ Job succeeded
 
 - `ERROR: Job failed: failed to pull image "python:3.13m" with specified policies [always]: ... manifest unknown`: опечатка в имени образа или тега; сверь с hub.docker.com/_/python и поправь `image:`.
 - `fatal: Could not read from remote repository. Permission denied (publickey).` при `git push gitlab`: ключ не добавлен в профиль GitLab; добавь публичный ключ и проверь `ssh -T git@gitlab.com`.
-- `jobs:lint config should implement a script: or a trigger: keyword` (вкладка Pipelines, `yaml invalid`): отступ или опечатка в ключе, `script` не на своём уровне; сверь отступы (два пробела, без табуляций).
+- `jobs:lint config should implement the script:, run:, or trigger: keyword` (вкладка Pipelines или CI Lint, `yaml invalid`; текст может чуть отличаться в разных версиях GitLab): отступ или опечатка в ключе, `script` не на своём уровне; сверь отступы (два пробела, без табуляций).
 - Pipeline не создался вообще: файл называется не `.gitlab-ci.yml` (например `.gitlab-ci.yaml` или `gitlab-ci.yml`); переименуй.
 - `! [rejected] main -> main (fetch first)` при `git push gitlab main`: в GitLab-проекте уже есть коммиты (например README при создании); создай проект пустым или сделай `git pull --rebase gitlab main`.
 
@@ -817,7 +831,7 @@ Job succeeded
 <details markdown="1">
 <summary>Ответ</summary>
 
-Pending. Job требует раннер с тегом `docker`, такого нет, ошибки нет, job просто ждёт. В интерфейсе: `This job is stuck because you don't have any active runners online with any of these tags assigned to them: docker`.
+Pending. Job требует раннер с тегом `docker`, такого нет, ошибки нет, job просто ждёт. В интерфейсе: `This job is stuck because of one of the following problems. There are no active runners online, no runners for the protected branch, or no runners that match all of the job's tags: docker`.
 
 </details>
 
@@ -863,7 +877,6 @@ lint:
   script:
     - pip install -r requirements-dev.txt
     - make lint
-    - ruff check .
 ```
 
 Для `test` сделай то же самое: те же `tags` и `rules` между `stage` и `script`, а `script` остаётся `- make test`. Ключ `rules` заменяет старые `only` и `except`, пиши по-новому. Проверь файл на месте `yq` (если установлен) или просто глазами по отступам.
@@ -898,7 +911,7 @@ notes-runner                                        Executor=docker Token=glrt-.
 
 **Типичные ошибки:**
 
-- `This job is stuck because you don't have any active runners online with any of these tags assigned to them: docker`: у раннера нет тега или он выключен; добавь тег в настройках раннера или включи «Run untagged jobs».
+- `This job is stuck because of one of the following problems. There are no active runners online, no runners for the protected branch, or no runners that match all of the job's tags: docker` (формулировка может отличаться в разных версиях GitLab; суть та же: нет раннера, подходящего по тегам): у раннера нет тега или он выключен; добавь тег в настройках раннера или включи «Run untagged jobs».
 - `Verifying runner... is not valid` и следом `PANIC: Failed to verify the runner.` при `register`: токен неверный, отозван или скопирован с обрезкой; создай раннер заново через New project runner и подставь новый `glrt-` токен. Текст получен на заведомо неверном токене.
 - `Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?`: сокет не смонтирован или демон остановлен; проверь `-v /var/run/docker.sock:/var/run/docker.sock` и `systemctl status docker`.
 
@@ -990,7 +1003,6 @@ pipeline {
                     . .venv/bin/activate
                     pip install -r requirements-dev.txt
                     make lint
-                    ruff check .
                 '''
             }
         }
@@ -1006,7 +1018,7 @@ git add Jenkinsfile && git commit -m "ci: Jenkinsfile для Jenkins (declarativ
 git push -u origin ci/gitlab
 ```
 
-Разбор: `pipeline { ... }` весь конвейер; `agent { docker { image ... } }` где выполнять; `options` общие настройки (`timeout` 10 минут); `environment` переменные окружения для всех стадий; в стадии `Lint` блок `sh '''...'''` выполняет пять команд по порядку: `python -m venv .venv` создаёт окружение, `. .venv/bin/activate` включает его (точка в начале это команда «выполни файл в текущей оболочке», после неё `ruff` находится в `PATH`), затем установка, `make lint` и `ruff check .`. Стадия `Test` вызывает `make test`, окружение ей не нужно: тесты используют только стандартную библиотеку, а `python3` и `make` в образе есть.
+Разбор: `pipeline { ... }` весь конвейер; `agent { docker { image ... } }` где выполнять; `options` общие настройки (`timeout` 10 минут); `environment` переменные окружения для всех стадий; в стадии `Lint` блок `sh '''...'''` выполняет четыре команды по порядку: `python -m venv .venv` создаёт окружение, `. .venv/bin/activate` включает его (точка в начале это команда «выполни файл в текущей оболочке», после неё `ruff` находится в `PATH`), затем `pip install` и `make lint` (он сам запускает ruff). Стадия `Test` вызывает `make test`, окружение ей не нужно: тесты используют только стандартную библиотеку, а `python3` и `make` в образе есть.
 
 5. В Jenkins: New Item, имя `notes`, тип Pipeline, потом Definition: Pipeline script from SCM, SCM: Git, Repository URL: `https://github.com/<github-user>/notes.git`, Branch: `*/ci/gitlab`, Script Path: `Jenkinsfile`. Save, Build Now. Репозиторий должен быть публичным, тогда ключи не нужны. Открой сборку и выбери Console Output.
 
@@ -1020,9 +1032,9 @@ git push -u origin ci/gitlab
 Successfully installed ruff-0.16.9
 + make lint
 python3 -m py_compile app.py test_app.py
-lint: синтаксис в порядке
-+ ruff check .
+python3 -m ruff check .
 All checks passed!
+lint: ок
 [Pipeline] { (Test)
 + make test
 python3 -m unittest -v
@@ -1046,7 +1058,7 @@ Finished: SUCCESS
 - `docker: not found`: в образе Jenkins нет клиента Docker; собери образ с `docker-cli`, как в шаге 1. Проверено на настоящем образе `jenkins/jenkins:lts-jdk21`: `sh: 1: docker: not found`.
 - `permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock`: у пользователя jenkins нет группы сокета; добавь `--group-add "$(stat -c %g /var/run/docker.sock)"`.
 - `Missing required section "stages"` или `Expected a step`: синтаксис declarative; сверь скобки и что `steps` лежат внутри `stage`.
-- `No such DSL method 'docker' found among steps`: не установлен плагин Docker Pipeline; пересобери образ с `docker-workflow`.
+- `Invalid agent type "docker" specified. Must be one of [any, label, none]` (список в скобках у тебя может отличаться): не установлен плагин Docker Pipeline; пересобери образ с `docker-workflow`.
 
 > Если нейросеть написала `Jenkinsfile`, сверь конструкции с разделом про Jenkins и не копируй из ответа токены и пароли, подставляй их через учётные данные Jenkins.
 {: .ai}
@@ -1087,7 +1099,7 @@ ls -a | grep -E 'gitlab-ci|Jenkinsfile'
 3. Убедись, что три конвейера делают одно и то же. `grep -n` ищет строки по образцу и печатает их номера; `\|` в образце означает «или»:
 
 ```bash
-grep -n 'ruff check\|make lint\|make test\|unittest' .github/workflows/ci.yml .gitlab-ci.yml Jenkinsfile
+grep -n 'make lint\|make test' .github/workflows/ci.yml .gitlab-ci.yml Jenkinsfile
 ```
 
 **Что должно получиться:**
@@ -1095,22 +1107,20 @@ grep -n 'ruff check\|make lint\|make test\|unittest' .github/workflows/ci.yml .g
 ```text
 .gitlab-ci.yml
 Jenkinsfile
-.github/workflows/ci.yml:...:        run: ruff check .
-.github/workflows/ci.yml:...:        run: python -m unittest -v
+.github/workflows/ci.yml:...:        run: make lint
+.github/workflows/ci.yml:...:        run: make test
 .gitlab-ci.yml:...:    - make lint
-.gitlab-ci.yml:...:    - ruff check .
 .gitlab-ci.yml:...:    - make test
 Jenkinsfile:...:                    make lint
-Jenkinsfile:...:                    ruff check .
 Jenkinsfile:...:                sh 'make test'
 ```
 
-**Как читать вывод:** первые две строки результат `ls`; остальные это `файл:номер строки:строка`. Номера у тебя другие. Обрати внимание, что у GitHub, GitLab и Jenkins команды не совпадают буквально: в `ci.yml` (урок 3.3) написан прямой вызов `python -m unittest -v`, а в двух новых файлах `make test`. Результат один, но правило теперь записано в двух местах: `Makefile` и `ci.yml`. Состояние проекта после урока: в `~/notes` GitHub Actions, `.gitlab-ci.yml` и `Jenkinsfile`, `app.py` не менялся (v3), тег остаётся `v0.2.0`. Эталон: [project/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
+**Как читать вывод:** первые две строки результат `ls`; остальные это `файл:номер строки:строка`. Номера у тебя другие, а пара лишних строк (например, комментарии со словом `make`) возможна. Обрати внимание: во всех трёх файлах вызываются одни и те же цели `make lint` и `make test` (синтаксис записи разный: `run:`, `script:`, `sh`). Правило проверки записано в одном месте, в `Makefile`. Состояние проекта после урока: в `~/notes` GitHub Actions, `.gitlab-ci.yml` и `Jenkinsfile`, `app.py` не менялся (v3), тег остаётся `v0.2.0`. Эталон: [project/notes](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes).
 
 **Объясни себе:**
 
 - Где живёт «источник истины» про то, что значит «проверка прошла»: в каждом файле отдельно или в целях `make lint` и `make test`?
-- Что произойдёт, если завтра поменять правило линтера только в `ci.yml`?
+- Что произойдёт, если завтра поменять правило линтера: где его придётся править, если `ci.yml` самих правил не содержит?
 
 **Типичные ошибки:**
 
@@ -1149,7 +1159,7 @@ bash /tmp/break-3.6.sh 1     # вместо 1 подставь выпавший 
 <details markdown="1">
 <summary>Разбор трёх сценариев</summary>
 
-**1. Тег, которого нет у раннера.** Скрипт заменил в job `tags: [docker]` на `tags: [docker-arm]`, а раннер зарегистрирован только с тегом `docker`. Симптом: `This job is stuck because you don't have any active runners online with any of these tags assigned to them: docker-arm`. Починка: вернуть тег в файле (или добавить `docker-arm` раннеру, если он и правда нужен). Урок: pending без ошибки означает «нет подходящего исполнителя», а не «сломан код»; про то же говорят настройки раннера (теги, «Run untagged jobs»).
+**1. Тег, которого нет у раннера.** Скрипт заменил в job `tags: [docker]` на `tags: [docker-arm]`, а раннер зарегистрирован только с тегом `docker`. Симптом: `This job is stuck because of one of the following problems. There are no active runners online, no runners for the protected branch, or no runners that match all of the job's tags: docker-arm`. Починка: вернуть тег в файле (или добавить `docker-arm` раннеру, если он и правда нужен). Урок: pending без ошибки означает «нет подходящего исполнителя», а не «сломан код»; про то же говорят настройки раннера (теги, «Run untagged jobs»).
 
 **2. Неверный образ в job.** В `image:` опечатка `python:3.13m`. Симптом: `ERROR: Job failed: failed to pull image "python:3.13m" with specified policies [always]: ... manifest unknown`. Проверка до пуша: `docker pull python:3.13m` на своей машине даёт `Error response from daemon: ... not found`. Починка: исправить имя. Урок: сообщение точно называет причину, читай его до конца.
 
@@ -1244,7 +1254,7 @@ bash /tmp/break-3.6.sh 1     # вместо 1 подставь выпавший 
 
 Проверено (Mac, Docker 29.6.2, образы под arm64; практика курса рассчитана на Ubuntu):
 
-- Python 3.13.15, GNU Make 4.4.1, ruff 0.16.9 (образ `python:3.13`): `make lint`, `ruff check .`, `make test` из заданий 1 и 3 выполнены в чистом контейнере, в том числе под пользователем без прав root с venv в рабочей папке (как в Jenkins); `python:3.13-slim` без `make` (`sh: 1: make: not found`).
+- Python 3.13.15, GNU Make 4.4.1, ruff 0.16.9 (образ `python:3.13`): `make lint`, `make test` из заданий 1 и 3 выполнены в чистом контейнере, в том числе под пользователем без прав root с venv в рабочей папке (как в Jenkins); `python:3.13-slim` без `make` (`sh: 1: make: not found`).
 - `app.py` v3 и `test_app.py` из урока 1.6: 6 тестов, `OK`; запуск без `NOTES_DATA` в чистом контейнере даёт `{"error": "storage"}` (код 500).
 - GitLab Runner 19.4.1 (образ `gitlab/gitlab-runner:ubuntu-v19.4.1`): `--version`, флаги `register`, ответ на неверный токен (`Verifying runner... is not valid`), формат `list` на тестовой конфигурации.
 - Jenkins 2.580.1 LTS (`jenkins/jenkins:2.580.1-lts-jdk21`, Debian 13): образ из задания 3 собран, `docker` есть (docker-cli 26.1.5), плагины `workflow-aggregator` 608, `git` 5.10.1, `docker-workflow` 653; в обычном образе `docker: not found`; пакет `docker.io` в Debian 13 клиента не содержит.
