@@ -8,19 +8,14 @@ time: "4 ч"
 
 ## Зачем это нужно
 
-Никому не хочется ночью заходить на сервер, чтобы руками поднять упавший сервис. Для этого и существует systemd, и в этом уроке ты научишься на него полагаться.
+Никому не хочется ночью заходить на сервер, чтобы руками поднять упавший сервис. Вот что видит дежурный, когда заглядывает в сервис, который упал:
 
 ```text
 $ systemctl status notes
-● notes.service - Notes web app
-     Loaded: loaded (/etc/systemd/system/notes.service; enabled)
-     Active: activating (auto-restart) (Result: exit-code) since Sun 2026-10-25 03:12:40 MSK; 4s ago
-    Process: 3120 ExecStart=/usr/bin/python3 /opt/notes/app.py (code=exited, status=1/FAILURE)
-$ journalctl -u notes -n 1 --no-pager
-Oct 25 03:12:40 notes python3[3120]: OSError: [Errno 98] Address already in use
+   Active: failed (Result: exit-code)
 ```
 
-Одна команда показывает состояние сервиса, вторая причину. systemd сам пытается поднять «Заметки» заново (`auto-restart`), но порт 8080 занят, и каждая попытка кончается ошибкой. Без systemd ты узнал бы об этом только от пользователей.
+Слово `failed` значит «сервис не работает, он упал». Хорошо бы, чтобы он поднимался сам, а ты читал об этом утром в журнале. Для этого и существует systemd, и в этом уроке ты научишься на него полагаться.
 
 Пока «Заметки» запущены руками в терминале (`sudo -u notes python3 /opt/notes/app.py`, [урок 1.3](03-users-permissions.md)), любое закрытое окно, перезагрузка сервера или падение процесса означают простой. Ночью никто не сидит перед терминалом и не нажимает Enter. На работе такое не допускается: сервис должен стартовать сам, подниматься после падения и писать логи в одно место, где их можно найти.
 
@@ -324,6 +319,20 @@ Failed to start crashy.service.
 Пять запусков за пять секунд, и systemd остановился.
 
 **Важная тонкость.** У наших «Заметок» `RestartSec=2`: запуски идут раз в две-три секунды, и за 10 секунд набирается меньше пяти. Предохранитель не срабатывает, и сломанный сервис не переходит в `failed`, а годами висит в состоянии `activating (auto-restart)`, то есть постоянно пытается запуститься. В сценарии 2 раздела «Сломай и почини» ты увидишь это своими глазами: счётчик `restart counter` дойдёт до десятков. Значит, отсутствие слова `failed` в `status` не доказывает, что сервис работает: смотри на `Active:` целиком.
+
+Помнишь `failed` из начала урока? Вот как выглядит сервис, который не упал окончательно, а бесконечно пытается подняться, и где искать причину:
+
+```text
+$ systemctl status notes
+● notes.service - Notes web app
+     Loaded: loaded (/etc/systemd/system/notes.service; enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Sun 2026-10-25 03:12:40 MSK; 4s ago
+    Process: 3120 ExecStart=/usr/bin/python3 /opt/notes/app.py (code=exited, status=1/FAILURE)
+$ journalctl -u notes -n 1 --no-pager
+Oct 25 03:12:40 notes python3[3120]: OSError: [Errno 98] Address already in use
+```
+
+Первая команда показывает состояние сервиса, вторая причину (`-u notes` значит «записи сервиса notes», `-n 1` одну последнюю). systemd сам пытается поднять «Заметки» заново (`auto-restart`), но порт 8080 занят, и каждая попытка кончается ошибкой.
 
 > **Прикинь сам:** ты убил сервис командой `kill -9`, у него `Restart=on-failure`. Что произойдёт? А после `systemctl stop`?
 {: .predict}

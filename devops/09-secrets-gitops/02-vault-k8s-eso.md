@@ -8,18 +8,14 @@ time: "3 ч"
 
 ## Зачем это нужно
 
-В [уроке 5.6](../05-kubernetes/06-config-secrets.md) пароль базы жил в Kubernetes Secret, созданном командой, а значения в Secret хранятся в base64, то есть почти открытым текстом (base64 это способ записи, а не шифр). Стоит положить такой манифест в git, и пароль утёк навсегда ([урок 9.1](01-secrets-problem-vault.md)). В Vault пароль уже лежит, но приложение в кластере ходить в Vault не умеет: ему нужен обычный Secret.
+В [уроке 5.6](../05-kubernetes/06-config-secrets.md) пароль базы жил в Kubernetes Secret, созданном командой, а значения в Secret хранятся в base64, то есть почти открытым текстом (base64 это способ записи, а не шифр). Стоит положить такой манифест в git, и пароль утёк навсегда ([урок 9.1](01-secrets-problem-vault.md)). Вот как выглядит пароль в таком манифесте:
 
 ```text
-$ kubectl get externalsecret,secret -n notes
-NAME                                  STORE        REFRESH   STATUS         READY
-externalsecret.external-secrets.io/notes-db   vault-backend   1h    SecretSynced   True
-
-NAME               TYPE     DATA   AGE
-secret/notes-db    Opaque   1      3m
+data:
+  password: cGFzc3dvcmQxMjM=
 ```
 
-На выводе видно две стороны одной связки: `ExternalSecret` со статусом `SecretSynced` описывает, что взять из Vault, а рядом лежит обычный `Secret notes-db`, который он создал сам. Приложение видит только второе.
+На вид это набор букв, но `cGFzc3dvcmQxMjM=` читается обратно в `password123` без всякого ключа. Кто увидел строку в git, тот узнал пароль. В Vault пароль уже лежит безопасно, но приложение в кластере ходить в Vault не умеет: ему нужен обычный Secret.
 
 На работе эту связку делает External Secrets Operator (ESO): программа внутри кластера, у которой есть доступ к Vault. Она сама создаёт и обновляет Secret из внешнего хранилища. Оператор (operator) это программа, которая постоянно следит за описаниями в кластере и приводит реальность в соответствие с ними, как курьер, который каждый час сверяет заявку с содержимым склада. Без такой программы тебе пришлось бы копировать пароль из Vault в кластер руками после каждой смены. Подробно разберём в теории. В git остаётся только описание «откуда взять», а не сам пароль. Это описание оформляется как отдельный объект `ExternalSecret`: заявка вида «возьми по этому адресу из Vault такие-то поля и сложи в Secret с таким-то именем». Как бумажка «заберите посылку из ячейки 42», на которой нет самой посылки. Ту же схему используют с AWS Secrets Manager, Yandex Lockbox и другими хранилищами.
 
@@ -381,6 +377,19 @@ database = notes
 У каждого объекта Kubernetes есть поле `status`, в которое пишет контроллер. У `ExternalSecret` там список состояний (conditions). Главное называется `Ready`: `True` значит «синхронизировано», `False` значит «не получилось». Рядом причина (`reason`): `SecretSynced` при успехе, `SecretSyncedError` при ошибке. Команда `kubectl get externalsecret` показывает то же в колонках `STATUS` и `READY`. Подробный текст ошибки пишется в события, их читают командой `kubectl describe externalsecret <имя>`.
 
 Разберём на примере. `kubectl -n notes get externalsecret notes-db` даёт `SecretSynced True`: ESO прочитал Vault и собрал Secret. Если `SecretSyncedError False`, открывай `describe` и иди в конец: в блоке `Events` будет сообщение Vault, например `Code: 403 ... permission denied`. Слой определяй по URL запроса (`auth/kubernetes/login` или `secret/data/...`) и тексту ошибки, а не по одному коду (предыдущий раздел).
+
+Помнишь связку из начала урока: пароль в Vault и обычный Secret в кластере? Вот как она выглядит, когда всё в порядке. Команда `kubectl get externalsecret,secret -n notes` показывает оба объекта подряд:
+
+```text
+$ kubectl get externalsecret,secret -n notes
+NAME                                  STORE        REFRESH   STATUS         READY
+externalsecret.external-secrets.io/notes-db   vault-backend   1h    SecretSynced   True
+
+NAME               TYPE     DATA   AGE
+secret/notes-db    Opaque   1      3m
+```
+
+`ExternalSecret` со статусом `SecretSynced` описывает, что взять из Vault, а рядом лежит обычный `Secret notes-db`, который он создал сам. Приложение видит только второе.
 
 Осторожно: что `Ready True` гарантирует работающее приложение. Нет: это значит только, что Secret собран. Перезапущены ли поды и сменился ли пароль в базе, статус не скажет.
 
