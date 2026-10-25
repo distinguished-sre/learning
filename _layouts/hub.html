@@ -120,16 +120,15 @@ layout: default
       <ul class="hub-cards">
         {%- for c in hub.courses.items %}
         {%- assign course = site.data.courses[c.key] -%}
-        {%- assign n_lessons = 0 -%}{%- assign n_hours = 0 -%}
+        {%- assign n_lessons = 0 -%}{%- assign n_hours = 0 -%}{%- assign lesson_ids = '' -%}
         {%- for t in course.topics -%}
           {%- assign n_lessons = n_lessons | plus: t.lessons.size -%}
-          {%- assign h = t.time | remove: ' ч' | plus: 0 -%}
+          {%- for l in t.lessons -%}{%- assign lesson_ids = lesson_ids | append: l.id | append: ' ' -%}{%- endfor -%}
+          {%- comment -%} время темы вида «N.N ч»; запятая и запись без пробела тоже разбираются{%- endcomment -%}
+          {%- assign h = t.time | replace: ',', '.' | remove: 'ч' | strip | plus: 0 -%}
           {%- assign n_hours = n_hours | plus: h -%}
         {%- endfor -%}
         {%- assign cbase = '/' | append: c.key | append: '/' -%}
-        {%- assign first_topic = course.topics | first -%}
-        {%- assign first_lesson = first_topic.lessons | first -%}
-        {%- capture first_url %}{{ cbase }}{{ first_topic.dir }}/{{ first_lesson.slug }}.html{% endcapture -%}
         {%- assign c_tagline = c.tagline | default: '' -%}
         {%- assign c_text = c.text | default: '' -%}
         {%- assign c_for = c.for_whom | default: '' -%}
@@ -158,12 +157,9 @@ layout: default
             {%- endif %}
           </dl>
           <div class="hub-act">
-            <p class="hub-progress" data-hub-progress="{{ c.key }}" data-total="{{ n_lessons }}" hidden></p>
+            <p class="hub-progress" data-hub-progress="{{ c.key }}" data-total="{{ n_lessons }}" data-ids="{{ lesson_ids | strip }}" hidden></p>
             <div class="hub-card-cta">
               <a class="hbtn hbtn-primary" href="{{ cbase | relative_url }}" data-hub-open><span>Открыть курс</span> <span class="arr" aria-hidden="true">→</span></a>
-              {%- if first_lesson %}
-              <a class="hbtn hbtn-ghost" href="{{ first_url | relative_url }}">Первый урок <span class="arr" aria-hidden="true">→</span></a>
-              {%- endif %}
             </div>
           </div>
           <div class="hub-hint-box">
@@ -333,9 +329,12 @@ layout: default
     var keys = { devops: 'done', 'load-tester': 'lt:done', monitoring: 'mon:done' };
     var els = document.querySelectorAll('[data-hub-progress]');
     for (var i = 0; i < els.length; i++) {
-      var el = els[i], k = keys[el.getAttribute('data-hub-progress')], total = +el.getAttribute('data-total') || 0, n = 0;
+      var el = els[i], k = keys[el.getAttribute('data-hub-progress')], total = +el.getAttribute('data-total') || 0, n = 0, ids = (el.getAttribute('data-ids') || '').split(' ');
       if (!k || !total) continue;
-      try { n = (JSON.parse(localStorage.getItem(k) || '[]') || []).length; } catch (e) { n = 0; }
+      try {
+        var arr = JSON.parse(localStorage.getItem(k) || '[]');
+        if (Array.isArray(arr)) for (var j = 0; j < arr.length; j++) if (ids.indexOf(String(arr[j])) !== -1) n++;
+      } catch (e) { n = 0; }
       if (!n) continue;
       el.textContent = '✓ пройдено ' + Math.min(n, total) + ' из ' + total + ' уроков';
       el.hidden = false;

@@ -405,36 +405,36 @@
       "section": "Версионирование бакета: кнопка «отменить»"
     },
     {
-      "id": "q07-03-13",
+      "id": "q07-03-31",
       "skill": "соответствие AWS",
-      "kind": "понимание",
+      "kind": "применение",
       "type": "single",
-      "text": "Какой сервис Yandex Cloud соответствует Amazon S3 для хранения state?",
+      "text": "Ты переносишь `backend \"s3\"` из учебного проекта в Yandex Cloud. Что поменяешь в блоке, чтобы он работал с Object Storage?",
       "options": [
         {
           "id": "a",
-          "text": "Compute Cloud, потому что он хранит данные ВМ",
-          "why": "Compute Cloud запускает виртуальные машины, а файлы в бакетах хранит Object Storage."
+          "text": "Заменю тип backend на `yandex`, потому что `s3` умеет только Amazon",
+          "why": "Тип backend остаётся `s3`: он работает с любым S3-совместимым хранилищем, меняются адрес и проверки."
         },
         {
           "id": "b",
-          "text": "Cloud DNS, ведь он хранит записи об именах и адресах",
-          "why": "DNS отвечает за имена, а не за файлы состояния."
+          "text": "Укажу адрес хранилища в `endpoints` и отключу проверки, специфичные для AWS (`skip_*`)"
         },
         {
           "id": "c",
-          "text": "Object Storage"
+          "text": "Ничего: адрес хранилища Terraform определит сам по региону",
+          "why": "Без `endpoints` backend пойдёт на адрес Amazon, а не в Object Storage."
         },
         {
           "id": "d",
-          "text": "Managed PostgreSQL, потому что state это таблица",
-          "why": "State это один объект-файл, а не данные таблицы."
+          "text": "Заменю блокировку на таблицу DynamoDB, потому что без неё backend не стартует",
+          "why": "Блокировка файлом `use_lockfile` не требует DynamoDB, а в Yandex такой таблицы нет."
         }
       ],
       "correct": [
-        "c"
+        "b"
       ],
-      "explain": "Backend `s3` один и тот же, отличается адрес endpoint и несколько флагов проверок.",
+      "explain": "Backend `s3` один и тот же. Для Object Storage задают `endpoints = { s3 = ... }` и пропускают проверки, рассчитанные на AWS (`skip_region_validation`, `skip_credentials_validation`, `skip_requesting_account_id`).",
       "section": "Соответствие AWS"
     },
     {

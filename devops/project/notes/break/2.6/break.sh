@@ -23,7 +23,7 @@ need_https() {
     exit 1
   fi
   if [[ ! -f $SITE ]] || ! grep -q 'listen 443' "$SITE" || [[ ! -f $CRT || ! -f $KEY ]]; then
-    echo "HTTPS для «Заметок» не настроен: нет $SITE с 'listen 443' или $CRT. Сначала выполни задания 2 и 4 урока 2.6." >&2
+    echo "HTTPS для «Заметок» не настроен: нет $SITE с 'listen 443' или $CRT. Сначала выполни задания 2 и 5 урока 2.6." >&2
     exit 1
   fi
 }

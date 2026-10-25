@@ -71,8 +71,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
-RUN groupadd --system --gid 10001 notes \
- && useradd --system --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin notes \
+RUN groupadd --gid 10001 notes \
+ && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin notes \
  && mkdir /data && chown 10001:10001 /data
 ENV HOST=0.0.0.0 PORT=8080 NOTES_DATA=/data/notes.txt
 USER 10001:10001

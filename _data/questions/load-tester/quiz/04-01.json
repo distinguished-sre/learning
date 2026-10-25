@@ -300,7 +300,7 @@
     {
      "id": "c",
      "text": "`30.83 50`",
-     "why": "Дробный результат даёт `/`, а `//` отбрасывает дробную часть."
+     "why": "Дробный результат даёт `/`, а `//` округляет вниз до целого."
     },
     {
      "id": "d",
@@ -789,7 +789,7 @@
    "skill": "доля ошибок в процентах",
    "kind": "применение",
    "type": "single",
-   "text": "За 1800 запросов было `errors = 9`. Какая доля ошибок в процентах получится по формуле `errors / requests * 100`?",
+   "text": "За 1800 запросов было `errors = 9`. Какая доля ошибок в процентах получится по формуле `errors / total_requests * 100`?",
    "options": [
     {
      "id": "a",
@@ -823,7 +823,7 @@
    "kind": "чтение",
    "type": "multiple",
    "text": "Скрипт посчитал RPS и долю ошибок. Какие утверждения о его выводе верны?",
-   "code": "requests = 1800\nerrors = 27\nduration_s = 60\nrps = requests / duration_s\nerror_rate = errors / requests * 100\nprint(f\"RPS: {rps}\")\nprint(f\"Ошибок: {error_rate:.1f}%\")",
+   "code": "total_requests = 1800\nerrors = 27\nduration_s = 60\nrps = total_requests / duration_s\nerror_rate = errors / total_requests * 100\nprint(f\"RPS: {rps}\")\nprint(f\"Ошибок: {error_rate:.1f}%\")",
    "options": [
     {
      "id": "a",

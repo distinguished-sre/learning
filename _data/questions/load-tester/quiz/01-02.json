@@ -547,8 +547,8 @@
    "options": [
     {
      "id": "a",
-     "text": "`grep 'POST /api/orders'`",
-     "why": "Без имени файла `grep` ждёт ввода с клавиатуры и ничего не найдёт."
+     "text": "`grep -v 'POST /api/orders' access.log`",
+     "why": "Флаг `-v` инвертирует поиск: команда покажет все строки, кроме заказов."
     },
     {
      "id": "b",
@@ -563,6 +563,16 @@
      "id": "d",
      "text": "`grep POST|orders access.log`",
      "why": "Знак `|` оболочка сочтёт конвейером и попробует запустить команду `orders`."
+    },
+    {
+     "id": "e",
+     "text": "`grep -E 'POST|orders' access.log`",
+     "why": "Это «POST или orders»: в выводе будут все запросы `POST` на любые адреса и все строки со словом `orders`, а нужна именно фраза целиком."
+    },
+    {
+     "id": "f",
+     "text": "`grep POST access.log | grep orders`",
+     "why": "Это «POST и orders» в любом порядке и месте строки: сюда попадут и `POST /api/cart?from=orders`, и другие строки, где слова просто встретились. Нужна фраза `POST /api/orders` подряд."
     }
    ],
    "correct": [

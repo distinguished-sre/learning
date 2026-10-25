@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Поломки для урока 10.3 «Бэкапы, восстановление и ёмкость». Запуск: bash break.sh 1|2|fix
-# 1: «ночной» дамп обрезан (файл ~/notes-backups/notes-nightly.dump).
-# 2: том с данными notes-db забит лишними файлами (каталог old-wal-archive в томе).
+# 1: «ночной» дамп обрезан на 60% (файл ~/notes-backups/notes-nightly.dump, исходник прячется в скрытый файл .break-10.3-1.orig).
+# 2: в томе notes-db создан файл-пустышка segment.bin (около 90% свободного места тома, 1 ГБ, если размер тома не ограничен) в каталоге old-wal-archive; на маленьком PVC он может заполнить том и остановить базу.
 # Без sudo. Нужен дамп из задания 1 урока и работающий кластер notes-db.
 set -euo pipefail
 
 NS=notes
 POD=notes-db-1
 DIR=$HOME/notes-backups
-SRC=$DIR/notes-manual.dump
 NIGHTLY=$DIR/notes-nightly.dump
+MARK=$DIR/.break-10.3-1
+ORIG=$MARK.orig
 JUNK=/var/lib/postgresql/data/old-wal-archive
 
 die() { echo "$*" >&2; exit 1; }
@@ -21,11 +22,17 @@ need_kubectl() {
 }
 
 break_1() {
-  [[ -s $SRC ]] || die "Нет $SRC. Сначала сделай дамп в задании 1 урока."
-  if [[ -e $NIGHTLY ]]; then echo "Сценарий 1 уже применён."; return 0; fi
-  local size; size=$(wc -c < "$SRC")
+  [[ -s $NIGHTLY ]] || die "Нет $NIGHTLY. Сначала сделай дамп в задании 1 урока."
+  if [[ -e $MARK ]]; then echo "Сценарий 1 уже применён."; return 0; fi
+  # Исходник копируем один раз: после прерывания $NIGHTLY уже может быть обрезан.
+  if [[ ! -e $ORIG ]]; then
+    cp -p "$NIGHTLY" "$ORIG.tmp" && mv "$ORIG.tmp" "$ORIG"
+  fi
+  local size; size=$(wc -c < "$ORIG")
   # Оставляем 60% файла: похоже на дамп, оборванный переполненным диском.
-  head -c $(( size * 6 / 10 )) "$SRC" > "$NIGHTLY"
+  head -c $(( size * 6 / 10 )) "$ORIG" > "$NIGHTLY"
+  # В метке размер обрезанного файла: fix не затрёт дамп, пересозданный руками.
+  wc -c < "$NIGHTLY" > "$MARK"
   echo "Ночной бэкап готов: $NIGHTLY (зелёный, размер ненулевой)."
 }
 
@@ -50,7 +57,16 @@ break_2() {
 }
 
 do_fix() {
-  rm -f "$NIGHTLY"
+  if [[ -e $ORIG ]]; then
+    # Размер обрезанного дампа: из метки, а если её нет (прервали запуск), считаем от исходника.
+    local expected
+    if [[ -e $MARK ]]; then expected=$(cat "$MARK"); else expected=$(( $(wc -c < "$ORIG") * 6 / 10 )); fi
+    # Возвращаем целый дамп, если его нет или он всё ещё обрезанный; пересозданный руками не трогаем.
+    if [[ ! -e $NIGHTLY || $(wc -c < "$NIGHTLY") -eq $expected ]]; then
+      mv -f "$ORIG" "$NIGHTLY"
+    fi
+  fi
+  rm -f "$MARK" "$ORIG" "$ORIG.tmp"
   if command -v kubectl >/dev/null && kubectl -n "$NS" get pod "$POD" >/dev/null 2>&1; then
     kubectl -n "$NS" exec "$POD" -c postgres -- rm -rf "$JUNK"
   fi

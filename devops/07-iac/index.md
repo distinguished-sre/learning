@@ -2,7 +2,7 @@
 layout: topic
 title: "IaC: Terraform и Ansible"
 topic: 7
-time: "13.5 ч"
+time: "19 ч"
 redirect_from:
   - /devops/7-Ansible-Terraform.html
 ---

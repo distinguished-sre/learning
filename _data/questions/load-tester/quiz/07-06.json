@@ -180,7 +180,7 @@
    "skill": "сколько сообщений даст группировка",
    "kind": "применение",
    "type": "single",
-   "text": "Работает конфиг Alertmanager выше (`group_by: [alertname]`). Одновременно горят: `ShopHighLatencyP95` по пяти разным маршрутам и один `ShopHighErrorRate`. На сколько групп Alertmanager разобьёт эти алерты при первой отправке (одна группа это одно сообщение)?",
+   "text": "Работает конфиг Alertmanager выше (`group_by: [alertname]`). Допустим, у тебя есть условное правило `RouteHighLatency` с `sum by (route, le)` (в стенде такого нет, там один `ShopHighLatencyP95` на весь магазин). Одновременно горят: `RouteHighLatency` по пяти разным маршрутам и один `ShopHighErrorRate`. На сколько групп Alertmanager разобьёт эти алерты при первой отправке (одна группа это одно сообщение)?",
    "code": "route:\n  receiver: classroom\n  group_by: [alertname]\n  group_wait: 10s\n  group_interval: 1m\n  repeat_interval: 1h\nreceivers:\n  - name: classroom",
    "options": [
     {
@@ -206,7 +206,7 @@
    "correct": [
     "a"
    ],
-   "explain": "Группировка идёт по значениям меток из `group_by`. Пять `ShopHighLatencyP95` склеятся в одно сообщение, а `ShopHighErrorRate` будет вторым.",
+   "explain": "Группировка идёт по значениям меток из `group_by`. Пять `RouteHighLatency` склеятся в одно сообщение, а `ShopHighErrorRate` будет вторым.",
    "section": "Alertmanager: группы, маршруты и тишина"
   },
   {

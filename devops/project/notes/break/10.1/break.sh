@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Поломки для урока 10.1 «On-call». Запуск: bash break.sh random|1|3|4|5|fix
-# Ломает «Заметки» в учебном kind-кластере, четыре поломки: 1 OOM, 3 плохой релиз,
+# Ломает «Заметки» (Deployment или Rollout) в учебном kind-кластере, четыре поломки: 1 OOM, 3 плохой релиз,
 # 4 сертификат, 5 БД недоступна. Без sudo. Что именно сломано, скрипт не печатает.
 # Состояние хранится в ConfigMap break-10-1 (namespace notes), fix читает его.
 set -euo pipefail
@@ -11,11 +11,16 @@ CHART=${NOTES_CHART:-$HOME/notes/helm/notes}
 
 die() { echo "$*" >&2; exit 1; }
 
+# Имя рабочей нагрузки: после урока 9.6 это может быть Rollout, иначе Deployment.
+wl() {
+  if kubectl -n "$NS" get rollout.argoproj.io notes >/dev/null 2>&1; then echo rollout/notes; else echo deploy/notes; fi
+}
+
 need() {
   command -v kubectl >/dev/null || die "Нет kubectl. Сначала пройди урок 5.1."
   command -v helm >/dev/null || die "Нет helm. Сначала пройди урок 5.9."
-  kubectl -n "$NS" get deploy notes >/dev/null 2>&1 \
-    || die "Не найден Deployment notes в namespace $NS. Проверь контекст (kubectl config use-context kind-notes) и уроки 5.x."
+  kubectl -n "$NS" get deploy notes >/dev/null 2>&1 || kubectl -n "$NS" get rollout.argoproj.io notes >/dev/null 2>&1 \
+    || die "Не найден ни Deployment, ни Rollout notes в namespace $NS. Проверь контекст (kubectl config use-context kind-notes) и уроки 5.x, 9.6."
 }
 
 # Читает поле из ConfigMap состояния; пусто, если ConfigMap или поля нет.
@@ -28,12 +33,48 @@ deployed_rev() {
     'import json,sys; print([r["revision"] for r in json.load(sys.stdin) if r["status"]=="deployed"][-1])'
 }
 
-wait_rollout() { kubectl -n "$NS" rollout status deploy/notes --timeout=120s >/dev/null || true; }
+wait_rollout() {
+  if [[ $(wl) == rollout/notes ]]; then
+    kubectl -n "$NS" wait --for=jsonpath='{.status.phase}'=Healthy rollout/notes --timeout=120s >/dev/null || true
+  else
+    kubectl -n "$NS" rollout status deploy/notes --timeout=120s >/dev/null || true
+  fi
+}
+
+# Одна JSON-операция для памяти ($1 requests|limits, $2 значение, пусто = убрать поле).
+mem_op() {
+  local base=/spec/template/spec/containers/0/resources has
+  has=$(kubectl -n "$NS" get "$(wl)" -o "jsonpath={.spec.template.spec.containers[0].resources.$1}")
+  if [[ -z $2 ]]; then
+    [[ -n $has ]] && printf '{"op":"remove","path":"%s/%s/memory"}' "$base" "$1"
+  elif [[ -z $has ]]; then
+    printf '{"op":"add","path":"%s/%s","value":{"memory":"%s"}}' "$base" "$1" "$2"
+  else
+    printf '{"op":"add","path":"%s/%s/memory","value":"%s"}' "$base" "$1" "$2"
+  fi
+  return 0
+}
+
+# Ставит память requests и limits одним патчем: limit меньше request Kubernetes не принимает.
+set_mem() {
+  local r l ops=""
+  r=$(mem_op requests "$1"); l=$(mem_op limits "$2")
+  [[ -n $r ]] && ops=$r
+  [[ -n $l ]] && ops=${ops:+$ops,}$l
+  [[ -n $ops ]] || return 0
+  kubectl -n "$NS" patch "$(wl)" --type=json -p "[$ops]" >/dev/null
+}
+
+
 
 break_1() {
-  local orig; orig=$(kubectl -n "$NS" get deploy notes -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}')
-  save --from-literal=scenario=1 --from-literal=orig="$orig"
-  kubectl -n "$NS" set resources deploy/notes --limits=memory=8Mi >/dev/null
+  local base='{.spec.template.spec.containers[0].resources'
+  local lim req
+  lim=$(kubectl -n "$NS" get "$(wl)" -o "jsonpath=$base.limits.memory}")
+  req=$(kubectl -n "$NS" get "$(wl)" -o "jsonpath=$base.requests.memory}")
+  save --from-literal=scenario=1 --from-literal=orig="$lim" --from-literal=origreq="$req"
+  # Request и limit ставим вместе: limit меньше request Kubernetes отвергнет.
+  set_mem 8Mi 8Mi
 }
 
 break_3() {
@@ -63,13 +104,7 @@ do_fix() {
   if [[ -z $sc ]]; then echo "Ничего не сломано (нет состояния $STATE), чинить нечего."; return 0; fi
   case $sc in
     1)
-      local orig; orig=$(st orig)
-      if [[ -n $orig ]]; then
-        kubectl -n "$NS" set resources deploy/notes --limits=memory="$orig" >/dev/null
-      else
-        kubectl -n "$NS" patch deploy notes --type=json \
-          -p '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/limits/memory"}]' >/dev/null || true
-      fi
+      set_mem "$(st origreq)" "$(st orig)"
       wait_rollout ;;
     3) helm rollback notes "$(st rev)" -n "$NS" >/dev/null; wait_rollout ;;
     4)
