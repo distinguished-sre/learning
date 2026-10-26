@@ -2,7 +2,7 @@
 layout: topic
 title: "Секреты и GitOps"
 topic: 9
-time: "14.5 ч"
+time: "21.5 ч"
 redirect_from:
   - /devops/9-Vault-Flux-k8sOperators-releases.html
 ---

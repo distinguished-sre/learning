@@ -2,7 +2,7 @@
 layout: topic
 title: "Kubernetes и Helm"
 topic: 5
-time: "25.5 ч"
+time: "42.5 ч"
 redirect_from:
   - /devops/5-Kubernetes-helm.html
 ---

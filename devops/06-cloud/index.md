@@ -2,7 +2,7 @@
 layout: topic
 title: "Облако"
 topic: 6
-time: "18 ч"
+time: "18.5 ч"
 redirect_from:
   - /devops/6-Cloud-SaaS-PaaS-IaaS.html
 ---

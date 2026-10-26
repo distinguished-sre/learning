@@ -2,7 +2,7 @@
 layout: topic
 title: "Git и CI"
 topic: 3
-time: "11.5 ч"
+time: "23 ч"
 redirect_from:
   - /devops/3-Git-Gitlab-Github.html
 ---

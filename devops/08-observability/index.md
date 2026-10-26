@@ -2,7 +2,7 @@
 layout: topic
 title: "Наблюдаемость"
 topic: 8
-time: "21.5 ч"
+time: "38.5 ч"
 redirect_from:
   - /devops/8-Метрики-логгирование-трейсинг-istio.html
 ---

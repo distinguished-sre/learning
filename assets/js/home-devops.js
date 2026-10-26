@@ -240,7 +240,7 @@
   /* ---------- калькулятор темпа ---------- */
   var calc = $('[data-calc]');
   if (calc) {
-    var HOURS = parseFloat(home.getAttribute('data-hours')) || 165;
+    var HOURS = parseFloat(home.getAttribute('data-hours')) || 285.5;
     var inH = $('[data-in="h"]', calc), inD = $('[data-in="d"]', calc);
     var MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     var plural = function (n, a, b, c) { var m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c); };

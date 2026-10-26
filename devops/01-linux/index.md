@@ -2,7 +2,7 @@
 layout: topic
 title: "Linux, Bash и systemd"
 topic: 1
-time: "16.5 ч"
+time: "34 ч"
 redirect_from:
   - /devops/1-Linux-Bash-Текстовые-редакторы.html
 ---

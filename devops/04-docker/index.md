@@ -2,7 +2,7 @@
 layout: topic
 title: "Docker и Compose"
 topic: 4
-time: "17.5 ч"
+time: "33.5 ч"
 redirect_from:
   - /devops/4-Docker-и-Compose.html
 ---

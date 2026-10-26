@@ -2,7 +2,7 @@
 layout: topic
 title: "Итоговый практикум"
 topic: 10
-time: "19 ч"
+time: "27.5 ч"
 ---
 
 ## О чём тема
