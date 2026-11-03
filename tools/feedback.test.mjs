@@ -14,6 +14,10 @@ const skip = !chromium ? 'нет playwright' : !existsSync(SITE) ? 'нет со�
 if (skip && process.env.CI) throw new Error(skip);
 let browser, server, origin;
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+// Адрес сайта и почта автора из _config.yml: форк или локальная сборка с другим адресом не ломают тест.
+const config = readFileSync(path.join(ROOT, '_config.yml'), 'utf8');
+const SITE_URL = config.match(/^url:\s*"?([^"\s]+)"?/m)[1];
+const EMAIL = config.match(/^email:\s*"?([^"\s]+)"?/m)[1];
 const pages = [];
 function walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -93,9 +97,11 @@ test('опрос, обязательный текст, возврат назад
     const email = new URL(await page.locator('[data-feedback-channel="email"]').getAttribute('href'));
     assert.equal(telegram.pathname, '/distinguished_sre');
     assert.equal(telegram.searchParams.get('text'), body);
-    assert.equal(email.pathname, 'jenyabykov322@yandex.ru');
+    assert.equal(email.pathname, EMAIL);
     assert.equal(email.searchParams.get('body'), body);
     assert.ok(!email.search.includes('+'), 'mailto использует %20 для пробелов');
+    assert.ok(!telegram.search.includes('+'), 'telegram использует %20 для пробелов');
+    assert.equal(await page.locator('[data-feedback-note]').isVisible(), false);
     assert.equal(await page.locator('[data-feedback-channel]').count(), 4);
     assert.equal(await page.locator('[data-feedback-channel="vk"]').getAttribute('href'), 'https://vk.ru/distinguished_sre');
     await page.getByRole('button', { name: 'Изменить сообщение' }).click();
@@ -121,7 +127,7 @@ test('раздел, цитата, каноническая ссылка без q
     assert.ok(body.includes('Раздел: ' + heading.text));
     assert.ok(body.includes('Фрагмент: «' + heading.text + '»'));
     const url = new URL(body.split('\n').find(l => l.startsWith('Ссылка: ')).slice(8));
-    assert.equal(url.origin, 'https://distinguished-sre.github.io');
+    assert.equal(url.origin, SITE_URL);
     assert.equal(decodeURIComponent(url.hash.slice(1)), heading.id);
     assert.equal(url.search, '');
     assert.ok(!body.includes('private=value'));
@@ -133,6 +139,47 @@ test('раздел, цитата, каноническая ссылка без q
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#feedback').isVisible(), false);
     assert.equal(await page.evaluate(() => document.activeElement.dataset.feedbackSection), heading.id);
+  } finally { await page.close(); }
+});
+
+test('выделение из чужого раздела и сорвавшееся нажатие не попадают в сообщение', { skip }, async () => {
+  const page = await pageFor(lesson('monitoring').url);
+  const select = n => page.locator('[data-prose] h2[id]').nth(n).evaluate(h => {
+    const range = document.createRange(); range.selectNodeContents(h);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    return h.textContent.trim();
+  });
+  try {
+    // Выделен заголовок второго раздела, нажата кнопка третьего: цитаты нет, раздел третий.
+    const second = await select(1);
+    const third = await page.locator('[data-prose] h2[id]').nth(2).evaluate(h => h.textContent.trim());
+    await page.getByRole('button', { name: 'Обратная связь: ' + third, exact: true }).click();
+    let body = await complete(page);
+    assert.ok(body.includes('Раздел: ' + third));
+    assert.ok(!body.includes('Фрагмент:'), body);
+    await page.keyboard.press('Escape');
+    // Выделение внутри своего раздела (заголовок в него входит) остаётся.
+    await select(1);
+    await page.getByRole('button', { name: 'Обратная связь: ' + second, exact: true }).click();
+    body = await complete(page);
+    assert.ok(body.includes('Фрагмент: «' + second + '»'));
+    await page.keyboard.press('Escape');
+    // Нажали кнопку третьего раздела и увели курсор, потом сняли выделение и открыли форму второго с клавиатуры.
+    await select(1);
+    const button = page.getByRole('button', { name: 'Обратная связь: ' + third, exact: true });
+    await button.scrollIntoViewIfNeeded();
+    const box = await button.boundingBox();
+    await page.mouse.move(box.x + 5, box.y + 5);
+    await page.mouse.down();
+    await page.mouse.move(10, 10, { steps: 3 });
+    await page.mouse.up();
+    assert.equal(await page.locator('#feedback').evaluate(d => d.open), false);
+    await page.evaluate(() => window.getSelection().removeAllRanges());
+    await page.getByRole('button', { name: 'Обратная связь: ' + second, exact: true }).focus();
+    await page.keyboard.press('Enter');
+    body = await complete(page);
+    assert.ok(body.includes('Раздел: ' + second));
+    assert.ok(!body.includes('Фрагмент:'), body);
   } finally { await page.close(); }
 });
 
@@ -149,7 +196,7 @@ test('кнопка у вопроса передаёт его текст и не 
     const body = await complete(page);
     assert.ok(body.includes('Вопрос теста: ' + question.trim()));
     assert.ok(body.includes('ID вопроса: ' + qid));
-    assert.ok(body.includes('Раздел урока: https://distinguished-sre.github.io/learning/devops/'));
+    assert.ok(body.includes('Раздел урока: ' + SITE_URL + '/learning/devops/'));
     await page.keyboard.press('ArrowRight');
     assert.equal(page.url(), origin + lesson('devops').url);
     await page.keyboard.press('Escape');
@@ -190,7 +237,7 @@ test('подготовка: одинаковые вопросы различаю
     const body = await complete(page);
     assert.ok(body.includes('ID вопроса: ' + qid));
     assert.ok(body.includes('Код из вопроса:\n' + code.trim()));
-    assert.ok(body.includes('Раздел урока: https://distinguished-sre.github.io/learning/load-tester/04-python/02-conditions-loops.html#'));
+    assert.ok(body.includes('Раздел урока: ' + SITE_URL + '/learning/load-tester/04-python/02-conditions-loops.html#'));
   } finally { await page.close(); }
 });
 

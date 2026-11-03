@@ -74,6 +74,7 @@ body:has(.feedback[open]) { overflow: hidden; }
 .feedback-channels .btn { text-decoration: none; }
 .feedback button:disabled { opacity: .6; cursor: default; }
 .feedback-status { min-height: 1.5em; }
+.feedback-note { color: var(--muted); }
 .feedback-section {
   display: block;
   border: 0;

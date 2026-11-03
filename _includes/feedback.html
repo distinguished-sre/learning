@@ -45,11 +45,16 @@
       <label for="feedback-preview">Сообщение автору</label>
       <textarea id="feedback-preview" rows="9" readonly></textarea>
       <button class="btn" type="button" data-feedback-copy>Скопировать сообщение</button>
-      <p>В Telegram и почте текст подставится сам. Для Instagram и VK скопируй сообщение и вставь в переписку.</p>
+      <p>В Telegram и почте текст подставится сам. Для Instagram и VK скопируй сообщение и вставь в переписку. Если приложение открылось без текста или обрезало его, скопируй сообщение кнопкой выше.</p>
+      <p class="feedback-note" data-feedback-note hidden>Сообщение длинное: в Telegram и почту подставится сокращённый вариант без кода, с короткой цитатой и началом текста. Полный текст скопируй кнопкой выше.</p>
       <div class="feedback-channels" aria-label="Контакты автора">
         {% for channel in site.data.feedback.channels %}
-        {% if channel.url != '' %}
-        <a class="btn" data-feedback-channel="{{ channel.id | escape }}" href="{{ channel.url | escape }}" target="_blank" rel="noopener noreferrer">{{ channel.label | escape }}</a>
+        {%- assign url = channel.url -%}
+        {%- if channel.id == 'email' -%}
+          {%- if site.email and site.email != '' -%}{%- assign url = 'mailto:' | append: site.email -%}{%- else -%}{%- assign url = '' -%}{%- endif -%}
+        {%- endif %}
+        {% if url and url != '' %}
+        <a class="btn" data-feedback-channel="{{ channel.id | escape }}" href="{{ url | escape }}" target="_blank" rel="noopener noreferrer">{{ channel.label | escape }}</a>
         {% else %}
         <button type="button" disabled title="Контакт пока не добавлен">{{ channel.label | escape }} (скоро)</button>
         {% endif %}

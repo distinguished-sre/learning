@@ -1,5 +1,5 @@
-# Только публичные контакты автора. Пустой URL выключает канал в форме.
-# Telegram, Instagram и VK указаны автором; email из _config.yml.
+# Только публичные контакты автора. Пустой или отсутствующий URL выключает канал в форме.
+# Email берётся из `email` в _config.yml, здесь у него только подпись.
 channels:
   - id: telegram
     label: Telegram
@@ -12,4 +12,3 @@ channels:
     url: https://vk.ru/distinguished_sre
   - id: email
     label: Email
-    url: mailto:jenyabykov322@yandex.ru
