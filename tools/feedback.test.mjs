@@ -183,6 +183,37 @@ test('выделение из чужого раздела и сорвавшее�
   } finally { await page.close(); }
 });
 
+test('выделение с границы элемента даёт цитату; длинное сообщение укорачивается в ссылке', { skip }, async () => {
+  const page = await pageFor(lesson('monitoring').url);
+  try {
+    // Выделение от конца заголовка через несколько абзацев: startContainer - контейнер, а не текст.
+    const title = await page.locator('[data-prose] h2[id]').nth(1).evaluate(h => {
+      const range = document.createRange(); range.setStartAfter(h);
+      let end = h; for (let i = 0; i < 6 && end.nextElementSibling; i++) end = end.nextElementSibling;
+      range.setEndAfter(end);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      return h.textContent.trim();
+    });
+    await page.getByRole('button', { name: 'Обратная связь: ' + title, exact: true }).click();
+    await page.getByRole('radio', { name: 'Ошибка или неточность', exact: true }).check();
+    await page.locator('[data-feedback-next]').click();
+    await page.locator('[name="detail"]').first().check();
+    await page.locator('#feedback-message').fill('Ж'.repeat(1000));
+    await page.getByRole('button', { name: 'Посмотреть сообщение' }).click();
+    const body = await page.locator('#feedback-preview').inputValue();
+    const quote = (body.match(/Фрагмент: «([\s\S]*?)»/) || ['', ''])[1];
+    assert.equal(quote.length, 600, 'цитата из своего раздела, обрезана до 600');
+    assert.ok(body.includes('Ж'.repeat(1000)));
+    const telegram = await page.locator('[data-feedback-channel="telegram"]').getAttribute('href');
+    const email = await page.locator('[data-feedback-channel="email"]').getAttribute('href');
+    assert.ok(telegram.length <= 8000 && email.length <= 8000, 'ссылки укорочены');
+    const short = new URL(telegram).searchParams.get('text');
+    assert.equal((short.match(/Фрагмент: «([\s\S]*?)»/) || ['', ''])[1].length, 200);
+    assert.equal((short.match(/Ж+/) || [''])[0].length, 500);
+    assert.equal(await page.locator('[data-feedback-note]').isVisible(), true);
+  } finally { await page.close(); }
+});
+
 test('кнопка у вопроса передаёт его текст и не меняет ответы или прогресс', { skip }, async () => {
   const page = await pageFor(lesson('devops').url);
   try {
