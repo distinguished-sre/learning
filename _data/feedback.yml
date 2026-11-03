@@ -1,0 +1,14 @@
+# Только публичные контакты автора. Пустой или отсутствующий URL выключает канал в форме.
+# Email берётся из `email` в _config.yml, здесь у него только подпись.
+channels:
+  - id: telegram
+    label: Telegram
+    url: https://t.me/distinguished_sre
+  - id: instagram
+    label: Instagram
+    url: https://www.instagram.com/distinguished_sre
+  - id: vk
+    label: VK
+    url: https://vk.ru/distinguished_sre
+  - id: email
+    label: Email

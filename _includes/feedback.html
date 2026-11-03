@@ -1,0 +1,68 @@
+<dialog class="feedback" id="feedback" aria-labelledby="feedback-title"
+  data-page-title="{{ page.title | default: site.title | escape }}"
+  data-page-url="{{ page.url | absolute_url | escape }}"
+  data-course="{{ site.data.courses[page.course].title | escape }}"
+  data-topic="{{ page.topic | escape }}" data-lesson="{{ page.lesson | escape }}">
+  <div class="feedback-head">
+    <h2 id="feedback-title">Помоги улучшить курс</h2>
+    <button type="button" data-feedback-close aria-label="Закрыть форму">×</button>
+  </div>
+  <p class="feedback-context" data-feedback-context></p>
+  <form data-feedback-form>
+    <section data-feedback-step="1" aria-label="Что изменить">
+      <p class="feedback-progress">Шаг 1 из 3</p>
+      <fieldset>
+        <legend tabindex="-1">Что нужно изменить?</legend>
+        <label><input type="radio" name="kind" value="Ошибка или неточность" required> Ошибка или неточность</label>
+        <label><input type="radio" name="kind" value="Непонятное объяснение"> Непонятное объяснение</label>
+        <label><input type="radio" name="kind" value="Не хватает материала"> Не хватает материала</label>
+        <label><input type="radio" name="kind" value="Не работает страница"> Не работает страница</label>
+        <label><input type="radio" name="kind" value="Другое предложение"> Другое предложение</label>
+      </fieldset>
+      <button class="btn" type="button" data-feedback-next>Дальше</button>
+    </section>
+    <section data-feedback-step="2" hidden aria-label="Подробности">
+      <p class="feedback-progress">Шаг 2 из 3</p>
+      <fieldset>
+        <legend tabindex="-1" data-feedback-followup></legend>
+        <div data-feedback-options></div>
+      </fieldset>
+      <label class="feedback-message-label" for="feedback-message">Коротко: что не так или что добавить?</label>
+      <textarea id="feedback-message" name="message" rows="4" maxlength="1000" required
+        placeholder="Напиши, где возник вопрос и как, по-твоему, должно быть."></textarea>
+      <div class="feedback-quote" data-feedback-quote hidden>
+        <label><input type="checkbox" name="includeQuote" checked> Добавить выделенный фрагмент</label>
+        <blockquote data-feedback-quote-text></blockquote>
+      </div>
+      <div class="feedback-actions">
+        <button type="button" data-feedback-back>Назад</button>
+        <button class="btn" type="submit">Посмотреть сообщение</button>
+      </div>
+    </section>
+    <section data-feedback-step="3" hidden aria-label="Выбор контакта">
+      <p class="feedback-progress">Шаг 3 из 3</p>
+      <h3 tabindex="-1">Куда тебе удобнее написать?</h3>
+      <label for="feedback-preview">Сообщение автору</label>
+      <textarea id="feedback-preview" rows="9" readonly></textarea>
+      <button class="btn" type="button" data-feedback-copy>Скопировать сообщение</button>
+      <p>В Telegram и почте текст подставится сам. Для Instagram и VK скопируй сообщение и вставь в переписку. Если приложение открылось без текста или обрезало его, скопируй сообщение кнопкой выше.</p>
+      <p class="feedback-note" data-feedback-note hidden>Сообщение длинное: в Telegram и почту подставится сокращённый вариант без кода, с короткой цитатой и началом текста. Полный текст скопируй кнопкой выше.</p>
+      <div class="feedback-channels" aria-label="Контакты автора">
+        {% for channel in site.data.feedback.channels %}
+        {%- assign url = channel.url -%}
+        {%- if channel.id == 'email' -%}
+          {%- if site.email and site.email != '' -%}{%- assign url = 'mailto:' | append: site.email -%}{%- else -%}{%- assign url = '' -%}{%- endif -%}
+        {%- endif %}
+        {% if url and url != '' %}
+        <a class="btn" data-feedback-channel="{{ channel.id | escape }}" href="{{ url | escape }}" target="_blank" rel="noopener noreferrer">{{ channel.label | escape }}</a>
+        {% else %}
+        <button type="button" disabled title="Контакт пока не добавлен">{{ channel.label | escape }} (скоро)</button>
+        {% endif %}
+        {% endfor %}
+      </div>
+      <p>Нажми «Отправить» в выбранном приложении. Здесь сообщение только готовится.</p>
+      <button type="button" data-feedback-back>Изменить сообщение</button>
+    </section>
+    <p class="feedback-status" data-feedback-status role="status" aria-live="polite"></p>
+  </form>
+</dialog>
