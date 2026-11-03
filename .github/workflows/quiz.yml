@@ -16,10 +16,13 @@ on:
       - 'assets/js/quiz*.js'
       - 'assets/js/prep.js'
       - 'assets/js/site.js'
+      - 'assets/js/feedback.js'
+      - 'assets/css/feedback.css'
       - 'assets/questions/**'
       - 'tools/check_questions.py'
       - 'tools/quiz.test.mjs'
       - 'tools/browser.test.mjs'
+      - 'tools/feedback.test.mjs'
       - '.github/workflows/quiz.yml'
   pull_request:
     paths:
@@ -36,10 +39,13 @@ on:
       - 'assets/js/quiz*.js'
       - 'assets/js/prep.js'
       - 'assets/js/site.js'
+      - 'assets/js/feedback.js'
+      - 'assets/css/feedback.css'
       - 'assets/questions/**'
       - 'tools/check_questions.py'
       - 'tools/quiz.test.mjs'
       - 'tools/browser.test.mjs'
+      - 'tools/feedback.test.mjs'
       - '.github/workflows/quiz.yml'
   workflow_dispatch:
 
@@ -91,6 +97,7 @@ jobs:
           COURSE=load-tester SITE_DIR=_site node --test tools/browser.test.mjs
           COURSE=monitoring SITE_DIR=_site node --test tools/browser.test.mjs
           COURSE=devops SITE_DIR=_site node --test tools/browser.test.mjs
+          SITE_DIR=_site node --test tools/feedback.test.mjs
       - name: Собранный сайт для ручной проверки в браузере
         if: always()
         uses: actions/upload-artifact@v4

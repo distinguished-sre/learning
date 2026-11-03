@@ -1,0 +1,15 @@
+# Только публичные контакты автора. Пустой URL выключает канал в форме.
+# Telegram, Instagram и VK указаны автором; email из _config.yml.
+channels:
+  - id: telegram
+    label: Telegram
+    url: https://t.me/distinguished_sre
+  - id: instagram
+    label: Instagram
+    url: https://www.instagram.com/distinguished_sre
+  - id: vk
+    label: VK
+    url: https://vk.ru/distinguished_sre
+  - id: email
+    label: Email
+    url: mailto:jenyabykov322@yandex.ru

@@ -32,6 +32,8 @@
          readonly, refHref, refLabel, onChange(ids), label (подпись над вопросом)} */
   function card(q, o) {
     var fs = el('fieldset', 'qz-card');
+    fs.dataset.questionId = q.id;
+    if (o.refHref) fs.dataset.questionSource = o.refHref;
     var name = 'qz' + (++uid);
     var legend = el('legend', 'qz-q');
     legend.appendChild(el('span', 'qz-n', o.label || ('Вопрос ' + o.n + ' из ' + o.total)));

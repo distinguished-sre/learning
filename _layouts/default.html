@@ -22,6 +22,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap&subset=cyrillic" rel="stylesheet">
   <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
   <script src="{{ '/assets/js/site.js' | relative_url }}" defer></script>
+  <link rel="stylesheet" href="{{ '/assets/css/feedback.css' | relative_url }}">
+  <script src="{{ '/assets/js/feedback.js' | relative_url }}" defer></script>
   {%- if page.course %}
   <script src="{{ '/assets/js/viz.js' | relative_url }}" defer></script>
   {%- for f in site.static_files %}{% if f.path contains '/assets/js/viz/' and f.extname == '.js' %}
@@ -70,6 +72,7 @@
     <a class="hub-link" href="{{ '/' | relative_url }}">Все курсы</a>
     {%- endif %}
     <span class="topbar-sp"></span>
+    <button class="feedback-launch" type="button" data-feedback-open hidden>Обратная связь</button>
     <span class="chip progress-chip" title="Пройдено уроков" hidden><span data-progress-text></span></span>
     <button class="icon-btn theme-btn" type="button" aria-label="Переключить тему"><span aria-hidden="true" class="theme-ico"></span></button>
   </header>
@@ -86,5 +89,6 @@
       </footer>
     </main>
   </div>
+  {% include feedback.html %}
 </body>
 </html>
