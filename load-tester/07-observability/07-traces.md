@@ -469,7 +469,7 @@ Tempo 2.10, TraceQL. Составь запрос: трейсы сервиса sh
 
 ## Проверено на версиях
 
-OpenTelemetry Python SDK 1.45, инструментации 0.66b0 (fastapi, httpx, psycopg, redis), Grafana Alloy 1.20, Grafana Tempo 2.10, Grafana 13.2, Loki 3.7. Версии закреплены в `project/shop/compose.yaml` и `requirements.txt`. Имена спанов в таблице получены инструментацией этих версий; в новых версиях имена атрибутов (например, код ответа) могут меняться, поэтому в запросах TraceQL урока использованы устойчивые поля: `name`, `duration`, `status`, `resource.service.name`, `span.db.system`.
+OpenTelemetry Python SDK 1.45.2, инструментации 0.66b2 (fastapi, httpx, psycopg, redis), Grafana Alloy 1.20, Grafana Tempo 2.10, Grafana 13.2, Loki 3.7. Версии закреплены в `project/shop/compose.yaml` и `requirements.txt`. Имена спанов в таблице получены инструментацией этих версий; в новых версиях имена атрибутов (например, код ответа) могут меняться, поэтому в запросах TraceQL урока использованы устойчивые поля: `name`, `duration`, `status`, `resource.service.name`, `span.db.system`.
 
 ## Итог урока: ты умеешь
 

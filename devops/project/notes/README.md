@@ -53,10 +53,10 @@ python3 -m venv .venv
 # Для v5 и v6: метрики Prometheus
 .venv/bin/python -m pip install 'prometheus_client==0.26.0'
 # Для v7 и v7.1: дополнительно API, SDK и экспортёр трейсов
-.venv/bin/python -m pip install 'opentelemetry-api==1.45.0' 'opentelemetry-sdk==1.45.0' 'opentelemetry-exporter-otlp-proto-http==1.45.0'
+.venv/bin/python -m pip install 'opentelemetry-api==1.45.2' 'opentelemetry-sdk==1.45.2' 'opentelemetry-exporter-otlp-proto-http==1.45.2'
 ```
 
-Урок 8.2 предлагает закрепить установленную версию клиента, урок 8.8 перечисляет пакеты без номеров. Здесь выбраны стабильные выпуски на 2026-09-30: [prometheus_client 0.26.0](https://pypi.org/project/prometheus-client/0.26.0/), [opentelemetry-api 1.45.0](https://pypi.org/project/opentelemetry-api/1.45.0/), [opentelemetry-sdk 1.45.0](https://pypi.org/project/opentelemetry-sdk/1.45.0/), [opentelemetry-exporter-otlp-proto-http 1.45.0](https://pypi.org/project/opentelemetry-exporter-otlp-proto-http/1.45.0/). Все четыре зависимости также записаны в [requirements.txt](requirements.txt): из корня курса их можно установить командой `.venv/bin/python -m pip install -r project/notes/requirements.txt`. После установки запускай приложение через `.venv/bin/python app.py`.
+Урок 8.2 предлагает закрепить установленную версию клиента, урок 8.8 перечисляет пакеты без номеров. Здесь выбраны стабильные выпуски на 2026-11-03: [prometheus_client 0.26.0](https://pypi.org/project/prometheus-client/0.26.0/), [opentelemetry-api 1.45.2](https://pypi.org/project/opentelemetry-api/1.45.2/), [opentelemetry-sdk 1.45.2](https://pypi.org/project/opentelemetry-sdk/1.45.2/), [opentelemetry-exporter-otlp-proto-http 1.45.2](https://pypi.org/project/opentelemetry-exporter-otlp-proto-http/1.45.2/). Все четыре зависимости также записаны в [requirements.txt](requirements.txt): из корня курса их можно установить командой `.venv/bin/python -m pip install -r project/notes/requirements.txt`. После установки запускай приложение через `.venv/bin/python app.py`.
 
 Начиная с v4 для `STORE=postgres` дополнительно нужен драйвер из урока 4.4. Диапазон версий сохранён, как в уроке; в `STORE=file` драйвер не требуется:
 
