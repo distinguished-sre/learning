@@ -649,9 +649,9 @@ hello
 1. Добавь в `requirements.txt` три пакета с закреплёнными версиями (актуальные значения лежат в [эталонном requirements.txt](https://github.com/distinguished-sre/learning/tree/main/devops/project/notes/requirements.txt)):
 
 ```text
-opentelemetry-api==1.45.0
-opentelemetry-sdk==1.45.0
-opentelemetry-exporter-otlp-proto-http==1.45.0
+opentelemetry-api==1.45.2
+opentelemetry-sdk==1.45.2
+opentelemetry-exporter-otlp-proto-http==1.45.2
 ```
 
 2. В `app.py` добавь трейсинг. Полный файл: [эталон v7](https://github.com/distinguished-sre/learning/blob/main/devops/project/notes/versions/v7.py). Вот четыре изменения. Первое, импорты и настройка. Если адрес экспорта не задан, трейсинг выключен:
@@ -1072,7 +1072,7 @@ bash ~/learning-course/devops/project/notes/break/8.8/break.sh fix
 - Grafana: 13.2.2
 - Loki: 3.7.8
 - Python: 3.13
-- OpenTelemetry API, SDK и OTLP/HTTP-экспортёр для Python: 1.45.0 (как в эталонном `requirements.txt`)
+- OpenTelemetry API, SDK и OTLP/HTTP-экспортёр для Python: 1.45.2 (как в эталонном `requirements.txt`)
 
 ## Итог урока: ты умеешь
 
