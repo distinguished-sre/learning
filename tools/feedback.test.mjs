@@ -183,6 +183,43 @@ test('выделение из чужого раздела и сорвавшее�
   } finally { await page.close(); }
 });
 
+test('выделение с границы элемента даёт цитату; длинное сообщение укорачивается в ссылке', { skip }, async () => {
+  const page = await pageFor(lesson('monitoring').url);
+  try {
+    // Выделение от конца заголовка через несколько абзацев: startContainer - контейнер, а не текст.
+    // Берётся самый длинный раздел h2, чтобы цитаты хватило на обрезку до 600 знаков.
+    const title = await page.locator('[data-prose]').first().evaluate(prose => {
+      const sections = Array.from(prose.querySelectorAll('h2[id]')).map(h => {
+        let end = h, length = 0;
+        while (end.nextElementSibling && end.nextElementSibling.tagName !== 'H2') { end = end.nextElementSibling; length += end.textContent.length; }
+        return { h, end, length };
+      });
+      const { h, end } = sections.sort((a, b) => b.length - a.length)[0];
+      const range = document.createRange(); range.setStartAfter(h); range.setEndAfter(end);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      return h.textContent.trim();
+    });
+    await page.getByRole('button', { name: 'Обратная связь: ' + title, exact: true }).click();
+    await page.getByRole('radio', { name: 'Ошибка или неточность', exact: true }).check();
+    await page.locator('[data-feedback-next]').click();
+    await page.locator('[name="detail"]').first().check();
+    await page.locator('#feedback-message').fill('Ж'.repeat(1000));
+    await page.getByRole('button', { name: 'Посмотреть сообщение' }).click();
+    const body = await page.locator('#feedback-preview').inputValue();
+    const quote = (body.match(/Фрагмент: «([\s\S]*?)»/) || ['', ''])[1];
+    // Сотни знаков цитаты хватает, чтобы ссылка с сообщением в 1000 знаков перешла порог укорачивания.
+    assert.ok(quote.length >= 100 && quote.length <= 600, 'цитата из своего раздела: ' + quote.length);
+    assert.ok(body.includes('Ж'.repeat(1000)));
+    const telegram = await page.locator('[data-feedback-channel="telegram"]').getAttribute('href');
+    const email = await page.locator('[data-feedback-channel="email"]').getAttribute('href');
+    assert.ok(telegram.length <= 8000 && email.length <= 8000, 'ссылки укорочены');
+    const short = new URL(telegram).searchParams.get('text');
+    assert.equal((short.match(/Фрагмент: «([\s\S]*?)»/) || ['', ''])[1].length, Math.min(200, quote.length));
+    assert.equal((short.match(/Ж+/) || [''])[0].length, 500);
+    assert.equal(await page.locator('[data-feedback-note]').isVisible(), true);
+  } finally { await page.close(); }
+});
+
 test('кнопка у вопроса передаёт его текст и не меняет ответы или прогресс', { skip }, async () => {
   const page = await pageFor(lesson('devops').url);
   try {

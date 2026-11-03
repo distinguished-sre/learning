@@ -27,7 +27,10 @@
   function selection() {
     var sel = window.getSelection();
     if (!sel || !sel.rangeCount || sel.isCollapsed || !content.contains(sel.anchorNode) || !content.contains(sel.focusNode)) return null;
-    var node = sel.getRangeAt(0).startContainer;
+    var range = sel.getRangeAt(0);
+    var node = range.startContainer;
+    // Выделение от границы элемента: началом считается первый узел внутри выделения, а не контейнер.
+    if (node.nodeType === 1 && node.childNodes[range.startOffset]) node = node.childNodes[range.startOffset];
     return { element: node.nodeType === 1 ? node : node.parentElement, quote: sel.toString().trim().slice(0, 600) };
   }
   // Снимок выделения до клика: перевод фокуса на кнопку может его убрать.
