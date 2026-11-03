@@ -187,10 +187,15 @@ test('выделение с границы элемента даёт цитат�
   const page = await pageFor(lesson('monitoring').url);
   try {
     // Выделение от конца заголовка через несколько абзацев: startContainer - контейнер, а не текст.
-    const title = await page.locator('[data-prose] h2[id]').nth(1).evaluate(h => {
-      const range = document.createRange(); range.setStartAfter(h);
-      let end = h; for (let i = 0; i < 6 && end.nextElementSibling; i++) end = end.nextElementSibling;
-      range.setEndAfter(end);
+    // Берётся самый длинный раздел h2, чтобы цитаты хватило на обрезку до 600 знаков.
+    const title = await page.locator('[data-prose]').first().evaluate(prose => {
+      const sections = Array.from(prose.querySelectorAll('h2[id]')).map(h => {
+        let end = h, length = 0;
+        while (end.nextElementSibling && end.nextElementSibling.tagName !== 'H2') { end = end.nextElementSibling; length += end.textContent.length; }
+        return { h, end, length };
+      });
+      const { h, end } = sections.sort((a, b) => b.length - a.length)[0];
+      const range = document.createRange(); range.setStartAfter(h); range.setEndAfter(end);
       const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
       return h.textContent.trim();
     });
