@@ -17,6 +17,7 @@ layout: default
   <div class="lesson-grid">
     <div class="prose lesson-body" data-prose>
       <details class="toc toc-inline" hidden><summary>Содержание урока</summary><ol data-toc></ol></details>
+      {% include code-study-guide.html %}
       {{ content }}
       {%- if site.data.questions[page.course] %}{%- include quiz.html %}{%- endif %}
     </div>
