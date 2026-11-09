@@ -159,6 +159,10 @@ layout: default
   </section>
 
   <!-- ============ Программа: этапы ============ -->
+  <div class="wrap">
+    {% include code-study-guide.html %}
+  </div>
+
   {%- assign st_from = "1,4,7,9,11" | split: "," -%}
   {%- assign st_to = "3,6,8,10,13" | split: "," -%}
   {%- assign st_name = "Освоиться|Автоматизировать|Видеть, что внутри|Создавать нагрузку|Находить причину и выходить на работу" | split: "|" -%}
