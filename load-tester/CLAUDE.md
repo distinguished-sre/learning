@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Что это
 
-Курс нагрузочного тестирования и мониторинга для новичка на GitHub Pages (https://distinguished-sre.github.io/learning/load-tester/, Jekyll 3.10, `baseurl: /learning`, сайт собирается из корня репозитория `learning`, курс лежит в `load-tester/`): Markdown-уроки, которые Jekyll собирает в сайт (`_layouts/`, `_includes/`, `assets/`). Главная курса в корне сайта, старый адрес `/course/` редиректит на неё. Дизайн и механика взяты из соседнего курса DevOps (папка `devops/` этого же репозитория) и адаптированы. `README.md` репозитория: сокращённая главная, цифры (уроки, часы, месяцы) правятся вместе с `_data/courses/load-tester.yml`.
+Курс нагрузочного тестирования и мониторинга для новичка на GitHub Pages (https://distinguished-sre.github.io/learning/load-tester/, Jekyll 3.10, `baseurl: /learning`, сайт собирается из корня репозитория `learning`, курс лежит в `load-tester/`): Markdown-уроки, которые Jekyll собирает в сайт (`_layouts/`, `_includes/`, `assets/`). Старый адрес `/load-tester/course/` редиректит на главную курса. Дизайн и механика взяты из соседнего курса DevOps (папка `devops/` этого же репозитория) и адаптированы. Цифры курса (уроки, часы) берутся из `_data/courses/load-tester.yml`, в корневом `README.md` курс описан одной строкой.
 
 Курс общий, для любого новичка. Никаких имён конкретных учеников, работодателей и историй «для кого написан» в текстах, коммитах и примерах.
 
@@ -25,7 +25,7 @@ cd load-tester/project/shop && cp .env.example .env && docker compose --profile 
 
 - `_data/courses/load-tester.yml`: **единственный источник порядка курса** (13 тем, 57 уроков): `topics[].{n, dir, title, subtitle, time, layer, project, lessons[].{id, slug, title, time}}`. Время темы равно сумме уроков. Новый урок без записи здесь недостижим.
 - `<NN-тема>/index.md`: страница темы (`layout: topic`). `<NN-тема>/<NN-slug>.md`: урок, front matter `layout: lesson`, `title`, `topic` (число), `lesson` ("5.3"), `time`.
-- `index.md`: главная курса (`layout: home`, `permalink: /`, `redirect_from: /course/`, тексты в `_layouts/home.html`). `schedule.md`: расписание по неделям. `ai.md`: страница «ИИ-помощник» (выбор нейросети, правила, промпт преподавателя).
+- `index.md`: главная курса (`layout: home-load-tester`, `permalink: /load-tester/`, `redirect_from: /load-tester/course/`, тексты в `_layouts/home-load-tester.html`). `schedule.md`: расписание по неделям. `ai.md`: страница «ИИ-помощник» (выбор нейросети, правила, промпт преподавателя).
 - Ссылки только относительные на `.md`: в своей теме `03-dns.md`, в чужой `../05-docker/03-compose-shop.md`.
 - Пользовательский прогресс в `localStorage` с префиксом `lt:`: на том же origin живёт курс DevOps. Тесты хранят попытки отдельно, в `lt-quiz:v1:<урок>` и `lt-quiz:v1:prep` (страница подготовки), и отметки прохождения не трогают.
 - `interview.md` (`/learning/load-tester/interview.html`, ссылка в меню): «Подготовка к собеседованию». Устные вопросы, тесты в режиме изучения и проверка случайным блоком по теме или уроку. Данные берёт из `assets/questions/load-tester/topic-NN.json` (собирает `_includes/prep-data.json`), логика в `assets/js/prep.js`.

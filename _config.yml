@@ -1,5 +1,5 @@
 # Единый сайт курсов: GitHub Pages проекта https://distinguished-sre.github.io/learning/
-# Курсы лежат в папках devops/, load-tester/ (позже monitoring/). Данные курса: _data/courses/<курс>.yml,
+# Курсы лежат в папках devops/, load-tester/, monitoring/. Данные курса: _data/courses/<курс>.yml,
 # курс страницы задаётся в defaults ниже (page.course).
 title: Обучение
 description: "Три курса Евгения Быкова: DevOps, нагрузочное тестирование и мониторинг. Теория простым языком, вопросы с ответами и практика"

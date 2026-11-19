@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Что это
 
-Сайт «Обучение» на GitHub Pages: https://distinguished-sre.github.io/learning/ (репозиторий github.com/distinguished-sre/learning, Jekyll 3.10, `baseurl: /learning`, сайт собирается из корня). Три курса: `devops/`, `load-tester/`, `monitoring/` (готовится). Общее лежит в корне: `_config.yml`, `_layouts/`, `_includes/`, `assets/`, `_data/courses/<курс>.yml` (порядок курса), `_data/questions/<курс>/{quiz,open}/MM-LL.json` (банки вопросов), `tools/` (скрипты проверки с `--course`, `theory-style.md`, `readers.md`), `.github/workflows/`. Главную сайта (хаб) рисует `_layouts/hub.html`.
+Сайт «Обучение» на GitHub Pages: https://distinguished-sre.github.io/learning/ (репозиторий github.com/distinguished-sre/learning, Jekyll 3.10, `baseurl: /learning`, сайт собирается из корня). Три курса: `devops/`, `load-tester/`, `monitoring/`. Общее лежит в корне: `_config.yml`, `_layouts/`, `_includes/`, `assets/`, `_data/courses/<курс>.yml` (порядок курса), `_data/questions/<курс>/{quiz,open}/MM-LL.json` (банки вопросов), `tools/` (скрипты проверки с `--course`, `theory-style.md`, `readers.md`), `.github/workflows/`. Главную сайта (хаб) рисует `_layouts/hub.html`.
 
 Ключи `localStorage` (один origin на все курсы), **не менять: потеряется прогресс учеников**:
 - прохождение уроков: devops `done`, load-tester `lt:done`, monitoring `mon:done`;
@@ -36,7 +36,7 @@ COURSE=<курс> node --test tools/quiz.test.mjs
 npm install --no-save playwright && npx playwright install chromium && COURSE=<курс> SITE_DIR=_site node --test tools/browser.test.mjs
 ```
 
-Деплой: `.github/workflows/deploy.yml` собирает Jekyll и публикует при push в `main`. `quiz.yml` проверяет банки вопросов и логику тестов, собирает сайт, как Pages, и сверяет собранные страницы; сейчас гоняет только load-tester (`--course load-tester`, `COURSE=load-tester`), новый курс добавляй в эти шаги. `snippets.yml`: синтаксис кода, сейчас только load-tester (devops выключен: 17 ошибок в плейсхолдерах). `stand.yml`: стенд load-tester (см. `load-tester/CLAUDE.md`).
+Деплой: `.github/workflows/deploy.yml` собирает Jekyll и публикует при push в `main`. `quiz.yml` проверяет банки вопросов и логику тестов, собирает сайт, как Pages, и сверяет собранные страницы; `snippets.yml` проверяет синтаксис кода. Оба гоняют каждый курс отдельным шагом (`--course <курс>`, `COURSE=<курс>`), новый курс добавляй в эти шаги. `stand.yml`: стенд load-tester (см. `load-tester/CLAUDE.md`).
 
 ## Главное правило: курс для новичка
 
@@ -120,7 +120,7 @@ Liquid обрабатывает все `.md` до Markdown: `{{ ... }}` и `{% .
 
 ```bash
 gem install --user-install --no-document liquid -v 4.0.4
-ruby -e '$LOAD_PATH.unshift(File.expand_path("~/.gem/ruby/2.6.0/gems/liquid-4.0.4/lib"))
+ruby -e '$LOAD_PATH.unshift(File.join(Gem.user_dir, "gems/liquid-4.0.4/lib"))
 require "liquid"; require "yaml"
 skip = YAML.load_file("_config.yml")["exclude"] || []
 (Dir.glob("**/*.md") - skip - Dir.glob("_site/**/*") - Dir.glob("**/project/**/*")).each { |f| begin
@@ -134,17 +134,17 @@ rescue => e; puts "#{f}: #{e.message}"; end }'
 
 Параллельные субагенты здесь дороже всего: каждый заново читает этот файл, `CLAUDE.md` курса, `tools/theory-style.md` и уроки. 03.10 три сессии раздали от 30 до 220 агентов и за день съели около 28% недельного лимита Claude.
 
-- Одновременно не больше 4 агентов, за сессию не больше 15. Нужно больше: сначала спроси пользователя, назови число агентов и что получится в итоге.
+- Одновременно не больше 4 агентов, из них пишущих или запускающих сборку и тесты (`worker`) не больше 2; за сессию не больше 15. Нужно больше: сначала спроси пользователя, назови число агентов и что получится в итоге.
 - Пачка: тема целиком, а не урок или группа вопросов. Один агент пишет или правит все уроки темы.
 - Серию однотипных задач начинай с одного агента. Проверь результат, потом раздавай остальное с той же постановкой.
 - Кому отдавать:
   - написать или переписать урок, внести правки по ревью → `worker`;
   - проверить без правок (факты, банк вопросов по правилам выше, ссылки, порты и имена по цепочке уроков) → `scout`, ответ списком замечаний; правки потом одним `worker` на тему;
-  - аудит тремя новичками из `tools/readers.md` → `reader`, один агент на персону и тему, не на урок;
-  - механика (JSON вопросов, массовые замены, переименования) → `cxw task`, при коде 75 → `worker`.
+  - аудит тремя новичками из `tools/readers.md` → `scout`, портрет читателя из `tools/readers.md` в постановке, один агент на персону и тему, не на урок;
+  - механика (JSON вопросов, массовые замены, переименования) → `worker`.
 - `general-purpose` не вызывай.
 - Скрипты проверки (`tools/audit.py`, `tools/readability.py`, `tools/check_questions.py`) запускай сам, агент для них не нужен.
-- `scout` и `reader` CLAUDE.md не видят: правила, которые нужны для проверки, вставляй в постановку текстом, вместе с путями к файлам.
+- `scout` CLAUDE.md не видит: правила, которые нужны для проверки, вставляй в постановку текстом, вместе с путями к файлам.
 
 ## Новый курс
 
